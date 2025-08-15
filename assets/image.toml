@@ -1,0 +1,26 @@
+[header]
+id = "texture"
+asset_type = "Texture"
+
+[properties.Texture]
+files = [
+    "bins/image.jpg",
+]
+
+# These properties are optional:
+# use_mipmaps = true
+# min_filter = "Linear"
+# mag_filter = "Linear"
+# wrap_s = "ClampToEdge"
+# wrap_t = "ClampToEdge"
+# wrap_r = "ClampToEdge"
+
+# If you want to resize the texture,
+# you can specify the width and height.
+[properties.Texture.texture_type.Texture2D]
+width = 128
+height = 128
+
+# By default textures stored in RGB8 format. For example:
+[properties.Texture.pixel_format.RGBA.U8]
+# [properties.Texture.pixel_format.R8]

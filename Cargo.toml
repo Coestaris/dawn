@@ -1,0 +1,35 @@
+[workspace]
+members = [
+    ".",
+    "lib/crates/assets",
+    "lib/crates/audio",
+    "lib/crates/ecs",
+    "lib/crates/graphics",
+    "lib/crates/profile",
+    "lib/crates/yarc",
+]
+
+[package]
+name = "dawn"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["gl"]
+gl = ["dawn-graphics/gl"]
+
+[build-dependencies]
+dawn-yarc = { path = "lib/crates/yarc" }
+log = "0.4.27"
+
+[dependencies]
+dawn-assets = { path = "lib/crates/assets" }
+dawn-audio = { path = "lib/crates/audio" }
+dawn-ecs = { path = "lib/crates/ecs" }
+dawn-graphics = { path = "lib/crates/graphics" }
+dawn-profile = { path = "lib/crates/profile" }
+dawn-yarc = { path = "lib/crates/yarc" }
+evenio = "0.6.0"
+log = "0.4.27"
+glam = "0.30.5"
+rand = "0.4.6"
