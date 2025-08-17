@@ -1,33 +1,34 @@
 mod chain;
+mod logging;
 
+use dawn_graphics::passes::chain::ChainNil;
+use dawn_graphics::passes::chain::ChainCons;
 use crate::chain::{create_quad, AABBPass, CustomPassEvent, GeometryPass};
-use common::logging::{format_system_time, CommonLogger};
+use crate::logging::{format_system_time, CommonLogger};
+use dawn_assets::factory::FactoryBinding;
+use dawn_assets::hub::{AssetHub, AssetHubEvent};
+use dawn_assets::raw::AssetRaw;
+use dawn_assets::reader::AssetReader;
+use dawn_assets::{AssetHeader, AssetID, AssetType};
+use dawn_ecs::{run_loop_with_monitoring, MainLoopMonitoring, StopEventLoop};
+use dawn_graphics::construct_chain;
+use dawn_graphics::gl::entities::shader_program::ShaderProgram;
+use dawn_graphics::gl::entities::texture::Texture;
+use dawn_graphics::input::{InputEvent, KeyCode};
+use dawn_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
+use dawn_graphics::passes::pipeline::RenderPipeline;
+use dawn_graphics::renderable::{Position, RenderableMesh};
+use dawn_graphics::renderer::{Renderer, RendererBackendConfig, RendererMonitoring};
+use dawn_graphics::view::{PlatformSpecificViewConfig, ViewConfig};
+use dawn_yarc::Manifest;
 use evenio::component::Component;
-use evenio::event::{Event, Receiver, Sender};
+use evenio::event::{Receiver, Sender};
 use evenio::fetch::{Fetcher, Single};
 use evenio::world::World;
 use glam::*;
 use log::{debug, error, info};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use yage2_core::assets::factory::FactoryBinding;
-use yage2_core::assets::hub::{AssetHub, AssetHubEvent};
-use yage2_core::assets::raw::AssetRaw;
-use yage2_core::assets::reader::AssetReader;
-use yage2_core::assets::{AssetHeader, AssetID, AssetType};
-use yage2_core::ecs::{run_loop, run_loop_with_monitoring, MainLoopMonitoring, StopEventLoop};
-use yage2_graphics::construct_chain;
-use yage2_graphics::gl::entities::shader_program::ShaderProgram;
-use yage2_graphics::gl::entities::texture::Texture;
-use yage2_graphics::input::{InputEvent, KeyCode};
-use yage2_graphics::passes::chain::ChainCons;
-use yage2_graphics::passes::chain::ChainNil;
-use yage2_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
-use yage2_graphics::passes::pipeline::RenderPipeline;
-use yage2_graphics::renderable::{Position, RenderableMesh};
-use yage2_graphics::renderer::{Renderer, RendererBackendConfig, RendererMonitoring};
-use yage2_graphics::view::{PlatformSpecificViewConfig, ViewConfig};
-use yage2_yarc::Manifest;
 
 // On my linux machine, the refresh rate is 60 Hz.
 // I'll deal with it later
@@ -55,7 +56,7 @@ impl GameController {
                 let yarc = env!("YARC_FILE");
                 info!("Reading assets from: {}", yarc);
 
-                let (manifest, assets) = yage2_yarc::read(PathBuf::from(yarc)).unwrap();
+                let (manifest, assets) = dawn_yarc::read(PathBuf::from(yarc)).unwrap();
                 #[rustfmt::skip]
                 fn log(manifest: Manifest) {
                     debug!("> Version: {}", manifest.version.unwrap_or("unknown".to_string()));
@@ -198,8 +199,7 @@ fn assets_loaded_handler(
             rpe.send(RenderPassEvent::new(
                 gc.geometry_pass_id,
                 CustomPassEvent::UpdateTexture(
-                    hub.get_typed::<Texture>(AssetID::from("texture"))
-                        .unwrap(),
+                    hub.get_typed::<Texture>(AssetID::from("texture")).unwrap(),
                 ),
             ));
         }

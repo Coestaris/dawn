@@ -29,7 +29,9 @@ dawn-ecs = { path = "lib/crates/ecs" }
 dawn-graphics = { path = "lib/crates/graphics" }
 dawn-profile = { path = "lib/crates/profile" }
 dawn-yarc = { path = "lib/crates/yarc" }
+ansi_term = "0.12.1"
 evenio = "0.6.0"
 log = "0.4.27"
 glam = "0.30.5"
 rand = "0.4.6"
+libc = "0.2.172"
