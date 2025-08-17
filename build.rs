@@ -1,5 +1,5 @@
+use dawn_yarc::{write_from_directory, ChecksumAlgorithm, Compression, ReadMode, WriteOptions};
 use std::path::PathBuf;
-use yage2_yarc::{write_from_directory, ChecksumAlgorithm, Compression, ReadMode, WriteOptions};
 
 fn main() {
     let current_dir = std::env::current_dir().unwrap().join("assets");

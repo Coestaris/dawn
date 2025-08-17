@@ -1,20 +1,21 @@
-use glam::{Mat4, Vec3};
-use log::info;
-use yage2_core::assets::TypedAsset;
-use yage2_graphics::gl::entities::array_buffer::{ArrayBuffer, ArrayBufferUsage};
-use yage2_graphics::gl::entities::element_array_buffer::{
+use dawn_assets::TypedAsset;
+use dawn_graphics::gl::entities::array_buffer::{ArrayBuffer, ArrayBufferUsage};
+use dawn_graphics::gl::entities::element_array_buffer::{
     ElementArrayBuffer, ElementArrayBufferUsage,
 };
-use yage2_graphics::gl::entities::shader_program::{ShaderProgram, UniformLocation};
-use yage2_graphics::gl::entities::texture::Texture;
-use yage2_graphics::gl::entities::vertex_array::{
+use dawn_graphics::gl::entities::shader_program::ShaderProgram;
+use dawn_graphics::gl::entities::shader_program::UniformLocation;
+use dawn_graphics::gl::entities::texture::Texture;
+use dawn_graphics::gl::entities::vertex_array::{
     DrawElementsMode, VertexArray, VertexAttribute, VertexAttributeFormat,
 };
-use yage2_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
-use yage2_graphics::passes::result::PassExecuteResult;
-use yage2_graphics::passes::RenderPass;
-use yage2_graphics::renderable::Renderable;
-use yage2_graphics::renderer::RendererBackend;
+use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
+use dawn_graphics::passes::result::PassExecuteResult;
+use dawn_graphics::passes::RenderPass;
+use dawn_graphics::renderable::Renderable;
+use dawn_graphics::renderer::RendererBackend;
+use glam::{Mat4, Vec3};
+use log::info;
 
 pub struct Mesh {
     vao: VertexArray,
@@ -155,7 +156,10 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
                     model_location: shader.cast().get_uniform_location("model").unwrap(),
                     view_location: shader.cast().get_uniform_location("view").unwrap(),
                     proj_location: shader.cast().get_uniform_location("projection").unwrap(),
-                    texture_uniform: shader.cast().get_uniform_location("texture_diffuse1").unwrap(),
+                    texture_uniform: shader
+                        .cast()
+                        .get_uniform_location("texture_diffuse1")
+                        .unwrap(),
                 });
             }
             CustomPassEvent::UpdateTexture(texture) => {
