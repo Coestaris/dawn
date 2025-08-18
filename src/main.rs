@@ -1,7 +1,7 @@
 mod chain;
 mod logging;
 
-use crate::chain::{create_quad, AABBPass, CustomPassEvent, GeometryPass};
+use crate::chain::{AABBPass, CustomPassEvent, GeometryPass};
 use crate::logging::{format_system_time, CommonLogger};
 use dawn_assets::factory::FactoryBinding;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
@@ -10,6 +10,7 @@ use dawn_assets::reader::AssetReader;
 use dawn_assets::{AssetHeader, AssetID, AssetType};
 use dawn_ecs::{run_loop_with_monitoring, MainLoopMonitoring, StopEventLoop};
 use dawn_graphics::construct_chain;
+use dawn_graphics::gl::entities::mesh::Mesh;
 use dawn_graphics::gl::entities::shader_program::ShaderProgram;
 use dawn_graphics::gl::entities::texture::Texture;
 use dawn_graphics::input::{InputEvent, KeyCode};
@@ -49,7 +50,7 @@ impl GameController {
         world.insert(entity, self);
     }
 
-    pub fn setup_asset_hub(world: &mut World) -> (FactoryBinding, FactoryBinding) {
+    pub fn setup_asset_hub(world: &mut World) -> (FactoryBinding, FactoryBinding, FactoryBinding) {
         struct Reader;
         impl AssetReader for Reader {
             fn read(&mut self) -> Result<HashMap<AssetID, (AssetHeader, IRAsset)>, String> {
@@ -87,17 +88,19 @@ impl GameController {
         // in the main loop (via ECS).
         let shader_binding = hub.create_factory_biding(AssetType::Shader);
         let texture_binding = hub.create_factory_biding(AssetType::Texture);
+        let mesh_binding = hub.create_factory_biding(AssetType::Mesh);
 
         hub.query_load_all().unwrap();
         hub.attach_to_ecs(world);
 
-        (shader_binding, texture_binding)
+        (shader_binding, texture_binding, mesh_binding)
     }
 
     pub fn setup_graphics(
         world: &mut World,
         shader_binding: FactoryBinding,
         texture_binding: FactoryBinding,
+        mesh_binding: FactoryBinding,
     ) -> (RenderPassTargetId, RenderPassTargetId) {
         let view_config = ViewConfig {
             platform_specific: PlatformSpecificViewConfig {},
@@ -110,6 +113,7 @@ impl GameController {
             fps: REFRESH_RATE as usize,
             shader_factory_binding: Some(shader_binding),
             texture_factory_binding: Some(texture_binding),
+            mesh_factory_binding: Some(mesh_binding),
             vsync: true,
         };
 
@@ -117,7 +121,7 @@ impl GameController {
         let aabb_pass_id = RenderPassTargetId::new();
 
         let renderer = Renderer::new_with_monitoring(view_config, backend_config, move |_| {
-            let geometry_pass = GeometryPass::new(geometry_pass_id, create_quad(), (800, 600));
+            let geometry_pass = GeometryPass::new(geometry_pass_id, (800, 600));
             let aabb_pass = AABBPass::new(aabb_pass_id);
             Ok(RenderPipeline::new(construct_chain!(
                 geometry_pass,
@@ -131,9 +135,9 @@ impl GameController {
     }
 
     pub fn setup(world: &mut World) {
-        let (shader_binding, texture_binding) = Self::setup_asset_hub(world);
+        let (shader, texture, mesh) = Self::setup_asset_hub(world);
         let (geometry_pass, aabb_pass) =
-            Self::setup_graphics(world, shader_binding, texture_binding);
+            Self::setup_graphics(world, shader, texture, mesh);
         GameController {
             geometry_pass_id: geometry_pass,
             aabb_pass_id: aabb_pass,
@@ -182,6 +186,7 @@ fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut stopper: Sender<StopEve
 }
 
 fn assets_loaded_handler(
+    world: &mut World,
     r: Receiver<AssetHubEvent>,
     hub: Single<&mut AssetHub>,
     gc: Single<&GameController>,
@@ -196,12 +201,20 @@ fn assets_loaded_handler(
                         .unwrap(),
                 ),
             ));
-            rpe.send(RenderPassEvent::new(
-                gc.geometry_pass_id,
-                CustomPassEvent::UpdateTexture(
-                    hub.get_typed::<Texture>(AssetID::from("texture")).unwrap(),
-                ),
-            ));
+
+            let quad = world.spawn();
+            world.insert(
+                quad,
+                Position {
+                    0: Vec3::new(0.0, 0.0, 0.0),
+                },
+            );
+            world.insert(
+                quad,
+                RenderableMesh {
+                    asset: hub.get_typed::<Mesh>(AssetID::from("teapot")).unwrap(),
+                },
+            );
         }
         _ => {}
     }
@@ -229,15 +242,6 @@ fn events_handler(
 
             InputEvent::KeyRelease(KeyCode::Space) => {
                 info!("Space key pressed, changing color");
-                let new_color = Vec3::new(
-                    rand::random::<f32>(),
-                    rand::random::<f32>(),
-                    rand::random::<f32>(),
-                );
-                s.send(RenderPassEvent::new(
-                    gc.geometry_pass_id,
-                    CustomPassEvent::ChangeColor(new_color),
-                ));
             }
             _ => {}
         }
@@ -252,21 +256,11 @@ fn main() {
     let mut world = World::new();
     GameController::setup(&mut world);
 
-    let quad = world.spawn();
-    world.insert(
-        quad,
-        Position {
-            0: Vec3::new(0.0, 0.0, 0.0),
-        },
-    );
-    world.insert(quad, RenderableMesh { mesh_id: 0 });
-
     world.add_handler(main_loop_profile_handler);
     world.add_handler(renderer_profile_handler);
     world.add_handler(escape_handler);
     world.add_handler(events_handler);
     world.add_handler(assets_failed_handler);
-    world.add_handler(assets_loaded_handler);
 
     run_loop_with_monitoring(&mut world, REFRESH_RATE);
 }
