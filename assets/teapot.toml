@@ -1,0 +1,6 @@
+[header]
+id = "teapot"
+asset_type = "Mesh"
+
+[properties.Mesh]
+file ="bins/teapot.obj"
