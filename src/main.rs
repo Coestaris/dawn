@@ -1,13 +1,11 @@
 mod chain;
 mod logging;
 
-use dawn_graphics::passes::chain::ChainNil;
-use dawn_graphics::passes::chain::ChainCons;
 use crate::chain::{create_quad, AABBPass, CustomPassEvent, GeometryPass};
 use crate::logging::{format_system_time, CommonLogger};
 use dawn_assets::factory::FactoryBinding;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
-use dawn_assets::raw::AssetRaw;
+use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::AssetReader;
 use dawn_assets::{AssetHeader, AssetID, AssetType};
 use dawn_ecs::{run_loop_with_monitoring, MainLoopMonitoring, StopEventLoop};
@@ -15,6 +13,8 @@ use dawn_graphics::construct_chain;
 use dawn_graphics::gl::entities::shader_program::ShaderProgram;
 use dawn_graphics::gl::entities::texture::Texture;
 use dawn_graphics::input::{InputEvent, KeyCode};
+use dawn_graphics::passes::chain::ChainCons;
+use dawn_graphics::passes::chain::ChainNil;
 use dawn_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
 use dawn_graphics::passes::pipeline::RenderPipeline;
 use dawn_graphics::renderable::{Position, RenderableMesh};
@@ -52,7 +52,7 @@ impl GameController {
     pub fn setup_asset_hub(world: &mut World) -> (FactoryBinding, FactoryBinding) {
         struct Reader;
         impl AssetReader for Reader {
-            fn read(&mut self) -> Result<HashMap<AssetID, (AssetHeader, AssetRaw)>, String> {
+            fn read(&mut self) -> Result<HashMap<AssetID, (AssetHeader, IRAsset)>, String> {
                 let yarc = env!("YARC_FILE");
                 info!("Reading assets from: {}", yarc);
 
@@ -73,8 +73,8 @@ impl GameController {
                 log(manifest);
 
                 let mut result = HashMap::new();
-                for (header, raw) in assets {
-                    result.insert(header.id.clone(), (header, raw));
+                for (header, ir) in assets {
+                    result.insert(header.id.clone(), (header, ir));
                 }
 
                 Ok(result)
@@ -117,7 +117,7 @@ impl GameController {
         let aabb_pass_id = RenderPassTargetId::new();
 
         let renderer = Renderer::new_with_monitoring(view_config, backend_config, move |_| {
-            let geometry_pass = GeometryPass::new(geometry_pass_id, create_quad());
+            let geometry_pass = GeometryPass::new(geometry_pass_id, create_quad(), (800, 600));
             let aabb_pass = AABBPass::new(aabb_pass_id);
             Ok(RenderPipeline::new(construct_chain!(
                 geometry_pass,
@@ -215,6 +215,13 @@ fn events_handler(
 ) {
     for pos in f.iter_mut() {
         match ie.event {
+            InputEvent::Resize { width, height } => {
+                info!("Window resized to {}x{}", width, height);
+                s.send(RenderPassEvent::new(
+                    gc.geometry_pass_id,
+                    CustomPassEvent::UpdateWindowSize(*width, *height),
+                ));
+            }
             InputEvent::MouseMove { x, y } => {
                 pos.0.x = x / 400.0 - 0.5; // Adjusting for screen size
                 pos.0.y = -y / 300.0 + 0.5; // Adjusting for screen size
