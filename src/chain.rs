@@ -98,6 +98,7 @@ pub(crate) enum CustomPassEvent {
     UpdateShader(TypedAsset<ShaderProgram>),
     ChangeColor(Vec3),
     UpdateTexture(TypedAsset<Texture>),
+    UpdateWindowSize(usize, usize),
 }
 
 struct TriangleShaderContainer {
@@ -116,19 +117,41 @@ pub(crate) struct GeometryPass {
     id: RenderPassTargetId,
     shader: Option<TriangleShaderContainer>,
     texture: Option<TextureContainer>,
+    win_size: (usize, usize),
+    projection: Mat4,
+    view: Mat4,
     color: Vec3,
     mesh: Mesh,
 }
 
 impl GeometryPass {
-    pub fn new(id: RenderPassTargetId, mesh: Mesh) -> Self {
+    pub fn new(id: RenderPassTargetId, mesh: Mesh, win_size: (usize, usize)) -> Self {
         GeometryPass {
             id,
             shader: None,
             texture: None,
+            win_size,
+            projection: Mat4::IDENTITY,
+            view: Mat4::IDENTITY,
+            // view: Mat4::from_scale(Vec3::new(scale as f32, scale as f32, scale as f32)),
             color: Vec3::new(1.0, 1.0, 1.0),
             mesh,
         }
+    }
+
+    fn update_projection(&mut self) {
+        // let w = self.win_size.0 as f32;
+        // let h = self.win_size.1 as f32;
+        // self.projection = Mat4::orthographic_rh(
+        //     -w / 2.0,
+        //     w / 2.0,
+        //     -h / 2.0,
+        //     h / 2.0,
+        //     -1.0,
+        //     1.0,
+        // );
+
+        self.projection = Mat4::IDENTITY;
     }
 }
 
@@ -167,6 +190,11 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
                 let clone = texture.clone();
                 self.texture = Some(TextureContainer { texture: clone });
             }
+            CustomPassEvent::UpdateWindowSize(width, height) => {
+                info!("Updating window size: {}x{}", width, height);
+                self.win_size = (*width, *height);
+                self.update_projection();
+            }
         }
     }
 
@@ -193,8 +221,8 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         let shader = shader_container.shader.cast();
         let shader_binding = shader.bind();
         shader_binding.set_uniform(shader_container.model_location, renderable.model);
-        shader_binding.set_uniform(shader_container.view_location, Mat4::IDENTITY);
-        shader_binding.set_uniform(shader_container.proj_location, Mat4::IDENTITY);
+        shader_binding.set_uniform(shader_container.view_location, self.view);
+        shader_binding.set_uniform(shader_container.proj_location, self.projection);
         shader_binding.set_uniform(shader_container.texture_uniform, 0);
 
         // Setup texture
