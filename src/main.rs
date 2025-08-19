@@ -100,7 +100,7 @@ fn assets_spawn(
 ) {
     match r.event {
         AssetHubEvent::AllAssetsLoaded => {
-            for i in 0..100 {
+            for i in 0..1 {
                 let id = spawn.spawn();
                 spawn.insert(
                     id,
@@ -108,14 +108,7 @@ fn assets_spawn(
                 );
                 spawn.insert(id, Rotation(Quat::IDENTITY));
                 spawn.insert(id, Scale(Vec3::splat(gc.rand_float() * 0.5 + 0.8)));
-                spawn.insert(
-                    id,
-                    Position(Vec3::new(
-                        gc.rand_float() * 30.0 - 15.0,
-                        gc.rand_float() * 30.0 - 15.0,
-                        gc.rand_float() * 30.0 - 15.0,
-                    )),
-                );
+                spawn.insert(id, Position(Vec3::new(0.0, 0.0, -10.0)));
             }
         }
         _ => {}
@@ -123,10 +116,10 @@ fn assets_spawn(
 }
 
 fn rotate_handler(t: Receiver<Tick>, rotation: Fetcher<&mut Rotation>) {
-    for f in rotation {
-        f.0 =
-            f.0 * Quat::from_rotation_y(t.event.delta) * Quat::from_rotation_x(t.event.delta * 0.5);
-    }
+    // for f in rotation {
+    //     f.0 =
+    //         f.0 * Quat::from_rotation_y(t.event.delta) * Quat::from_rotation_x(t.event.delta * 0.5);
+    // }
 }
 
 fn events_handler(
