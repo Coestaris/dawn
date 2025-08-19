@@ -1,11 +1,11 @@
 [header]
-id = "texture"
 asset_type = "Texture"
 
 [properties.Texture]
 files = [
     "bins/image.jpg",
 ]
+
 
 # These properties are optional:
 # use_mipmaps = true
