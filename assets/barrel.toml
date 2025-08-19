@@ -1,0 +1,5 @@
+[header]
+asset_type = "Mesh"
+
+[properties.Mesh]
+file ="bins/barrel.glb"

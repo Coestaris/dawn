@@ -1,5 +1,4 @@
 [header]
-id = "geometry"
 asset_type = "Shader"
 
 [properties.Shader]

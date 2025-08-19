@@ -9,29 +9,32 @@ use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
 use evenio::handler::IntoHandler;
 use evenio::world::World;
-use glam::{Mat4, Quat, Vec2, Vec3};
-use log::info;
+use glam::{FloatExt, Mat4, Vec2, Vec3};
 use std::f32::consts::PI;
 
-#[derive(Component)]
-pub struct FreeCamera {
+pub struct CameraData {
     position: Vec3,
-    click_pos: Vec2,
     pitch: f32,
     yaw: f32,
 }
 
-impl FreeCamera {
+impl CameraData {
+    /// The smallest angle that can be considered "zero"
+    const EPS: f32 = 0.0001;
+
     pub fn new() -> Self {
         Self {
             position: Vec3::ZERO,
-            click_pos: Default::default(),
             pitch: 0.0,
             yaw: PI / 2.0,
         }
     }
 
-    fn as_direction(&self) -> Vec3 {
+    pub fn as_view(&self) -> Mat4 {
+        Mat4::look_to_lh(self.position, self.as_direction(), Vec3::Y)
+    }
+
+    pub fn as_direction(&self) -> Vec3 {
         Vec3::new(
             self.yaw.cos() * self.pitch.cos(),
             self.pitch.sin(),
@@ -40,8 +43,41 @@ impl FreeCamera {
         .normalize()
     }
 
+    pub fn lerp(&self, other: &Self, t: f32) -> Self {
+        Self {
+            position: self.position.lerp(other.position, t),
+            pitch: self.pitch.lerp(other.pitch, t),
+            yaw: self.yaw.lerp(other.yaw, t),
+        }
+    }
+}
+
+impl PartialEq<Self> for CameraData {
+    fn eq(&self, other: &Self) -> bool {
+        (self.position - other.position).length() < Self::EPS
+            && (self.pitch - other.pitch).abs() < Self::EPS
+            && (self.yaw - other.yaw).abs() < Self::EPS
+    }
+}
+
+#[derive(Component)]
+pub struct FreeCamera {
+    click_pos: Vec2,
+    data: CameraData,
+    instant: CameraData,
+}
+
+impl FreeCamera {
+    pub fn new() -> Self {
+        Self {
+            click_pos: Vec2::ZERO,
+            data: CameraData::new(),
+            instant: CameraData::new(),
+        }
+    }
+
     fn as_view(&self) -> Mat4 {
-        Mat4::look_to_lh(self.position, self.as_direction(), Vec3::Y)
+        self.data.as_view()
     }
 
     pub fn attach_to_ecs(self, world: &mut World) {
@@ -68,50 +104,49 @@ impl FreeCamera {
             gc: Single<&mut GameController>,
             mut s: Sender<RenderPassEvent<CustomPassEvent>>,
         ) {
-            const MOVE_SPEED: f32 = 45.0;
-            const ROTATE_SPEED: f32 = 0.002;
+            const MOVE_SPEED: f32 = 25.0;
+            const ROTATE_SPEED: f32 = 0.001;
+            const LERP: f32 = 0.5;
+
             let delta = r.event.delta;
-            let direction = cam.as_direction();
+
+            let direction = cam.instant.as_direction();
             let right = direction.cross(Vec3::Y).normalize();
             let up = direction.cross(right).normalize();
 
-            let mut updated = false;
             if holder.key_pressed(KeyCode::Latin('W')) {
-                cam.position += direction * -delta * MOVE_SPEED;
-                updated = true;
+                cam.instant.position += direction * -delta * MOVE_SPEED;
             }
             if holder.key_pressed(KeyCode::Latin('S')) {
-                cam.position += direction * delta * MOVE_SPEED;
-                updated = true;
+                cam.instant.position += direction * delta * MOVE_SPEED;
             }
             if holder.key_pressed(KeyCode::Latin('A')) {
-                cam.position += right * delta * MOVE_SPEED;
-                updated = true;
+                cam.instant.position += right * delta * MOVE_SPEED;
             }
             if holder.key_pressed(KeyCode::Latin('D')) {
-                cam.position += right * -delta * MOVE_SPEED;
-                updated = true;
+                cam.instant.position += right * -delta * MOVE_SPEED;
             }
             if holder.key_pressed(KeyCode::Space) {
-                cam.position += up * -delta * MOVE_SPEED;
-                updated = true;
+                cam.instant.position += up * -delta * MOVE_SPEED;
             }
             if holder.key_pressed(KeyCode::ShiftL) {
-                cam.position += up * delta * MOVE_SPEED;
-                updated = true;
+                cam.instant.position += up * delta * MOVE_SPEED;
             }
             if holder.button_pressed(MouseButton::Left) {
                 let pos_delta = holder.mouse_pos() - cam.click_pos;
                 cam.click_pos = holder.mouse_pos();
+
                 // Allow look around in all directions
-                cam.yaw = cam.yaw - pos_delta.x * ROTATE_SPEED;
+                cam.instant.yaw = cam.instant.yaw - pos_delta.x * ROTATE_SPEED;
                 // Clamp pitch to prevent gimbal lock
-                cam.pitch = (cam.pitch - pos_delta.y * ROTATE_SPEED)
+                cam.instant.pitch = (cam.instant.pitch - pos_delta.y * ROTATE_SPEED)
                     .clamp(-PI / 2.0 + 0.01, PI / 2.0 - 0.01);
-                updated = true;
             }
 
-            if updated {
+            // Smoothly interpolate position and rotation
+            let data = cam.data.lerp(&cam.instant, LERP);
+            if cam.data != data {
+                cam.data = data;
                 gc.on_view_update(cam.as_view(), &mut s);
             }
         }

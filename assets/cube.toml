@@ -1,5 +1,4 @@
 [header]
-id = "cube"
 asset_type = "Mesh"
 
 [properties.Mesh]

@@ -104,7 +104,7 @@ fn assets_spawn(
                 let id = spawn.spawn();
                 spawn.insert(
                     id,
-                    RenderableMesh(hub.get_typed::<Mesh>("cube".into()).unwrap()),
+                    RenderableMesh(hub.get_typed::<Mesh>("barrel".into()).unwrap()),
                 );
                 spawn.insert(id, Rotation(Quat::IDENTITY));
                 spawn.insert(id, Scale(Vec3::splat(gc.rand_float() * 0.5 + 0.8)));
