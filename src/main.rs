@@ -8,7 +8,7 @@ use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::AssetReader;
 use dawn_assets::{AssetHeader, AssetID, AssetType};
-use dawn_ecs::{run_loop_with_monitoring, MainLoopMonitoring, StopEventLoop};
+use dawn_ecs::{run_loop_with_monitoring, MainLoopMonitoring, StopEventLoop, Tick};
 use dawn_graphics::construct_chain;
 use dawn_graphics::gl::entities::mesh::Mesh;
 use dawn_graphics::gl::entities::shader_program::ShaderProgram;
@@ -18,12 +18,12 @@ use dawn_graphics::passes::chain::ChainCons;
 use dawn_graphics::passes::chain::ChainNil;
 use dawn_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
 use dawn_graphics::passes::pipeline::RenderPipeline;
-use dawn_graphics::renderable::{Position, RenderableMesh};
+use dawn_graphics::renderable::{Position, RenderableMesh, Rotation, Scale};
 use dawn_graphics::renderer::{Renderer, RendererBackendConfig, RendererMonitoring};
 use dawn_graphics::view::{PlatformSpecificViewConfig, ViewConfig};
 use dawn_yarc::Manifest;
 use evenio::component::Component;
-use evenio::event::{Receiver, Sender};
+use evenio::event::{Insert, Receiver, Sender, Spawn};
 use evenio::fetch::{Fetcher, Single};
 use evenio::world::World;
 use glam::*;
@@ -136,8 +136,7 @@ impl GameController {
 
     pub fn setup(world: &mut World) {
         let (shader, texture, mesh) = Self::setup_asset_hub(world);
-        let (geometry_pass, aabb_pass) =
-            Self::setup_graphics(world, shader, texture, mesh);
+        let (geometry_pass, aabb_pass) = Self::setup_graphics(world, shader, texture, mesh);
         GameController {
             geometry_pass_id: geometry_pass,
             aabb_pass_id: aabb_pass,
@@ -186,7 +185,6 @@ fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut stopper: Sender<StopEve
 }
 
 fn assets_loaded_handler(
-    world: &mut World,
     r: Receiver<AssetHubEvent>,
     hub: Single<&mut AssetHub>,
     gc: Single<&GameController>,
@@ -201,50 +199,58 @@ fn assets_loaded_handler(
                         .unwrap(),
                 ),
             ));
-
-            let quad = world.spawn();
-            world.insert(
-                quad,
-                Position {
-                    0: Vec3::new(0.0, 0.0, 0.0),
-                },
-            );
-            world.insert(
-                quad,
-                RenderableMesh {
-                    asset: hub.get_typed::<Mesh>(AssetID::from("teapot")).unwrap(),
-                },
-            );
         }
         _ => {}
     }
 }
 
+fn assets_spawn(
+    r: Receiver<AssetHubEvent>,
+    hub: Single<&mut AssetHub>,
+    mut spawn: Sender<(
+        Spawn,
+        Insert<Position>,
+        Insert<Scale>,
+        Insert<RenderableMesh>,
+        Insert<Rotation>,
+    )>,
+) {
+    match r.event {
+        AssetHubEvent::AllAssetsLoaded => {
+            info!("Spawning a teapot mesh");
+            let id = spawn.spawn();
+            spawn.insert(
+                id,
+                RenderableMesh(hub.get_typed::<Mesh>(AssetID::from("teapot")).unwrap()),
+            );
+            spawn.insert(id, Rotation(Quat::IDENTITY));
+            spawn.insert(id, Scale(Vec3::splat(1.0)));
+            spawn.insert(id, Position(Vec3::new(0.0, 0.0, -5.0)));
+        }
+        _ => {}
+    }
+}
+
+fn rotate_handler(t: Receiver<Tick>, mut rotation: Fetcher<&mut Rotation>) {
+    for f in rotation {
+        f.0 = f.0 * Quat::from_rotation_y(t.event.delta);
+    }
+}
+
 fn events_handler(
     ie: Receiver<InputEvent>,
-    mut f: Fetcher<&mut Position>,
     gc: Single<&mut GameController>,
     mut s: Sender<RenderPassEvent<CustomPassEvent>>,
 ) {
-    for pos in f.iter_mut() {
-        match ie.event {
-            InputEvent::Resize { width, height } => {
-                info!("Window resized to {}x{}", width, height);
-                s.send(RenderPassEvent::new(
-                    gc.geometry_pass_id,
-                    CustomPassEvent::UpdateWindowSize(*width, *height),
-                ));
-            }
-            InputEvent::MouseMove { x, y } => {
-                pos.0.x = x / 400.0 - 0.5; // Adjusting for screen size
-                pos.0.y = -y / 300.0 + 0.5; // Adjusting for screen size
-            }
-
-            InputEvent::KeyRelease(KeyCode::Space) => {
-                info!("Space key pressed, changing color");
-            }
-            _ => {}
+    match ie.event {
+        InputEvent::Resize { width, height } => {
+            info!("Window resized to {}x{}", width, height);
+            s.send(RenderPassEvent::new(
+                gc.geometry_pass_id,
+                CustomPassEvent::UpdateWindowSize(*width, *height),
+            ));
         }
+        _ => {}
     }
 }
 
@@ -256,11 +262,18 @@ fn main() {
     let mut world = World::new();
     GameController::setup(&mut world);
 
+    // Core handlers
     world.add_handler(main_loop_profile_handler);
     world.add_handler(renderer_profile_handler);
     world.add_handler(escape_handler);
-    world.add_handler(events_handler);
+
+    // Asset handlers
     world.add_handler(assets_failed_handler);
+    world.add_handler(assets_loaded_handler);
+
+    world.add_handler(events_handler);
+    world.add_handler(assets_spawn);
+    world.add_handler(rotate_handler);
 
     run_loop_with_monitoring(&mut world, REFRESH_RATE);
 }
