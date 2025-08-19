@@ -1,9 +1,0 @@
-[header]
-id = "triangle"
-asset_type = "Shader"
-
-[properties.Shader]
-files = [
-    ["Vertex", "bins/triangle.vsh"],
-    ["Fragment", "bins/triangle.fsh"]
-]
