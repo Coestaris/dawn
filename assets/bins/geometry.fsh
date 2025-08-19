@@ -7,6 +7,7 @@ in vec2 TexCoords;
 
 void main()
 {
+//    FragColor= vec4(1,1,1,1); // Set the fragment color to white
     FragColor = vec4(TexCoords, 0.0, 1.0); // Output the texture coordinates as color
     // FragColor = texture(texture_diffuse1, TexCoords); // Uncomment to use a
 }

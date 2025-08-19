@@ -195,7 +195,7 @@ fn assets_loaded_handler(
             rpe.send(RenderPassEvent::new(
                 gc.geometry_pass_id,
                 CustomPassEvent::UpdateShader(
-                    hub.get_typed::<ShaderProgram>(AssetID::from("triangle"))
+                    hub.get_typed::<ShaderProgram>(AssetID::from("geometry"))
                         .unwrap(),
                 ),
             ));
@@ -217,15 +217,14 @@ fn assets_spawn(
 ) {
     match r.event {
         AssetHubEvent::AllAssetsLoaded => {
-            info!("Spawning a teapot mesh");
             let id = spawn.spawn();
             spawn.insert(
                 id,
-                RenderableMesh(hub.get_typed::<Mesh>(AssetID::from("teapot")).unwrap()),
+                RenderableMesh(hub.get_typed::<Mesh>(AssetID::from("cube")).unwrap()),
             );
             spawn.insert(id, Rotation(Quat::IDENTITY));
             spawn.insert(id, Scale(Vec3::splat(1.0)));
-            spawn.insert(id, Position(Vec3::new(0.0, 0.0, -5.0)));
+            spawn.insert(id, Position(Vec3::new(0.0, 0.0, -8.0)));
         }
         _ => {}
     }
@@ -233,7 +232,8 @@ fn assets_spawn(
 
 fn rotate_handler(t: Receiver<Tick>, mut rotation: Fetcher<&mut Rotation>) {
     for f in rotation {
-        f.0 = f.0 * Quat::from_rotation_y(t.event.delta);
+        f.0 =
+            f.0 * Quat::from_rotation_y(t.event.delta) * Quat::from_rotation_x(t.event.delta * 0.5);
     }
 }
 

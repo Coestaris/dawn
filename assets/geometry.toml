@@ -1,0 +1,9 @@
+[header]
+id = "geometry"
+asset_type = "Shader"
+
+[properties.Shader]
+files = [
+    ["Vertex", "bins/geometry.vsh"],
+    ["Fragment", "bins/geometry.fsh"]
+]

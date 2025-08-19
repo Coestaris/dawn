@@ -1,5 +1,5 @@
 [header]
-id = "teapot"
+id = "cube"
 asset_type = "Mesh"
 
 [properties.Mesh]
