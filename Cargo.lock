@@ -370,6 +370,7 @@ dependencies = [
  "libc",
  "log",
  "rand 0.4.6",
+ "tinyrand",
 ]
 
 [[package]]
