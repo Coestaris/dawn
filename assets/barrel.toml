@@ -2,4 +2,4 @@
 asset_type = "Mesh"
 
 [properties.Mesh]
-file ="bins/cube.glb"
+file ="bins/barrel.glb"
