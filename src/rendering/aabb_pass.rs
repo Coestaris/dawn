@@ -22,7 +22,7 @@ impl AABBPass {
 
 impl RenderPass<CustomPassEvent> for AABBPass {
     fn get_target(&self) -> Vec<PassEventTarget<CustomPassEvent>> {
-        fn dispatch_aabb_pass(ptr: *mut u8, event: &CustomPassEvent) {
+        fn dispatch_aabb_pass(ptr: *mut u8, event: CustomPassEvent) {
             let pass = unsafe { &mut *(ptr as *mut AABBPass) };
             pass.dispatch(event);
         }
@@ -30,7 +30,7 @@ impl RenderPass<CustomPassEvent> for AABBPass {
         vec![PassEventTarget::new(dispatch_aabb_pass, self.id, self)]
     }
 
-    fn dispatch(&mut self, event: &CustomPassEvent) {
+    fn dispatch(&mut self, event: CustomPassEvent) {
         match event {
             _ => {}
         }

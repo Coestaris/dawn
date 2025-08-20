@@ -68,7 +68,7 @@ impl GeometryPass {
 
 impl RenderPass<CustomPassEvent> for GeometryPass {
     fn get_target(&self) -> Vec<PassEventTarget<CustomPassEvent>> {
-        fn dispatch_geometry_pass(ptr: *mut u8, event: &CustomPassEvent) {
+        fn dispatch_geometry_pass(ptr: *mut u8, event: CustomPassEvent) {
             let pass = unsafe { &mut *(ptr as *mut GeometryPass) };
             pass.dispatch(event);
         }
@@ -76,7 +76,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         vec![PassEventTarget::new(dispatch_geometry_pass, self.id, self)]
     }
 
-    fn dispatch(&mut self, event: &CustomPassEvent) {
+    fn dispatch(&mut self, event: CustomPassEvent) {
         match event {
             CustomPassEvent::UpdateShader(shader) => {
                 info!("Updating shader: {:?}", shader);
@@ -94,11 +94,11 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
                 self.update_projection();
             }
             CustomPassEvent::UpdateWindowSize(width, height) => {
-                self.win_size = (*width, *height);
+                self.win_size = (width, height);
                 self.update_projection();
             }
             CustomPassEvent::UpdateView(view) => {
-                self.view = *view;
+                self.view = view;
             }
         }
     }
