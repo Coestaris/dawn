@@ -142,8 +142,8 @@ fn main() {
 
     let mut world = World::new();
 
-    let (shader, texture, mesh) = setup_asset_hub(&mut world);
-    let (geometry_pass, aabb_pass) = setup_graphics(&mut world, shader, texture, mesh);
+    let bindings = setup_asset_hub(&mut world);
+    let (geometry_pass, aabb_pass) = setup_graphics(&mut world, bindings);
     GameController::new(geometry_pass, aabb_pass).attach_to_ecs(&mut world);
     InputHolder::new().attach_to_ecs(&mut world);
     FreeCamera::new().attach_to_ecs(&mut world);
