@@ -7,7 +7,10 @@ fn main() {
     write_from_directory(
         current_dir,
         WriteOptions {
+            #[cfg(yarc_compression)]
             compression: Compression::Gzip,
+            #[cfg(not(yarc_compression))]
+            compression: Compression::None,
             read_mode: ReadMode::Recursive,
             checksum_algorithm: ChecksumAlgorithm::Md5,
             author: Some("Coestaris <vk_vm@ukr.net>".to_string()),
