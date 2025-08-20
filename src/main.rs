@@ -116,10 +116,10 @@ fn assets_spawn(
 }
 
 fn rotate_handler(t: Receiver<Tick>, rotation: Fetcher<&mut Rotation>) {
-    // for f in rotation {
-    //     f.0 =
-    //         f.0 * Quat::from_rotation_y(t.event.delta) * Quat::from_rotation_x(t.event.delta * 0.5);
-    // }
+    for f in rotation {
+        f.0 =
+            f.0 * Quat::from_rotation_y(t.event.delta) * Quat::from_rotation_x(t.event.delta * 0.5);
+    }
 }
 
 fn events_handler(
