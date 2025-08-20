@@ -29,11 +29,12 @@ pub fn setup_graphics(
     world: &mut World,
     bindings: FactoryBindings,
 ) -> (RenderPassTargetId, RenderPassTargetId) {
+    let win_size = (1920, 1080); // Default window size
     let view_config = ViewConfig {
         platform_specific: PlatformSpecificViewConfig {},
         title: "Hello world".to_string(),
-        width: 800,
-        height: 600,
+        width: win_size.0,
+        height: win_size.1,
     };
 
     let backend_config = RendererBackendConfig {
@@ -49,7 +50,7 @@ pub fn setup_graphics(
     let aabb_pass_id = RenderPassTargetId::new();
 
     let renderer = Renderer::new_with_monitoring(view_config, backend_config, move |_| {
-        let geometry_pass = GeometryPass::new(geometry_pass_id, (800, 600));
+        let geometry_pass = GeometryPass::new(geometry_pass_id, win_size);
         let aabb_pass = AABBPass::new(aabb_pass_id);
         Ok(RenderPipeline::new(construct_chain!(
             geometry_pass,
