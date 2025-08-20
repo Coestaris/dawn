@@ -1,3 +1,4 @@
+use crate::assets::FactoryBindings;
 use crate::rendering::aabb_pass::AABBPass;
 use crate::rendering::geometry_pass::GeometryPass;
 use crate::REFRESH_RATE;
@@ -26,9 +27,7 @@ pub(crate) enum CustomPassEvent {
 
 pub fn setup_graphics(
     world: &mut World,
-    shader_binding: FactoryBinding,
-    texture_binding: FactoryBinding,
-    mesh_binding: FactoryBinding,
+    bindings: FactoryBindings,
 ) -> (RenderPassTargetId, RenderPassTargetId) {
     let view_config = ViewConfig {
         platform_specific: PlatformSpecificViewConfig {},
@@ -39,9 +38,10 @@ pub fn setup_graphics(
 
     let backend_config = RendererBackendConfig {
         fps: REFRESH_RATE as usize,
-        shader_factory_binding: Some(shader_binding),
-        texture_factory_binding: Some(texture_binding),
-        mesh_factory_binding: Some(mesh_binding),
+        shader_factory_binding: Some(bindings.shader),
+        texture_factory_binding: Some(bindings.texture),
+        mesh_factory_binding: Some(bindings.mesh),
+        material_factory_binding: Some(bindings.material),
         vsync: true,
     };
 

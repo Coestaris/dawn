@@ -10,7 +10,14 @@ use log::{debug, info};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-pub fn setup_asset_hub(world: &mut World) -> (FactoryBinding, FactoryBinding, FactoryBinding) {
+pub struct FactoryBindings {
+    pub shader: FactoryBinding,
+    pub texture: FactoryBinding,
+    pub mesh: FactoryBinding,
+    pub material: FactoryBinding,
+}
+
+pub fn setup_asset_hub(world: &mut World) -> FactoryBindings {
     struct Reader;
     impl AssetReader for Reader {
         fn read(&mut self) -> Result<HashMap<AssetID, (AssetHeader, IRAsset)>, String> {
@@ -46,12 +53,15 @@ pub fn setup_asset_hub(world: &mut World) -> (FactoryBinding, FactoryBinding, Fa
     // Unlike other factories, shader and texture assets are
     // managed directly by the renderer, instead of processing assets
     // in the main loop (via ECS).
-    let shader_binding = hub.create_factory_biding(AssetType::Shader);
-    let texture_binding = hub.create_factory_biding(AssetType::Texture);
-    let mesh_binding = hub.create_factory_biding(AssetType::Mesh);
+    let bindings = FactoryBindings {
+        shader: hub.create_factory_biding(AssetType::Shader),
+        texture: hub.create_factory_biding(AssetType::Texture),
+        mesh: hub.create_factory_biding(AssetType::Mesh),
+        material: hub.create_factory_biding(AssetType::Material),
+    };
 
     hub.query_load_all().unwrap();
     hub.attach_to_ecs(world);
 
-    (shader_binding, texture_binding, mesh_binding)
+    bindings
 }
