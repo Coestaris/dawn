@@ -1,7 +1,9 @@
 use crate::rendering::CustomPassEvent;
 use dawn_assets::TypedAsset;
+use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::entities::mesh::Mesh;
 use dawn_graphics::gl::entities::shader_program::{ShaderProgram, UniformLocation};
+use dawn_graphics::gl::entities::texture::Texture;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::PassExecuteResult;
 use dawn_graphics::passes::RenderPass;
@@ -15,6 +17,7 @@ struct TriangleShaderContainer {
     model_location: UniformLocation,
     view_location: UniformLocation,
     proj_location: UniformLocation,
+    base_color_texture_location: UniformLocation,
 }
 
 pub(crate) struct GeometryPass {
@@ -53,6 +56,12 @@ impl GeometryPass {
             let program = shader.shader.cast();
             let binding = program.bind();
             binding.set_uniform(shader.proj_location, self.projection);
+            binding.set_uniform(shader.base_color_texture_location, 0);
+        }
+
+        unsafe {
+            bindings::Viewport(0, 0, self.win_size.0 as i32, self.win_size.1 as i32);
+            bindings::Scissor(0, 0, self.win_size.0 as i32, self.win_size.1 as i32);
         }
     }
 }
@@ -77,6 +86,10 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
                     model_location: shader.cast().get_uniform_location("model").unwrap(),
                     view_location: shader.cast().get_uniform_location("view").unwrap(),
                     proj_location: shader.cast().get_uniform_location("projection").unwrap(),
+                    base_color_texture_location: shader
+                        .cast()
+                        .get_uniform_location("base_color_texture")
+                        .unwrap(),
                 });
                 self.update_projection();
             }
@@ -117,8 +130,12 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
             let program = shader.shader.cast();
             let binding = program.bind();
             binding.set_uniform(shader.model_location, renderable.model);
+        }
 
-            // TODO: Setup textures
+        let material = renderable.material.cast();
+        if let Some(texture) = &material.base_color_texture {
+            let texture = texture.cast::<Texture>();
+            let _binding = texture.bind(0);
         }
 
         PassExecuteResult::default()

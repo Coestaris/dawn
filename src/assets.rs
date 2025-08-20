@@ -2,6 +2,7 @@ use crate::logging::format_system_time;
 use dawn_assets::factory::FactoryBinding;
 use dawn_assets::hub::AssetHub;
 use dawn_assets::ir::IRAsset;
+use dawn_assets::query::AssetQueryID;
 use dawn_assets::reader::AssetReader;
 use dawn_assets::{AssetHeader, AssetID, AssetType};
 use dawn_yarc::Manifest;
@@ -9,6 +10,7 @@ use evenio::prelude::World;
 use log::{debug, info};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::time::Instant;
 
 pub struct FactoryBindings {
     pub shader: FactoryBinding,
@@ -48,7 +50,12 @@ pub fn setup_asset_hub(world: &mut World) -> FactoryBindings {
             Ok(result)
         }
     }
+    let start = Instant::now();
     let mut hub = AssetHub::new(Reader).unwrap();
+    info!("Asset hub created in {} ms", start.elapsed().as_millis());
+
+    hub.query_load("barrel".into()).unwrap();
+    hub.query_load("geometry".into()).unwrap();
 
     // Unlike other factories, shader and texture assets are
     // managed directly by the renderer, instead of processing assets
@@ -60,7 +67,6 @@ pub fn setup_asset_hub(world: &mut World) -> FactoryBindings {
         material: hub.create_factory_biding(AssetType::Material),
     };
 
-    hub.query_load_all().unwrap();
     hub.attach_to_ecs(world);
 
     bindings
