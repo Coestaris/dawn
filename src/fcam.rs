@@ -11,6 +11,7 @@ use evenio::handler::IntoHandler;
 use evenio::world::World;
 use glam::{FloatExt, Mat4, Vec2, Vec3};
 use std::f32::consts::PI;
+use log::debug;
 
 pub struct CameraData {
     position: Vec3,

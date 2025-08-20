@@ -6,11 +6,14 @@ use crate::logging::CommonLogger;
 use crate::rendering::{setup_graphics, CustomPassEvent};
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_ecs::{run_loop_with_monitoring, MainLoopMonitoring, StopEventLoop, Tick};
+use dawn_graphics::gl::entities::material::Material;
 use dawn_graphics::gl::entities::mesh::Mesh;
 use dawn_graphics::gl::entities::shader_program::ShaderProgram;
 use dawn_graphics::input::{InputEvent, KeyCode};
 use dawn_graphics::passes::events::RenderPassEvent;
-use dawn_graphics::renderable::{Position, RenderableMesh, Rotation, Scale};
+use dawn_graphics::renderable::{
+    ObjectMaterial, ObjectMesh, ObjectPosition, ObjectRotation, ObjectScale,
+};
 use dawn_graphics::renderer::RendererMonitoring;
 use evenio::event::{Insert, Receiver, Sender, Spawn};
 use evenio::fetch::{Fetcher, Single};
@@ -59,12 +62,16 @@ fn escape_handler(r: Receiver<InputEvent>, mut s: Sender<StopEventLoop>) {
 
 fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut stopper: Sender<StopEventLoop>) {
     match r.event {
-        AssetHubEvent::LoadFailed(_, _, _) => {
-            error!("Aborting due to asset load failure");
+        AssetHubEvent::QueryCompleted(_, false) => {
+            error!("Asset query failed, stopping the event loop");
             stopper.send(StopEventLoop);
         }
-        AssetHubEvent::AllAssetsFreed => {
-            info!("All assets have been freed");
+        AssetHubEvent::AssetFailed(aid, error) => {
+            let error = match error {
+                Some(e) => e.to_string(),
+                None => "Unknown error".to_string(),
+            };
+            error!("Aborting due to asset load failure: {}: {}", aid, error);
             stopper.send(StopEventLoop);
         }
         _ => {}
@@ -78,8 +85,8 @@ fn assets_loaded_handler(
     mut rpe: Sender<RenderPassEvent<CustomPassEvent>>,
 ) {
     match r.event {
-        AssetHubEvent::AllAssetsLoaded => {
-            let shader = hub.get_typed::<ShaderProgram>("geometry".into()).unwrap();
+        AssetHubEvent::AssetLoaded(id) if *id == "geometry".into() => {
+            let shader = hub.get_typed::<ShaderProgram>(id.clone()).unwrap();
             gc.on_new_geometry_shader(shader.clone(), &mut rpe);
         }
         _ => {}
@@ -92,34 +99,42 @@ fn assets_spawn(
     hub: Single<&mut AssetHub>,
     mut spawn: Sender<(
         Spawn,
-        Insert<Position>,
-        Insert<Scale>,
-        Insert<RenderableMesh>,
-        Insert<Rotation>,
+        Insert<ObjectPosition>,
+        Insert<ObjectScale>,
+        Insert<ObjectMesh>,
+        Insert<ObjectRotation>,
+        Insert<ObjectMaterial>,
     )>,
 ) {
     match r.event {
-        AssetHubEvent::AllAssetsLoaded => {
+        AssetHubEvent::AssetLoaded(id) if *id == "barrel".into() => {
             for i in 0..1 {
-                let id = spawn.spawn();
+                let entity = spawn.spawn();
                 spawn.insert(
-                    id,
-                    RenderableMesh(hub.get_typed::<Mesh>("barrel".into()).unwrap()),
+                    entity,
+                    ObjectMesh(hub.get_typed::<Mesh>(id.clone()).unwrap()),
                 );
-                spawn.insert(id, Rotation(Quat::IDENTITY));
-                spawn.insert(id, Scale(Vec3::splat(gc.rand_float() * 0.5 + 0.8)));
-                spawn.insert(id, Position(Vec3::new(0.0, 0.0, -10.0)));
+                spawn.insert(entity, ObjectRotation(Quat::IDENTITY));
+                spawn.insert(
+                    entity,
+                    ObjectScale(Vec3::splat(gc.rand_float() * 0.5 + 0.8)),
+                );
+                spawn.insert(entity, ObjectPosition(Vec3::new(0.0, 0.0, -10.0)));
+                spawn.insert(
+                    entity,
+                    ObjectMaterial(hub.get_typed::<Material>("barrel_material".into()).unwrap()),
+                );
             }
         }
         _ => {}
     }
 }
 
-fn rotate_handler(t: Receiver<Tick>, rotation: Fetcher<&mut Rotation>) {
-    for f in rotation {
-        f.0 =
-            f.0 * Quat::from_rotation_y(t.event.delta) * Quat::from_rotation_x(t.event.delta * 0.5);
-    }
+fn rotate_handler(t: Receiver<Tick>, rotation: Fetcher<&mut ObjectRotation>) {
+    // for f in rotation {
+    //     f.0 =
+    //         f.0 * Quat::from_rotation_y(t.event.delta) * Quat::from_rotation_x(t.event.delta * 0.5);
+    // }
 }
 
 fn events_handler(

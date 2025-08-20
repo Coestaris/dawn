@@ -4,6 +4,8 @@ out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 Normal;
 
+uniform sampler2D base_color_texture; // Base color texture
+
 vec3 light_position = vec3(0.0, 0.0, 1.0); // Example light position
 
 void main()
@@ -13,12 +15,13 @@ void main()
     // Calculate the normal vector (assuming Normal is already in world space)
     vec3 norm = normalize(Normal);
     // Calculate the diffuse lighting factor
-    float diff = max(dot(norm, lightDir), 0.1);
-    // Set the fragment color based on the diffuse lighting
-    FragColor = vec4(diff * vec3(1.0, 1.0, 1.0), 1.0); // White color scaled by diffuse factor
+    float diff = max(dot(norm, lightDir), 0.0);
 
-    //    FragColor= vec4(1,1,1,1); // Set the fragment color to white
-    //    FragColor = vec4(TexCoords, 0.0, 1.0); // Output the texture coordinates as color
-    //    FragColor = vec4(Normal, 1.0); // Output the normal vector as color
-    // FragColor = texture(texture_diffuse1, TexCoords); // Uncomment to use a
+    // Sample the base color texture
+    vec4 baseColor = texture(base_color_texture, TexCoords);
+    // Apply the diffuse lighting to the base color
+    FragColor = vec4(baseColor.rgb * diff, baseColor.a);
+    // Optionally, you can add ambient lighting or other effects here
+    // For example, adding a simple ambient light:
+    vec3 ambient = 0.1 * baseColor.rgb; // Simple ambient light
 }
