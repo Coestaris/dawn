@@ -1,13 +1,14 @@
 use crate::logging::format_system_time;
 use dawn_assets::factory::FactoryBinding;
-use dawn_assets::hub::AssetHub;
+use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::ir::IRAsset;
-use dawn_assets::query::AssetQueryID;
 use dawn_assets::reader::AssetReader;
 use dawn_assets::{AssetHeader, AssetID, AssetType};
+use dawn_ecs::StopEventLoop;
 use dawn_yarc::Manifest;
+use evenio::event::{Receiver, Sender};
 use evenio::prelude::World;
-use log::{debug, info};
+use log::{debug, error, info};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -19,7 +20,25 @@ pub struct FactoryBindings {
     pub material: FactoryBinding,
 }
 
-pub fn setup_asset_hub(world: &mut World) -> FactoryBindings {
+fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut sender: Sender<StopEventLoop>) {
+    match r.event {
+        AssetHubEvent::QueryCompleted(_, false) => {
+            error!("Asset query failed, stopping the event loop");
+            sender.send(StopEventLoop);
+        }
+        AssetHubEvent::AssetFailed(aid, error) => {
+            let error = match error {
+                Some(e) => e.to_string(),
+                None => "Unknown error".to_string(),
+            };
+            error!("Aborting due to asset load failure: {}: {}", aid, error);
+            sender.send(StopEventLoop);
+        }
+        _ => {}
+    }
+}
+
+pub fn setup_assets_system(world: &mut World) -> FactoryBindings {
     struct Reader;
     impl AssetReader for Reader {
         fn read(&mut self) -> Result<HashMap<AssetID, (AssetHeader, IRAsset)>, String> {
@@ -68,6 +87,7 @@ pub fn setup_asset_hub(world: &mut World) -> FactoryBindings {
     };
 
     hub.attach_to_ecs(world);
+    world.add_handler(assets_failed_handler);
 
     bindings
 }

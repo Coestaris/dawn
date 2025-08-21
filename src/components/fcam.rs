@@ -1,6 +1,5 @@
-use crate::controller::GameController;
-use crate::input::InputHolder;
-use crate::rendering::CustomPassEvent;
+use crate::components::input::InputHolder;
+use crate::systems::rendering::{CustomPassEvent, RenderPassIDs};
 use dawn_ecs::Tick;
 use dawn_graphics::input::{InputEvent, KeyCode, MouseButton};
 use dawn_graphics::passes::events::RenderPassEvent;
@@ -11,7 +10,6 @@ use evenio::handler::IntoHandler;
 use evenio::world::World;
 use glam::{FloatExt, Mat4, Vec2, Vec3};
 use std::f32::consts::PI;
-use log::debug;
 
 pub struct CameraData {
     position: Vec3,
@@ -102,8 +100,8 @@ impl FreeCamera {
             r: Receiver<Tick>,
             holder: Single<&mut InputHolder>,
             mut cam: Single<&mut FreeCamera>,
-            gc: Single<&mut GameController>,
-            mut s: Sender<RenderPassEvent<CustomPassEvent>>,
+            ids: Single<&RenderPassIDs>,
+            mut sender: Sender<RenderPassEvent<CustomPassEvent>>,
         ) {
             const MOVE_SPEED: f32 = 25.0;
             const ROTATE_SPEED: f32 = 0.001;
@@ -148,7 +146,10 @@ impl FreeCamera {
             let data = cam.data.lerp(&cam.instant, LERP);
             if cam.data != data {
                 cam.data = data;
-                gc.on_view_update(cam.as_view(), &mut s);
+                sender.send(RenderPassEvent::new(
+                    ids.geometry,
+                    CustomPassEvent::UpdateView(cam.as_view()),
+                ));
             }
         }
 

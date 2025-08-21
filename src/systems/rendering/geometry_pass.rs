@@ -1,4 +1,4 @@
-use crate::rendering::CustomPassEvent;
+use crate::systems::rendering::CustomPassEvent;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::entities::mesh::Mesh;
@@ -99,6 +99,9 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
             }
             CustomPassEvent::UpdateView(view) => {
                 self.view = view;
+            }
+            CustomPassEvent::DropAllAssets => {
+                self.shader = None;
             }
         }
     }
