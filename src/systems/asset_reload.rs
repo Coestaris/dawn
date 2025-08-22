@@ -1,6 +1,6 @@
 use crate::systems::rendering::{CustomPassEvent, RenderPassIDs};
 use dawn_assets::hub::{AssetHub, AssetInfoState};
-use dawn_assets::query::AssetQueryID;
+use dawn_assets::requests::{AssetRequest, AssetRequestID, AssetRequestQuery};
 use dawn_ecs::Tick;
 use dawn_graphics::input::{InputEvent, KeyCode};
 use dawn_graphics::passes::events::RenderPassEvent;
@@ -19,7 +19,7 @@ struct Timer {
 }
 
 #[derive(Component)]
-struct FreeAllAssetsQuery(AssetQueryID);
+struct FreeAllAssetsRequest(AssetRequestID);
 
 #[derive(GlobalEvent)]
 struct DropAllAssets;
@@ -29,7 +29,7 @@ struct AllAssetsDropped;
 fn log_assets_handler(
     r: Receiver<AllAssetsDropped>,
     mut hub: Single<&mut AssetHub>,
-    mut sender: Sender<(Spawn, Insert<FreeAllAssetsQuery>)>,
+    mut sender: Sender<(Spawn, Insert<FreeAllAssetsRequest>)>,
 ) {
     let mut sorted = hub.asset_infos();
     sorted.sort_by(|a, b| a.id.as_str().cmp(&b.id.as_str()));
@@ -53,9 +53,9 @@ fn log_assets_handler(
         );
     }
 
-    let qid = hub.query_free_all().unwrap();
-    let query = sender.spawn();
-    sender.insert(query, FreeAllAssetsQuery(qid));
+    let qid = hub.request(AssetRequest::Free(AssetRequestQuery::All));
+    let request = sender.spawn();
+    sender.insert(request, FreeAllAssetsRequest(qid));
 }
 
 fn drop_all_assest_handler(

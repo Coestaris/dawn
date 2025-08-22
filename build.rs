@@ -1,4 +1,5 @@
-use dawn_yarc::{write_from_directory, ChecksumAlgorithm, Compression, ReadMode, WriteOptions};
+use dawn_yarc::writer::write_from_directory;
+use dawn_yarc::{ChecksumAlgorithm, Compression, ReadMode, WriteOptions};
 use std::path::PathBuf;
 
 fn main() {
