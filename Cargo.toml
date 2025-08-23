@@ -6,7 +6,7 @@ members = [
     "lib/crates/ecs",
     "lib/crates/graphics",
     "lib/crates/profile",
-    "lib/crates/yarc",
+    "lib/crates/dac",
 ]
 
 [package]
@@ -19,7 +19,7 @@ default = ["gl"]
 gl = ["dawn-graphics/gl"]
 
 [build-dependencies]
-dawn-yarc = { path = "lib/crates/yarc" }
+dawn-dac = { path = "lib/crates/dac" }
 log = "0.4.27"
 
 [dependencies]
@@ -28,7 +28,7 @@ dawn-audio = { path = "lib/crates/audio" }
 dawn-ecs = { path = "lib/crates/ecs" }
 dawn-graphics = { path = "lib/crates/graphics" }
 dawn-profile = { path = "lib/crates/profile" }
-dawn-yarc = { path = "lib/crates/yarc" }
+dawn-dac = { path = "lib/crates/dac" }
 ansi_term = "0.12.1"
 evenio = "0.6.0"
 log = "0.4.27"

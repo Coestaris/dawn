@@ -6,7 +6,7 @@ use dawn_assets::reader::{BasicReader, ReaderBinding};
 use dawn_assets::requests::{AssetRequest, AssetRequestQuery};
 use dawn_assets::{AssetHeader, AssetID, AssetType};
 use dawn_ecs::StopEventLoop;
-use dawn_yarc::manifest::Manifest;
+use dawn_dac::manifest::Manifest;
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::prelude::World;
@@ -42,7 +42,7 @@ impl ReaderHandle {
         let stop_signal = Arc::new(AtomicBool::new(false));
         let thread_stop_signal = stop_signal.clone();
         let handle = Builder::new()
-            .name("yarcreader".into())
+            .name("dacreader".into())
             .spawn(move || {
                 info!("Asset reader thread started");
                 while !thread_stop_signal.load(std::sync::atomic::Ordering::Relaxed) {
@@ -67,13 +67,13 @@ impl ReaderHandle {
         world.insert(entity, self);
     }
 
-    fn yarc_path() -> PathBuf {
-        PathBuf::from(env!("YARC_FILE"))
+    fn dac_path() -> PathBuf {
+        PathBuf::from(env!("dac_FILE"))
     }
 
     fn enumerate() -> Result<Vec<AssetHeader>, String> {
         info!("Enumerating assets");
-        let manifest = dawn_yarc::reader::read_manifest(Self::yarc_path())
+        let manifest = dawn_dac::reader::read_manifest(Self::dac_path())
             .map_err(|e| format!("Failed to read asset manifest: {}", e))?;
 
         #[rustfmt::skip]
@@ -91,7 +91,7 @@ impl ReaderHandle {
     }
 
     fn load(aid: AssetID) -> Result<IRAsset, String> {
-        dawn_yarc::reader::read(Self::yarc_path(), aid.clone())
+        dawn_dac::reader::read(Self::dac_path(), aid.clone())
             .map_err(|e| format!("Failed to read asset {}: {}", aid, e))
     }
 }
