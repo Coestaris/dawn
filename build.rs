@@ -1,10 +1,10 @@
-use dawn_yarc::writer::write_from_directory;
-use dawn_yarc::{ChecksumAlgorithm, Compression, ReadMode, WriteOptions};
+use dawn_dac::writer::write_from_directory;
+use dawn_dac::{ChecksumAlgorithm, Compression, ReadMode, WriteOptions};
 use std::path::PathBuf;
 
 fn main() {
     let current_dir = std::env::current_dir().unwrap().join("assets");
-    let target_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap()).join("demo_graphics.yarc");
+    let target_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap()).join("demo_graphics.dac");
     write_from_directory(
         current_dir,
         WriteOptions {
@@ -21,5 +21,5 @@ fn main() {
     .unwrap();
 
     println!("cargo:rerun-if-changed=assets");
-    println!("cargo:rustc-env=YARC_FILE={}", target_dir.display());
+    println!("cargo:rustc-env=dac_FILE={}", target_dir.display());
 }
