@@ -5,8 +5,9 @@ use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::{BasicReader, ReaderBinding};
 use dawn_assets::requests::{AssetRequest, AssetRequestQuery};
 use dawn_assets::{AssetHeader, AssetID, AssetType};
-use dawn_ecs::StopEventLoop;
 use dawn_dac::manifest::Manifest;
+use dawn_dac::reader::{read_asset, read_manifest};
+use dawn_ecs::StopEventLoop;
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::prelude::World;
@@ -36,6 +37,7 @@ impl Drop for ReaderHandle {
 
 impl ReaderHandle {
     fn new(binding: ReaderBinding) -> ReaderHandle {
+        info!("DAC path: {:?}", Self::dac_path());
         let mut basic_reader = BasicReader::new();
         basic_reader.bind(binding);
 
@@ -68,12 +70,14 @@ impl ReaderHandle {
     }
 
     fn dac_path() -> PathBuf {
-        PathBuf::from(env!("dac_FILE"))
+        PathBuf::from(env!("DAC_FILE"))
     }
 
     fn enumerate() -> Result<Vec<AssetHeader>, String> {
         info!("Enumerating assets");
-        let manifest = dawn_dac::reader::read_manifest(Self::dac_path())
+        let file = std::fs::File::open(Self::dac_path()).unwrap();
+        let mut reader = std::io::BufReader::new(file);
+        let manifest = read_manifest(&mut reader)
             .map_err(|e| format!("Failed to read asset manifest: {}", e))?;
 
         #[rustfmt::skip]
@@ -91,7 +95,9 @@ impl ReaderHandle {
     }
 
     fn load(aid: AssetID) -> Result<IRAsset, String> {
-        dawn_dac::reader::read(Self::dac_path(), aid.clone())
+        let file = std::fs::File::open(Self::dac_path()).unwrap();
+        let mut reader = std::io::BufReader::new(file);
+        read_asset(&mut reader, aid.clone())
             .map_err(|e| format!("Failed to read asset {}: {}", aid, e))
     }
 }
