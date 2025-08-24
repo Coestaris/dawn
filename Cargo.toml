@@ -5,7 +5,7 @@ members = [
     "lib/crates/audio",
     "lib/crates/ecs",
     "lib/crates/graphics",
-    "lib/crates/profile",
+    "lib/crates/util",
     "lib/crates/dac",
 ]
 
@@ -29,7 +29,7 @@ dawn-assets = { path = "lib/crates/assets", features = ["hub"] }
 dawn-audio = { path = "lib/crates/audio" }
 dawn-ecs = { path = "lib/crates/ecs" }
 dawn-graphics = { path = "lib/crates/graphics" }
-dawn-profile = { path = "lib/crates/profile" }
+dawn-util = { path = "lib/crates/util" }
 dawn-dac = { path = "lib/crates/dac" }
 ansi_term = "0.12.1"
 evenio = "0.6.0"

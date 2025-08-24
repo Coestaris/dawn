@@ -1,6 +1,6 @@
+use crate::systems::asset::FactoryBindings;
 use crate::systems::rendering::aabb_pass::AABBPass;
 use crate::systems::rendering::geometry_pass::GeometryPass;
-use crate::REFRESH_RATE;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::TypedAsset;
 use dawn_ecs::StopMainLoop;
@@ -18,7 +18,7 @@ use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
 use evenio::prelude::World;
 use glam::Mat4;
-use crate::systems::asset::FactoryBindings;
+use dawn_util::rendezvous::Rendezvous;
 
 mod aabb_pass;
 mod geometry_pass;
@@ -72,22 +72,25 @@ fn viewport_resized_handler(
     }
 }
 
-pub fn setup_rendering_system(world: &mut World, bindings: FactoryBindings) {
-    let win_size = (1920, 1080); // Default window size
+pub fn setup_rendering_system(
+    world: &mut World,
+    bindings: FactoryBindings,
+    rendezvous: Option<Rendezvous>,
+) {
+    let win_size = (1280, 720); // Default window size
     let view_config = ViewConfig {
         platform_specific: PlatformSpecificViewConfig {},
         title: "Hello world".to_string(),
         width: win_size.0,
         height: win_size.1,
+        rendezvous,
     };
 
     let backend_config = RendererBackendConfig {
-        fps: REFRESH_RATE as usize,
         shader_factory_binding: Some(bindings.shader),
         texture_factory_binding: Some(bindings.texture),
         mesh_factory_binding: Some(bindings.mesh),
         material_factory_binding: Some(bindings.material),
-        vsync: true,
     };
 
     let geometry_pass_id = RenderPassTargetId::new();

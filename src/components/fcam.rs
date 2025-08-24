@@ -143,7 +143,7 @@ impl FreeCamera {
             }
 
             // Smoothly interpolate position and rotation
-            let data = cam.data.lerp(&cam.instant, LERP);
+            let data = cam.data.lerp(&cam.instant, LERP * delta * 30.0);
             if cam.data != data {
                 cam.data = data;
                 sender.send(RenderPassEvent::new(

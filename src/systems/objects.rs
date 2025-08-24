@@ -17,7 +17,7 @@ pub struct GameObject;
 fn rotate_handler(t: Receiver<Tick>, rotation: Fetcher<&mut ObjectRotation>) {
     for f in rotation {
         f.0 =
-            f.0 * Quat::from_rotation_y(t.event.delta) * Quat::from_rotation_x(t.event.delta * 0.5);
+            f.0 * Quat::from_rotation_y(t.event.delta * 0.3) * Quat::from_rotation_x(t.event.delta * 0.1);
     }
 }
 
@@ -50,7 +50,7 @@ pub fn setup_objects_system(world: &mut evenio::world::World) {
         let id = world.spawn();
         world.insert(id, GameObject);
         world.insert(id, ObjectRotation(Quat::IDENTITY));
-        world.insert(id, ObjectScale(Vec3::splat(1.0)));
+        world.insert(id, ObjectScale(Vec3::splat(4.0)));
         world.insert(id, ObjectPosition(Vec3::new(0.0, 0.0, -10.0)));
     }
 

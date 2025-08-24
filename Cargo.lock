@@ -452,7 +452,7 @@ dependencies = [
  "dawn-dacgen",
  "dawn-ecs",
  "dawn-graphics",
- "dawn-profile",
+ "dawn-util",
  "dirs",
  "evenio",
  "glam",
@@ -483,7 +483,7 @@ dependencies = [
  "crossbeam-queue",
  "dawn-assets",
  "dawn-ecs",
- "dawn-profile",
+ "dawn-util",
  "evenio",
  "glam",
  "log",
@@ -526,7 +526,7 @@ dependencies = [
 name = "dawn-ecs"
 version = "0.1.0"
 dependencies = [
- "dawn-profile",
+ "dawn-util",
  "evenio",
  "glam",
  "log",
@@ -539,7 +539,7 @@ dependencies = [
  "crossbeam-channel",
  "dawn-assets",
  "dawn-ecs",
- "dawn-profile",
+ "dawn-util",
  "evenio",
  "gl_generator",
  "glam",
@@ -550,7 +550,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dawn-profile"
+name = "dawn-util"
 version = "0.1.0"
 
 [[package]]
