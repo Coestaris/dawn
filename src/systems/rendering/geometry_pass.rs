@@ -1,4 +1,5 @@
 use crate::systems::rendering::CustomPassEvent;
+use dawn_assets::ir::texture::{IRPixelDataType, IRPixelFormat, IRTexture, IRTextureType};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::entities::mesh::Mesh;
@@ -12,6 +13,35 @@ use dawn_graphics::renderer::RendererBackend;
 use glam::{Mat4, Vec3};
 use log::info;
 
+fn create_missing_texture() -> Texture {
+    // Create a 2x2 checkerboard pattern (magenta and black)
+    let data: [u8; 16] = [
+        255, 0, 255, 255, // Magenta
+        0, 0, 0, 255, // Black
+        0, 0, 0, 255, // Black
+        255, 0, 255, 255, // Magenta
+    ];
+
+    let texture_ir = IRTexture {
+        data: data.to_vec(),
+        texture_type: IRTextureType::Texture2D {
+            width: 2,
+            height: 2,
+        },
+        pixel_format: IRPixelFormat::RGBA(IRPixelDataType::U8),
+        use_mipmaps: false,
+        min_filter: Default::default(),
+        mag_filter: Default::default(),
+        wrap_s: Default::default(),
+        wrap_t: Default::default(),
+        wrap_r: Default::default(),
+    };
+
+    Texture::from_ir::<CustomPassEvent>(texture_ir)
+        .expect("Failed to create missing texture")
+        .0
+}
+
 struct TriangleShaderContainer {
     shader: TypedAsset<ShaderProgram>,
     model_location: UniformLocation,
@@ -24,6 +54,7 @@ pub(crate) struct GeometryPass {
     id: RenderPassTargetId,
     shader: Option<TriangleShaderContainer>,
     win_size: (usize, usize),
+    missing_texture: Texture,
     projection: Mat4,
     view: Mat4,
 }
@@ -34,6 +65,7 @@ impl GeometryPass {
             id,
             shader: None,
             win_size,
+            missing_texture: create_missing_texture(),
             projection: Mat4::IDENTITY,
             view: Mat4::IDENTITY,
         }
@@ -50,9 +82,10 @@ impl GeometryPass {
         if let Some(shader) = self.shader.as_mut() {
             // Load projection matrix into shader
             let program = shader.shader.cast();
-            let binding = program.bind();
-            binding.set_uniform(shader.proj_location, self.projection);
-            binding.set_uniform(shader.base_color_texture_location, 0);
+            program.bind();
+            program.set_uniform(shader.proj_location, self.projection);
+            program.set_uniform(shader.base_color_texture_location, 0);
+            ShaderProgram::unbind();
         }
 
         unsafe {
@@ -107,14 +140,21 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
     }
 
     #[inline(always)]
-    fn begin(&mut self, _backend: &RendererBackend<CustomPassEvent>) -> PassExecuteResult {
+    fn begin(&mut self, _: &RendererBackend<CustomPassEvent>) -> PassExecuteResult {
         if let Some(shader) = self.shader.as_mut() {
             // Load view matrix into shader
             let program = shader.shader.cast();
-            let binding = program.bind();
-            binding.set_uniform(shader.view_location, self.view);
+            program.bind();
+            program.set_uniform(shader.view_location, self.view);
         }
 
+        PassExecuteResult::default()
+    }
+
+    #[inline(always)]
+    fn end(&mut self, _: &mut RendererBackend<CustomPassEvent>) -> PassExecuteResult {
+        ShaderProgram::unbind();
+        Texture::unbind(bindings::TEXTURE_2D, 0);
         PassExecuteResult::default()
     }
 
@@ -127,14 +167,16 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         if let Some(shader) = self.shader.as_mut() {
             // Load view matrix into shader
             let program = shader.shader.cast();
-            let binding = program.bind();
-            binding.set_uniform(shader.model_location, renderable.model);
+            program.set_uniform(shader.model_location, renderable.model);
         }
 
         let material = renderable.material.cast();
         if let Some(texture) = &material.base_color_texture {
             let texture = texture.cast::<Texture>();
-            let _binding = texture.bind(0);
+            texture.bind(0);
+        } else {
+            // Bind a default white texture if no texture is set
+            self.missing_texture.bind(0);
         }
 
         PassExecuteResult::default()
@@ -143,9 +185,13 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
     #[inline(always)]
     fn on_mesh(
         &mut self,
-        _backend: &mut RendererBackend<CustomPassEvent>,
+        _: &mut RendererBackend<CustomPassEvent>,
         mesh: &Mesh,
     ) -> PassExecuteResult {
-        mesh.draw()
+        if let Some(_) = self.shader.as_mut() {
+            mesh.draw()
+        } else {
+            PassExecuteResult::default()
+        }
     }
 }
