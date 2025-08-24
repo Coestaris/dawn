@@ -26,8 +26,6 @@ pub(crate) struct GeometryPass {
     win_size: (usize, usize),
     projection: Mat4,
     view: Mat4,
-    rotation: f32,
-    color: Vec3,
 }
 
 impl GeometryPass {
@@ -38,8 +36,6 @@ impl GeometryPass {
             win_size,
             projection: Mat4::IDENTITY,
             view: Mat4::IDENTITY,
-            rotation: 0.0,
-            color: Vec3::new(1.0, 1.0, 1.0),
         }
     }
 

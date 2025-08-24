@@ -46,7 +46,7 @@ fn map_assets_handler(
 }
 
 pub fn setup_objects_system(world: &mut evenio::world::World) {
-    for i in 0..3 {
+    for _ in 0..3 {
         let id = world.spawn();
         world.insert(id, GameObject);
         world.insert(id, ObjectRotation(Quat::IDENTITY));
