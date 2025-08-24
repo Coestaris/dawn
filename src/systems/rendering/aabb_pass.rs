@@ -1,22 +1,17 @@
+use crate::systems::rendering::CustomPassEvent;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::PassExecuteResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::RendererBackend;
-use glam::Vec3;
-use crate::systems::rendering::CustomPassEvent;
 
 pub(crate) struct AABBPass {
     id: RenderPassTargetId,
-    color: Vec3,
 }
 
 impl AABBPass {
     pub fn new(id: RenderPassTargetId) -> Self {
-        AABBPass {
-            id,
-            color: Default::default(),
-        }
+        AABBPass { id }
     }
 }
 
