@@ -102,7 +102,7 @@ fn drop_all_assets_handler(
     //      for Renderables streaming
     // You can experiment with this value to see how it affects the delay
     // of asset reload.
-    const TIMER_INTERVAL: usize = 10; // In Frames
+    const TIMER_INTERVAL: usize = 5; // In Frames
 
     // Spawn a timer to remove the assets when they are all dropped
     let id = sender.spawn();
