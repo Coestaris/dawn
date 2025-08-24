@@ -5,7 +5,6 @@ use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::{BasicReader, ReaderBinding};
 use dawn_assets::requests::{AssetRequest, AssetRequestQuery};
 use dawn_assets::{AssetHeader, AssetID, AssetType};
-use dawn_dac::manifest::Manifest;
 use dawn_dac::reader::{read_asset, read_manifest};
 use dawn_ecs::StopEventLoop;
 use evenio::component::Component;
@@ -17,6 +16,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 use std::time::Duration;
+use dawn_dac::Manifest;
 
 #[derive(Component)]
 struct ReaderHandle {
@@ -113,14 +113,6 @@ fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut sender: Sender<StopEven
     match r.event {
         AssetHubEvent::RequestCompleted(request, Err(message)) => {
             error!("Asset {} request failed: {}", request, message);
-            sender.send(StopEventLoop);
-        }
-        AssetHubEvent::AssetFailed(aid, error) => {
-            let error = match error {
-                Some(e) => e.to_string(),
-                None => "Unknown error".to_string(),
-            };
-            error!("Aborting due to asset load failure: {}: {}", aid, error);
             sender.send(StopEventLoop);
         }
         _ => {}
