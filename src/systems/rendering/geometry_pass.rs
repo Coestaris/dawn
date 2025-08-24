@@ -140,6 +140,12 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
 
     #[inline(always)]
     fn begin(&mut self, _: &RendererBackend<CustomPassEvent>) -> PassExecuteResult {
+        unsafe {
+            bindings::ClearColor(0.1, 0.1, 0.1, 1.0);
+            bindings::ClearDepth(1.0);
+            bindings::Clear(bindings::COLOR_BUFFER_BIT | bindings::DEPTH_BUFFER_BIT);
+        }
+        
         if let Some(shader) = self.shader.as_mut() {
             // Load view matrix into shader
             let program = shader.shader.cast();
