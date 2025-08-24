@@ -27,7 +27,7 @@ struct DropAllAssets;
 struct AllAssetsDropped;
 
 fn log_assets_handler(
-    r: Receiver<AllAssetsDropped>,
+    _: Receiver<AllAssetsDropped>,
     mut hub: Single<&mut AssetHub>,
     mut sender: Sender<(Spawn, Insert<FreeAllAssetsRequest>)>,
 ) {

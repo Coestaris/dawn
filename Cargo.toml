@@ -19,11 +19,13 @@ default = ["gl"]
 gl = ["dawn-graphics/gl"]
 
 [build-dependencies]
+dawn-dacgen = { path = "lib/crates/dacgen" }
 dawn-dac = { path = "lib/crates/dac" }
+dirs = "6.0.0"
 log = "0.4.27"
 
 [dependencies]
-dawn-assets = { path = "lib/crates/assets" }
+dawn-assets = { path = "lib/crates/assets", features = ["hub"] }
 dawn-audio = { path = "lib/crates/audio" }
 dawn-ecs = { path = "lib/crates/ecs" }
 dawn-graphics = { path = "lib/crates/graphics" }
@@ -33,7 +35,6 @@ ansi_term = "0.12.1"
 evenio = "0.6.0"
 log = "0.4.27"
 glam = "0.30.5"
-rand = "0.4.6"
 libc = "0.2.172"
 tinyrand = "0.5.0"
 
