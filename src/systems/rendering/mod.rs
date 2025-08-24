@@ -3,7 +3,7 @@ use crate::systems::rendering::geometry_pass::GeometryPass;
 use crate::REFRESH_RATE;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::TypedAsset;
-use dawn_ecs::StopEventLoop;
+use dawn_ecs::StopMainLoop;
 use dawn_graphics::construct_chain;
 use dawn_graphics::gl::entities::shader_program::ShaderProgram;
 use dawn_graphics::input::InputEvent;
@@ -42,7 +42,7 @@ fn map_assets_handler(
     r: Receiver<AssetHubEvent>,
     hub: Single<&mut AssetHub>,
     ids: Single<&RenderPassIDs>,
-    mut sender: Sender<(StopEventLoop, RenderPassEvent<CustomPassEvent>)>,
+    mut sender: Sender<(StopMainLoop, RenderPassEvent<CustomPassEvent>)>,
 ) {
     match r.event {
         AssetHubEvent::AssetLoaded(id) if *id == "geometry".into() => {
