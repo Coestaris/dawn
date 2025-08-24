@@ -5,6 +5,7 @@ use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::TypedAsset;
 use dawn_ecs::StopMainLoop;
 use dawn_graphics::construct_chain;
+use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::entities::shader_program::ShaderProgram;
 use dawn_graphics::input::InputEvent;
 use dawn_graphics::passes::chain::ChainCons;
@@ -13,12 +14,12 @@ use dawn_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
 use dawn_graphics::passes::pipeline::RenderPipeline;
 use dawn_graphics::renderer::{Renderer, RendererBackendConfig};
 use dawn_graphics::view::{PlatformSpecificViewConfig, ViewConfig};
+use dawn_util::rendezvous::Rendezvous;
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
 use evenio::prelude::World;
 use glam::Mat4;
-use dawn_util::rendezvous::Rendezvous;
 
 mod aabb_pass;
 mod geometry_pass;
@@ -97,6 +98,20 @@ pub fn setup_rendering_system(
     let aabb_pass_id = RenderPassTargetId::new();
 
     let renderer = Renderer::new_with_monitoring(view_config, backend_config, move |_| {
+        // Setup OpenGL state
+        unsafe {
+            // Enable wireframe mode
+            // bindings::PolygonMode(bindings::FRONT_AND_BACK, bindings::LINE);
+
+            bindings::ShadeModel(bindings::SMOOTH);
+            bindings::Enable(bindings::DEPTH_TEST);
+            bindings::DepthFunc(bindings::LEQUAL);
+            bindings::Enable(bindings::MULTISAMPLE);
+            bindings::Hint(bindings::PERSPECTIVE_CORRECTION_HINT, bindings::NICEST);
+            bindings::Enable(bindings::BLEND);
+            bindings::BlendFunc(bindings::SRC_ALPHA, bindings::ONE_MINUS_SRC_ALPHA);
+        }
+
         let geometry_pass = GeometryPass::new(geometry_pass_id, win_size);
         let aabb_pass = AABBPass::new(aabb_pass_id);
         Ok(RenderPipeline::new(construct_chain!(
