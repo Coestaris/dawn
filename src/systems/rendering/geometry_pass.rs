@@ -108,7 +108,6 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
     fn dispatch(&mut self, event: CustomPassEvent) {
         match event {
             CustomPassEvent::UpdateShader(shader) => {
-                info!("Updating shader: {:?}", shader);
                 let clone = shader.clone();
                 self.shader = Some(TriangleShaderContainer {
                     shader: clone,

@@ -45,7 +45,7 @@ impl ReaderHandle {
         let stop_signal = Arc::new(AtomicBool::new(false));
         let thread_stop_signal = stop_signal.clone();
         let handle = Builder::new()
-            .name("dacreader".into())
+            .name("dac_reader".into())
             .spawn(move || {
                 info!("Asset reader thread started");
                 while !thread_stop_signal.load(std::sync::atomic::Ordering::Relaxed) {
