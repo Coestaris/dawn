@@ -1,0 +1,206 @@
+use crate::systems::rendering::{CustomPassEvent, RenderPassIDs};
+use dawn_assets::hub::{AssetHub, AssetHubEvent, AssetInfoState};
+use dawn_assets::requests::{AssetRequest, AssetRequestID, AssetRequestQuery};
+use dawn_assets::AssetType;
+use dawn_ecs::{StopMainLoop, Tick};
+use dawn_graphics::passes::events::RenderPassEvent;
+use dawn_graphics::renderable::{ObjectMaterial, ObjectMesh};
+use evenio::component::Component;
+use evenio::entity::EntityId;
+use evenio::event::{GlobalEvent, Insert, Receiver, Remove, Sender, Spawn};
+use evenio::fetch::{Fetcher, Single};
+use evenio::query::Or;
+use evenio::world::World;
+use log::info;
+
+#[derive(Component)]
+struct Timer {
+    and_then: AndThen,
+    ticks: usize,
+}
+
+#[derive(Component)]
+struct FreeAllAssetsRequest(AssetRequestID, pub AndThen);
+
+#[derive(GlobalEvent)]
+pub struct DropAllAssets(pub AndThen);
+
+#[derive(Clone)]
+pub enum AndThen {
+    StopMainLoop,
+    ReloadAssets,
+}
+
+pub fn load_assets(hub: &mut AssetHub) {
+    hub.request(AssetRequest::Enumerate);
+    hub.request(AssetRequest::Load(AssetRequestQuery::ByID(
+        "geometry".into(),
+    )));
+    hub.request(AssetRequest::Load(AssetRequestQuery::ByID("barrel".into())));
+}
+
+pub fn free_assets(hub: &mut AssetHub) -> AssetRequestID {
+    hub.request(AssetRequest::FreeNoDeps(AssetRequestQuery::ByType(
+        AssetType::Mesh,
+    )));
+    // Materials are holding the textures. Free them first.
+    // Hoping that no one else is using them otherwise it's circular reference.
+    //   Textures are stored in Material so cannot be freed first
+    //   Materials depends on Textures so cannot be freed first
+    hub.request(AssetRequest::FreeNoDeps(AssetRequestQuery::ByType(
+        AssetType::Material,
+    )));
+    hub.request(AssetRequest::Free(AssetRequestQuery::All))
+}
+
+#[derive(GlobalEvent)]
+struct AllAssetsDropped(pub AndThen);
+
+fn drop_all_assets_handler(
+    r: Receiver<DropAllAssets>,
+    f: Fetcher<(EntityId, Or<&ObjectMesh, &ObjectMaterial>)>,
+    ids: Single<&RenderPassIDs>,
+    mut sender: Sender<(
+        RenderPassEvent<CustomPassEvent>,
+        Remove<ObjectMesh>,
+        Remove<ObjectMaterial>,
+        Spawn,
+        Insert<Timer>,
+    )>,
+) {
+    // Ask renderer to drop all owned assets
+    sender.send(RenderPassEvent::new(
+        ids.geometry,
+        CustomPassEvent::DropAllAssets,
+    ));
+    sender.send(RenderPassEvent::new(
+        ids.aabb,
+        CustomPassEvent::DropAllAssets,
+    ));
+
+    // Remove all assets from the ECS
+    for entity in f.iter() {
+        match entity.1 {
+            Or::Left(_) => {
+                sender.remove::<ObjectMesh>(entity.0);
+            }
+            Or::Right(_) => {
+                sender.remove::<ObjectMaterial>(entity.0);
+            }
+            Or::Both(_, _) => {
+                sender.remove::<ObjectMesh>(entity.0);
+                sender.remove::<ObjectMaterial>(entity.0);
+            }
+        }
+    }
+
+    // Assuming that the rendering thread is not throttled, so a logic update
+    // period is the same as the rendering period.
+    // It takes some time to drop assets:
+    //    - Maximum of 3 frames to pass the event to the renderer
+    //    - Maximum of 3 frames to empty the triple buffer used
+    //      for Renderables streaming
+    // You can experiment with this value to see how it affects the delay
+    // of asset reload.
+    const TIMER_INTERVAL: usize = 10; // In Frames
+
+    // Spawn a timer to remove the assets when they are all dropped
+    let id = sender.spawn();
+    sender.insert(
+        id,
+        Timer {
+            and_then: r.event.0.clone(),
+            ticks: TIMER_INTERVAL,
+        },
+    );
+}
+
+fn timer_handler(
+    _: Receiver<Tick>,
+    mut f: Fetcher<(EntityId, &mut Timer)>,
+    mut sender: Sender<(Remove<Timer>, AllAssetsDropped)>,
+) {
+    for timer in f.iter_mut() {
+        if timer.1.ticks == 0 {
+            info!("All assets dropped, removing timer");
+            sender.remove::<Timer>(timer.0);
+            sender.send(AllAssetsDropped(timer.1.and_then.clone()));
+        } else {
+            timer.1.ticks -= 1;
+        }
+    }
+}
+
+fn free_assets_handler(
+    r: Receiver<AllAssetsDropped>,
+    mut hub: Single<&mut AssetHub>,
+    mut sender: Sender<(Spawn, Insert<FreeAllAssetsRequest>)>,
+) {
+    let mut sorted = hub.asset_infos();
+    sorted.sort_by(|a, b| a.id.as_str().cmp(&b.id.as_str()));
+    for (i, info) in sorted.iter().enumerate() {
+        let state = match &info.state {
+            AssetInfoState::Empty => "Empty".to_string(),
+            AssetInfoState::IR(ram) => format!("IR ({} ram)", ram),
+            AssetInfoState::Loaded { usage, rc } => {
+                format!(
+                    "Loaded ({} refs, {} ram, {} vram)",
+                    rc, usage.ram, usage.vram
+                )
+            }
+        };
+        info!(
+            "[{}] [{:<8}] {:<30} | {}",
+            i,
+            info.header.asset_type.to_string(),
+            info.id.as_str(),
+            state
+        );
+    }
+
+    let request = sender.spawn();
+    sender.insert(
+        request,
+        FreeAllAssetsRequest(free_assets(*hub), r.event.0.clone()),
+    );
+}
+
+fn request_finished(
+    r: Receiver<AssetHubEvent>,
+    f: Fetcher<(EntityId, &FreeAllAssetsRequest)>,
+    mut hub: Single<&mut AssetHub>,
+    mut sender: Sender<(StopMainLoop, Remove<FreeAllAssetsRequest>)>,
+) {
+    let (rid, and_then) = match f.iter().next() {
+        Some((_, req)) => (req.0, req.1.clone()),
+        None => return,
+    };
+    if let AssetHubEvent::RequestFinished(id, Ok(())) = r.event {
+        if *id == rid {
+            match and_then {
+                AndThen::ReloadAssets => {
+                    info!("Free all assets request finished, reloading assets");
+                    load_assets(*hub);
+                }
+                AndThen::StopMainLoop => {
+                    // The request to free all assets is finished
+                    // The actual removal of assets from ECS is done in the timer handler
+                    info!("Free all assets request finished");
+                    sender.send(StopMainLoop);
+                }
+            }
+            sender.remove::<FreeAllAssetsRequest>(f.iter().next().unwrap().0);
+        }
+    }
+}
+
+pub fn setup_asset_swap_system(world: &mut World) {
+    // First we wait for DropAllAssets event
+    world.add_handler(drop_all_assets_handler);
+    // Then we wait for the timer to finish
+    world.add_handler(timer_handler);
+    // Then we request the AssetHub to free all assets
+    world.add_handler(free_assets_handler);
+    // After the AssetHub finished the request, we stop the main loop
+    world.add_handler(request_finished);
+}

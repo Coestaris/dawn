@@ -1,4 +1,5 @@
 use crate::logging::format_system_time;
+use crate::systems::asset_swap::load_assets;
 use dawn_assets::factory::FactoryBinding;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::ir::IRAsset;
@@ -6,7 +7,8 @@ use dawn_assets::reader::{BasicReader, ReaderBinding};
 use dawn_assets::requests::{AssetRequest, AssetRequestQuery};
 use dawn_assets::{AssetHeader, AssetID, AssetType};
 use dawn_dac::reader::{read_asset, read_manifest};
-use dawn_ecs::StopEventLoop;
+use dawn_dac::Manifest;
+use dawn_ecs::StopMainLoop;
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::prelude::World;
@@ -16,7 +18,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 use std::time::Duration;
-use dawn_dac::Manifest;
 
 #[derive(Component)]
 struct ReaderHandle {
@@ -109,26 +110,22 @@ pub struct FactoryBindings {
     pub material: FactoryBinding,
 }
 
-fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut sender: Sender<StopEventLoop>) {
+fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut sender: Sender<StopMainLoop>) {
     match r.event {
-        AssetHubEvent::RequestCompleted(request, Err(message)) => {
+        AssetHubEvent::RequestFinished(request, Err(message)) => {
             error!("Asset {} request failed: {}", request, message);
-            sender.send(StopEventLoop);
+            sender.send(StopMainLoop);
         }
         _ => {}
     }
 }
 
 pub fn setup_assets_system(world: &mut World) -> FactoryBindings {
-    let mut hub = AssetHub::new().unwrap();
+    let mut hub = AssetHub::new();
     let reader = ReaderHandle::new(hub.get_read_binding());
     reader.attach_to_ecs(world);
 
-    hub.request(AssetRequest::Enumerate);
-    hub.request(AssetRequest::Load(AssetRequestQuery::ByID("barrel".into())));
-    hub.request(AssetRequest::Load(AssetRequestQuery::ByID(
-        "geometry".into(),
-    )));
+    load_assets(&mut hub);
 
     // Unlike other factories, shader and texture assets are
     // managed directly by the renderer, instead of processing assets

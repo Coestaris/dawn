@@ -2,15 +2,14 @@ use crate::components::fcam::FreeCamera;
 use crate::components::input::InputHolder;
 use crate::logging::CommonLogger;
 use crate::systems::asset::setup_assets_system;
-use crate::systems::asset_reload::setup_asset_reload_system;
+use crate::systems::asset_swap::{setup_asset_swap_system, AndThen, DropAllAssets};
 use crate::systems::monitoring::setup_monitoring_system;
 use crate::systems::objects::setup_objects_system;
 use crate::systems::rendering::setup_rendering_system;
-use dawn_ecs::{run_loop_with_monitoring, StopEventLoop};
+use dawn_ecs::run_loop_with_monitoring;
 use dawn_graphics::input::{InputEvent, KeyCode};
 use evenio::event::{Receiver, Sender};
 use evenio::world::World;
-use log::info;
 
 mod components;
 mod logging;
@@ -23,11 +22,16 @@ const REFRESH_RATE: f32 = 60.0;
 #[cfg(not(target_os = "linux"))]
 const REFRESH_RATE: f32 = 144.0;
 
-fn escape_handler(r: Receiver<InputEvent>, mut s: Sender<StopEventLoop>) {
+fn escape_handler(r: Receiver<InputEvent>, mut s: Sender<DropAllAssets>) {
     // info!("Input event: {:?}", r.event);
-    if let InputEvent::KeyRelease(KeyCode::Escape) = r.event {
-        info!("Escape key pressed, stopping the event loop");
-        s.send(StopEventLoop);
+    match r.event {
+        InputEvent::KeyRelease(KeyCode::Escape) => {
+            s.send(DropAllAssets(AndThen::StopMainLoop));
+        }
+        InputEvent::KeyRelease(KeyCode::Function(5)) => {
+            s.send(DropAllAssets(AndThen::ReloadAssets));
+        }
+        _ => {}
     }
 }
 
@@ -44,7 +48,7 @@ fn main() {
     // Setup the systems
     let bindings = setup_assets_system(&mut world);
     setup_rendering_system(&mut world, bindings);
-    setup_asset_reload_system(&mut world);
+    setup_asset_swap_system(&mut world);
     setup_monitoring_system(&mut world);
     setup_objects_system(&mut world);
     world.add_handler(escape_handler);
