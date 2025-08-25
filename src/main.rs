@@ -16,6 +16,8 @@ mod components;
 mod logging;
 mod systems;
 
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 enum WorldSyncMode {
     SynchronizedWithMonitor,
     FixedTickRate(usize),
