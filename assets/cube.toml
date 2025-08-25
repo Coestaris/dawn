@@ -3,4 +3,4 @@ asset_type = "Mesh"
 
 [properties.Mesh]
 file ="bins/cube.glb"
-gen_material = "cube_material"
+gen_material = true

@@ -36,7 +36,7 @@ pub fn load_assets(hub: &mut AssetHub) {
     hub.request(AssetRequest::Load(AssetRequestQuery::ByID(
         "geometry".into(),
     )));
-    hub.request(AssetRequest::Load(AssetRequestQuery::ByID("barrel".into())));
+    hub.request(AssetRequest::Load(AssetRequestQuery::ByID("sponza".into())));
 }
 
 pub fn free_assets(hub: &mut AssetHub) -> AssetRequestID {

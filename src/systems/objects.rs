@@ -15,10 +15,10 @@ use dawn_ecs::events::TickEvent;
 pub struct GameObject;
 
 fn rotate_handler(t: Receiver<TickEvent>, rotation: Fetcher<&mut ObjectRotation>) {
-    for f in rotation {
-        f.0 =
-            f.0 * Quat::from_rotation_y(t.event.delta * 0.3) * Quat::from_rotation_x(t.event.delta * 0.1);
-    }
+    // for f in rotation {
+    //     f.0 =
+    //         f.0 * Quat::from_rotation_y(t.event.delta * 0.3) * Quat::from_rotation_x(t.event.delta * 0.1);
+    // }
 }
 
 fn map_assets_handler(
@@ -28,8 +28,8 @@ fn map_assets_handler(
     mut insert: Sender<(Insert<ObjectMesh>, Insert<ObjectMaterial>)>,
 ) {
     match r.event {
-        AssetHubEvent::AssetLoaded(id) if *id == "barrel".into() => {
-            let mesh = hub.get_typed::<Mesh>("barrel".into()).unwrap();
+        AssetHubEvent::AssetLoaded(id) if *id == "sponza".into() => {
+            let mesh = hub.get_typed::<Mesh>("sponza".into()).unwrap();
             for (id, _) in f {
                 insert.insert(id, ObjectMesh(mesh.clone()));
             }
