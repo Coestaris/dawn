@@ -3,7 +3,6 @@ use crate::systems::rendering::aabb_pass::AABBPass;
 use crate::systems::rendering::geometry_pass::GeometryPass;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::TypedAsset;
-use dawn_ecs::StopMainLoop;
 use dawn_graphics::construct_chain;
 use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::entities::shader_program::ShaderProgram;
@@ -13,13 +12,13 @@ use dawn_graphics::passes::chain::ChainNil;
 use dawn_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
 use dawn_graphics::passes::pipeline::RenderPipeline;
 use dawn_graphics::renderer::{Renderer, RendererBackendConfig};
-use dawn_graphics::view::{PlatformSpecificViewConfig, ViewConfig};
-use dawn_util::rendezvous::Rendezvous;
+use dawn_graphics::view::{PlatformSpecificViewConfig, ViewConfig, ViewSynchronization};
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
 use evenio::prelude::World;
 use glam::Mat4;
+use dawn_ecs::events::ExitEvent;
 
 mod aabb_pass;
 mod geometry_pass;
@@ -43,7 +42,7 @@ fn map_assets_handler(
     r: Receiver<AssetHubEvent>,
     hub: Single<&mut AssetHub>,
     ids: Single<&RenderPassIDs>,
-    mut sender: Sender<(StopMainLoop, RenderPassEvent<CustomPassEvent>)>,
+    mut sender: Sender<(ExitEvent, RenderPassEvent<CustomPassEvent>)>,
 ) {
     match r.event {
         AssetHubEvent::AssetLoaded(id) if *id == "geometry".into() => {
@@ -76,7 +75,7 @@ fn viewport_resized_handler(
 pub fn setup_rendering_system(
     world: &mut World,
     bindings: FactoryBindings,
-    rendezvous: Option<Rendezvous>,
+    synchronization: Option<ViewSynchronization>,
 ) {
     let win_size = (1280, 720); // Default window size
     let view_config = ViewConfig {
@@ -84,7 +83,7 @@ pub fn setup_rendering_system(
         title: "Hello world".to_string(),
         width: win_size.0,
         height: win_size.1,
-        rendezvous,
+        synchronization,
     };
 
     let backend_config = RendererBackendConfig {

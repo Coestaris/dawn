@@ -1,5 +1,4 @@
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
-use dawn_ecs::Tick;
 use dawn_graphics::gl::entities::material::Material;
 use dawn_graphics::gl::entities::mesh::Mesh;
 use dawn_graphics::renderable::{
@@ -10,11 +9,12 @@ use evenio::entity::EntityId;
 use evenio::event::{Insert, Receiver, Sender};
 use evenio::fetch::{Fetcher, Single};
 use glam::{Quat, Vec3};
+use dawn_ecs::events::TickEvent;
 
 #[derive(Component)]
 pub struct GameObject;
 
-fn rotate_handler(t: Receiver<Tick>, rotation: Fetcher<&mut ObjectRotation>) {
+fn rotate_handler(t: Receiver<TickEvent>, rotation: Fetcher<&mut ObjectRotation>) {
     for f in rotation {
         f.0 =
             f.0 * Quat::from_rotation_y(t.event.delta * 0.3) * Quat::from_rotation_x(t.event.delta * 0.1);

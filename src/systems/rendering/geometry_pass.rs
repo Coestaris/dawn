@@ -57,6 +57,7 @@ pub(crate) struct GeometryPass {
     missing_texture: Texture,
     projection: Mat4,
     view: Mat4,
+    frame: usize,
 }
 
 impl GeometryPass {
@@ -68,6 +69,7 @@ impl GeometryPass {
             missing_texture: create_missing_texture(),
             projection: Mat4::IDENTITY,
             view: Mat4::IDENTITY,
+            frame: 0,
         }
     }
 
@@ -140,12 +142,14 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
 
     #[inline(always)]
     fn begin(&mut self, _: &RendererBackend<CustomPassEvent>) -> PassExecuteResult {
+        self.frame += 1;
+
         unsafe {
             bindings::ClearColor(0.1, 0.1, 0.1, 1.0);
             bindings::ClearDepth(1.0);
             bindings::Clear(bindings::COLOR_BUFFER_BIT | bindings::DEPTH_BUFFER_BIT);
         }
-        
+
         if let Some(shader) = self.shader.as_mut() {
             // Load view matrix into shader
             let program = shader.shader.cast();

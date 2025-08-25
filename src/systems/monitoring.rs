@@ -1,10 +1,10 @@
-use dawn_ecs::MainLoopMonitoring;
-use dawn_graphics::renderer::RendererMonitoring;
+use dawn_graphics::renderer::RendererMonitorEvent;
 use evenio::event::Receiver;
 use evenio::world::World;
 use log::info;
+use dawn_ecs::main_loop::MainLoopMonitorEvent;
 
-fn main_loop_monitoring_handler(r: Receiver<MainLoopMonitoring>) {
+fn main_loop_monitoring_handler(r: Receiver<MainLoopMonitorEvent>) {
     info!(
         "Main loop: {:.1}tps ({:.1}%)",
         r.event.tps.average(),
@@ -12,7 +12,7 @@ fn main_loop_monitoring_handler(r: Receiver<MainLoopMonitoring>) {
     );
 }
 
-fn renderer_monitoring_handler(r: Receiver<RendererMonitoring>) {
+fn renderer_monitoring_handler(r: Receiver<RendererMonitorEvent>) {
     info!(
         "Renderer: {:.1} FPS. {:.1}/{:.1}",
         r.event.fps.average(),
