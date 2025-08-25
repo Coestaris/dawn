@@ -2,7 +2,7 @@ use crate::systems::rendering::{CustomPassEvent, RenderPassIDs};
 use dawn_assets::hub::{AssetHub, AssetHubEvent, AssetInfoState};
 use dawn_assets::requests::{AssetRequest, AssetRequestID, AssetRequestQuery};
 use dawn_assets::AssetType;
-use dawn_ecs::{StopMainLoop, Tick};
+use dawn_ecs::events::{ExitEvent, TickEvent};
 use dawn_graphics::passes::events::RenderPassEvent;
 use dawn_graphics::renderable::{ObjectMaterial, ObjectMesh};
 use evenio::component::Component;
@@ -23,7 +23,7 @@ struct Timer {
 struct FreeAllAssetsRequest(AssetRequestID, pub AndThen);
 
 #[derive(GlobalEvent)]
-pub struct DropAllAssets(pub AndThen);
+pub struct DropAllAssetsEvent(pub AndThen);
 
 #[derive(Clone)]
 pub enum AndThen {
@@ -54,10 +54,10 @@ pub fn free_assets(hub: &mut AssetHub) -> AssetRequestID {
 }
 
 #[derive(GlobalEvent)]
-struct AllAssetsDropped(pub AndThen);
+struct AllAssetsDroppedEvent(pub AndThen);
 
 fn drop_all_assets_handler(
-    r: Receiver<DropAllAssets>,
+    r: Receiver<DropAllAssetsEvent>,
     f: Fetcher<(EntityId, Or<&ObjectMesh, &ObjectMaterial>)>,
     ids: Single<&RenderPassIDs>,
     mut sender: Sender<(
@@ -116,15 +116,15 @@ fn drop_all_assets_handler(
 }
 
 fn timer_handler(
-    _: Receiver<Tick>,
+    _: Receiver<TickEvent>,
     mut f: Fetcher<(EntityId, &mut Timer)>,
-    mut sender: Sender<(Remove<Timer>, AllAssetsDropped)>,
+    mut sender: Sender<(Remove<Timer>, AllAssetsDroppedEvent)>,
 ) {
     for timer in f.iter_mut() {
         if timer.1.ticks == 0 {
             info!("All assets dropped, removing timer");
             sender.remove::<Timer>(timer.0);
-            sender.send(AllAssetsDropped(timer.1.and_then.clone()));
+            sender.send(AllAssetsDroppedEvent(timer.1.and_then.clone()));
         } else {
             timer.1.ticks -= 1;
         }
@@ -132,7 +132,7 @@ fn timer_handler(
 }
 
 fn free_assets_handler(
-    r: Receiver<AllAssetsDropped>,
+    r: Receiver<AllAssetsDroppedEvent>,
     mut hub: Single<&mut AssetHub>,
     mut sender: Sender<(Spawn, Insert<FreeAllAssetsRequest>)>,
 ) {
@@ -169,7 +169,7 @@ fn request_finished(
     r: Receiver<AssetHubEvent>,
     f: Fetcher<(EntityId, &FreeAllAssetsRequest)>,
     mut hub: Single<&mut AssetHub>,
-    mut sender: Sender<(StopMainLoop, Remove<FreeAllAssetsRequest>)>,
+    mut sender: Sender<(ExitEvent, Remove<FreeAllAssetsRequest>)>,
 ) {
     let (rid, and_then) = match f.iter().next() {
         Some((_, req)) => (req.0, req.1.clone()),
@@ -186,7 +186,7 @@ fn request_finished(
                     // The request to free all assets is finished
                     // The actual removal of assets from ECS is done in the timer handler
                     info!("Free all assets request finished");
-                    sender.send(StopMainLoop);
+                    sender.send(ExitEvent);
                 }
             }
             sender.remove::<FreeAllAssetsRequest>(f.iter().next().unwrap().0);
