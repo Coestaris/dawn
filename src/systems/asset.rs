@@ -4,11 +4,10 @@ use dawn_assets::factory::FactoryBinding;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::{BasicReader, ReaderBinding};
-use dawn_assets::requests::{AssetRequest, AssetRequestQuery};
+use dawn_assets::requests::{AssetRequestQuery};
 use dawn_assets::{AssetHeader, AssetID, AssetType};
 use dawn_dac::reader::{read_asset, read_manifest};
 use dawn_dac::Manifest;
-use dawn_ecs::StopMainLoop;
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::prelude::World;
@@ -18,6 +17,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 use std::time::Duration;
+use dawn_ecs::events::ExitEvent;
 
 #[derive(Component)]
 struct ReaderHandle {
@@ -110,11 +110,11 @@ pub struct FactoryBindings {
     pub material: FactoryBinding,
 }
 
-fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut sender: Sender<StopMainLoop>) {
+fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut sender: Sender<ExitEvent>) {
     match r.event {
         AssetHubEvent::RequestFinished(request, Err(message)) => {
             error!("Asset {} request failed: {}", request, message);
-            sender.send(StopMainLoop);
+            sender.send(ExitEvent);
         }
         _ => {}
     }

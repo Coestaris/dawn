@@ -2,15 +2,16 @@ use crate::components::fcam::FreeCamera;
 use crate::components::input::InputHolder;
 use crate::logging::CommonLogger;
 use crate::systems::asset::setup_assets_system;
-use crate::systems::asset_swap::{setup_asset_swap_system, AndThen, DropAllAssets};
+use crate::systems::asset_swap::{setup_asset_swap_system, AndThen, DropAllAssetsEvent};
 use crate::systems::monitoring::setup_monitoring_system;
 use crate::systems::objects::setup_objects_system;
 use crate::systems::rendering::setup_rendering_system;
-use dawn_ecs::{synchronized_loop_with_monitoring, unsynchronized_loop_with_monitoring};
 use dawn_graphics::input::{InputEvent, KeyCode};
+use dawn_graphics::view::ViewSynchronization;
+use dawn_util::rendezvous::Rendezvous;
 use evenio::event::{Receiver, Sender};
 use evenio::world::World;
-use dawn_util::rendezvous::Rendezvous;
+use dawn_ecs::main_loop::{synchronized_loop_with_monitoring, unsynchronized_loop_with_monitoring};
 
 mod components;
 mod logging;
@@ -30,14 +31,14 @@ const WORLD_SYNC_MODE: WorldSyncMode = WorldSyncMode::SynchronizedWithMonitor;
 // #[cfg(not(target_os = "linux"))]
 // const WORLD_SYNC_MODE: WorldSyncMode = WorldSyncMode::SynchronizedWithMonitor;
 
-fn escape_handler(r: Receiver<InputEvent>, mut s: Sender<DropAllAssets>) {
+fn escape_handler(r: Receiver<InputEvent>, mut s: Sender<DropAllAssetsEvent>) {
     // info!("Input event: {:?}", r.event);
     match r.event {
         InputEvent::KeyRelease(KeyCode::Escape) => {
-            s.send(DropAllAssets(AndThen::StopMainLoop));
+            s.send(DropAllAssetsEvent(AndThen::StopMainLoop));
         }
         InputEvent::KeyRelease(KeyCode::Function(5)) => {
-            s.send(DropAllAssets(AndThen::ReloadAssets));
+            s.send(DropAllAssetsEvent(AndThen::ReloadAssets));
         }
         _ => {}
     }
@@ -67,9 +68,17 @@ fn main() {
             unsynchronized_loop_with_monitoring(&mut world, tps as f32);
         }
         WorldSyncMode::SynchronizedWithMonitor => {
-            let rendezvous = Rendezvous::new(2);
-            setup_rendering_system(&mut world, bindings, Some(rendezvous.clone()));
-            synchronized_loop_with_monitoring(&mut world, rendezvous);
+            let before_frame = Rendezvous::new(2);
+            let after_frame = Rendezvous::new(2);
+            setup_rendering_system(
+                &mut world,
+                bindings,
+                Some(ViewSynchronization {
+                    before_frame: before_frame.clone(),
+                    after_frame: after_frame.clone(),
+                }),
+            );
+            synchronized_loop_with_monitoring(&mut world, before_frame, after_frame);
         }
     }
 }
