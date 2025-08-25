@@ -1,0 +1,6 @@
+[header]
+asset_type = "Mesh"
+
+[properties.Mesh]
+url = "https://github.com/Breush/lava-assets/blob/master/models/sponza.glb"
+gen_material = true

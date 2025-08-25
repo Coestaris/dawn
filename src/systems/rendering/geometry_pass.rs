@@ -2,6 +2,7 @@ use crate::systems::rendering::CustomPassEvent;
 use dawn_assets::ir::texture::{IRPixelDataType, IRPixelFormat, IRTexture, IRTextureType};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
+use dawn_graphics::gl::entities::material::Material;
 use dawn_graphics::gl::entities::mesh::Mesh;
 use dawn_graphics::gl::entities::shader_program::{ShaderProgram, UniformLocation};
 use dawn_graphics::gl::entities::texture::Texture;
@@ -179,15 +180,6 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
             program.set_uniform(shader.model_location, renderable.model);
         }
 
-        let material = renderable.material.cast();
-        if let Some(texture) = &material.base_color_texture {
-            let texture = texture.cast::<Texture>();
-            texture.bind(0);
-        } else {
-            // Bind a default white texture if no texture is set
-            self.missing_texture.bind(0);
-        }
-
         PassExecuteResult::default()
     }
 
@@ -197,10 +189,29 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         _: &mut RendererBackend<CustomPassEvent>,
         mesh: &Mesh,
     ) -> PassExecuteResult {
-        if let Some(_) = self.shader.as_mut() {
-            mesh.draw()
-        } else {
-            PassExecuteResult::default()
+        let mut result = PassExecuteResult::default();
+        if let None = self.shader {
+            return result;
         }
+
+        for submesh in &mesh.submesh {
+            if let Some(material) = &submesh.material {
+                let material = material.cast::<Material>();
+                if let Some(texture) = &material.base_color_texture {
+                    let texture = texture.cast::<Texture>();
+                    texture.bind(0);
+                } else {
+                    // Bind a default white texture if no texture is set
+                    self.missing_texture.bind(0);
+                }
+            } else {
+                // Bind a default white texture if no texture is set
+                self.missing_texture.bind(0);
+            }
+
+            result += submesh.draw()
+        }
+
+        result
     }
 }

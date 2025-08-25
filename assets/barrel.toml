@@ -3,4 +3,4 @@ asset_type = "Mesh"
 
 [properties.Mesh]
 file ="bins/barrel.glb"
-gen_material = "barrel_material"
+gen_material = true

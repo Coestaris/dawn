@@ -47,7 +47,7 @@ fn escape_handler(r: Receiver<InputEvent>, mut s: Sender<DropAllAssetsEvent>) {
 fn main() {
     // Initialize the logger
     log::set_logger(&CommonLogger).unwrap();
-    log::set_max_level(log::LevelFilter::Info);
+    log::set_max_level(log::LevelFilter::Debug);
 
     // Setup the world and standalone components
     let mut world = World::new();
