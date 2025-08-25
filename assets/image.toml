@@ -1,12 +1,10 @@
 [header]
 asset_type = "Texture"
 
+[[properties.Texture.sources]]
+File = "bins/image.jpg"
+
 [properties.Texture]
-files = [
-    "bins/image.jpg",
-]
-
-
 # These properties are optional:
 # use_mipmaps = true
 # min_filter = "Linear"

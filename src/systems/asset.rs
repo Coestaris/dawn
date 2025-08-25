@@ -4,7 +4,6 @@ use dawn_assets::factory::FactoryBinding;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::{BasicReader, ReaderBinding};
-use dawn_assets::requests::{AssetRequestQuery};
 use dawn_assets::{AssetHeader, AssetID, AssetType};
 use dawn_dac::reader::{read_asset, read_manifest};
 use dawn_dac::Manifest;
