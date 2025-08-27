@@ -1,7 +1,8 @@
 use dawn_dac::{ChecksumAlgorithm, CompressionLevel, ReadMode};
-use dawn_dacgen::{write_from_directory, WriteConfig};
+use dawn_dacgen::{write_from_directory};
 use dirs::cache_dir;
 use std::path::PathBuf;
+use dawn_dacgen::config::WriteConfig;
 
 fn main() {
     let current_dir = std::env::current_dir().unwrap().join("assets");
@@ -11,9 +12,9 @@ fn main() {
 
     // Make compression none in debug mode for faster builds
     let compression_level = if std::env::var("PROFILE").unwrap() == "release" {
-        CompressionLevel::Balanced
+        CompressionLevel::Default
     } else {
-        CompressionLevel::Fast
+        CompressionLevel::None
     };
 
     write_from_directory(
