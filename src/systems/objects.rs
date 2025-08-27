@@ -34,13 +34,6 @@ fn map_assets_handler(
                 insert.insert(id, ObjectMesh(mesh.clone()));
             }
         }
-        AssetHubEvent::AssetLoaded(id) if *id == "barrel_material".into() => {
-            let material = hub.get_typed::<Material>("barrel_material".into()).unwrap();
-            for (id, _) in f {
-                insert.insert(id, ObjectMaterial(material.clone()));
-            }
-        }
-
         _ => {}
     }
 }
