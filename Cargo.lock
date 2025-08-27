@@ -92,15 +92,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0674a1ddeecb70197781e945de4b3b8ffb61fa939a5597bcf48503737663100"
 
 [[package]]
-name = "approx"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f2a05fd1bd10b2527e20a2cd32d8873d115b8b39fe219ee25f42a8aca6ba278"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "arbitrary"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -342,16 +333,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
 
 [[package]]
-name = "cgmath"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a98d30140e3296250832bbaaff83b27dcd6fa3cc70fb6f1f3e5c9c0023b5317"
-dependencies = [
- "approx",
- "num-traits",
-]
-
-[[package]]
 name = "color_quant"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -564,6 +545,7 @@ dependencies = [
  "bincode",
  "brotli",
  "dawn-assets",
+ "dawn-util",
  "log",
  "serde",
  "serde_bytes",
@@ -577,8 +559,9 @@ dependencies = [
  "blake3",
  "dawn-assets",
  "dawn-dac",
- "easy-gltf",
+ "dawn-util",
  "glam",
+ "gltf",
  "image",
  "log",
  "md5",
@@ -623,6 +606,9 @@ dependencies = [
 [[package]]
 name = "dawn-util"
 version = "0.1.0"
+dependencies = [
+ "log",
+]
 
 [[package]]
 name = "digest"
@@ -674,18 +660,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "easy-gltf"
-version = "1.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1203d5e3b06d11431cd680b7d89fe3565ea797e948a3869aa791f10855b02175"
-dependencies = [
- "base64 0.22.1",
- "cgmath",
- "gltf",
- "image",
 ]
 
 [[package]]
