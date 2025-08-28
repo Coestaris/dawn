@@ -162,13 +162,6 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
     }
 
     #[inline(always)]
-    fn end(&mut self, _: &mut RendererBackend<CustomPassEvent>) -> PassExecuteResult {
-        ShaderProgram::unbind();
-        Texture::unbind(bindings::TEXTURE_2D, 0);
-        PassExecuteResult::default()
-    }
-
-    #[inline(always)]
     fn on_renderable(
         &mut self,
         _: &mut RendererBackend<CustomPassEvent>,
@@ -178,37 +171,34 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
             // Load view matrix into shader
             let program = shader.shader.cast();
             program.set_uniform(shader.model_location, renderable.model);
-        }
 
-        PassExecuteResult::default()
-    }
-
-    #[inline(always)]
-    fn on_mesh(
-        &mut self,
-        _: &mut RendererBackend<CustomPassEvent>,
-        mesh: &Mesh,
-    ) -> PassExecuteResult {
-        if let None = self.shader {
-            return PassExecuteResult::default();
-        }
-
-        mesh.draw(|submesh| {
-            if let Some(material) = &submesh.material {
-                let material = material.cast::<Material>();
-                if let Some(texture) = &material.base_color_texture {
-                    let texture = texture.cast::<Texture>();
-                    texture.bind(0);
+            let mesh = renderable.mesh.cast();
+            mesh.draw(|submesh| {
+                if let Some(material) = &submesh.material {
+                    let material = material.cast::<Material>();
+                    if let Some(texture) = &material.base_color_texture {
+                        let texture = texture.cast::<Texture>();
+                        texture.bind(0);
+                    } else {
+                        // Bind a default white texture if no texture is set
+                        self.missing_texture.bind(0);
+                    }
                 } else {
                     // Bind a default white texture if no texture is set
                     self.missing_texture.bind(0);
                 }
-            } else {
-                // Bind a default white texture if no texture is set
-                self.missing_texture.bind(0);
-            }
 
-            (false, PassExecuteResult::default())
-        })
+                (false, PassExecuteResult::default())
+            })
+        } else {
+            PassExecuteResult::default()
+        }
+    }
+
+    #[inline(always)]
+    fn end(&mut self, _: &mut RendererBackend<CustomPassEvent>) -> PassExecuteResult {
+        ShaderProgram::unbind();
+        Texture::unbind(bindings::TEXTURE_2D, 0);
+        PassExecuteResult::default()
     }
 }
