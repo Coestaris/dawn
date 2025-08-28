@@ -189,12 +189,11 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         _: &mut RendererBackend<CustomPassEvent>,
         mesh: &Mesh,
     ) -> PassExecuteResult {
-        let mut result = PassExecuteResult::default();
         if let None = self.shader {
-            return result;
+            return PassExecuteResult::default();
         }
 
-        for submesh in &mesh.submesh {
+        mesh.draw(|submesh| {
             if let Some(material) = &submesh.material {
                 let material = material.cast::<Material>();
                 if let Some(texture) = &material.base_color_texture {
@@ -209,9 +208,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
                 self.missing_texture.bind(0);
             }
 
-            result += submesh.draw()
-        }
-
-        result
+            (false, PassExecuteResult::default())
+        })
     }
 }
