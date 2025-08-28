@@ -20,5 +20,4 @@ width = 128
 height = 128
 
 # By default textures stored in RGB8 format. For example:
-[properties.Texture.pixel_format.RGBA.U8]
-# [properties.Texture.pixel_format.R8]
+# pixel_format = "RGBA8"
