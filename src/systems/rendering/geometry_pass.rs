@@ -16,11 +16,11 @@ use log::info;
 
 fn create_missing_texture() -> Texture {
     // Create a 2x2 checkerboard pattern (magenta and black)
-    let data: [u8; 16] = [
-        255, 0, 255, 255, // Magenta
-        0, 0, 0, 255, // Black
-        0, 0, 0, 255, // Black
-        255, 0, 255, 255, // Magenta
+    let data: [u8; 12] = [
+        255, 0, 255, // Magenta
+        0, 0, 0, // Black
+        0, 0, 0, // Black
+        255, 0, 255, // Magenta
     ];
 
     let texture_ir = IRTexture {
@@ -29,7 +29,7 @@ fn create_missing_texture() -> Texture {
             width: 2,
             height: 2,
         },
-        pixel_format: IRPixelFormat::RGBA(IRPixelDataType::U8),
+        pixel_format: IRPixelFormat::R8G8B8,
         use_mipmaps: false,
         min_filter: Default::default(),
         mag_filter: Default::default(),
