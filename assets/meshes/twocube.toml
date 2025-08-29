@@ -1,0 +1,8 @@
+[header]
+asset_type = "Mesh"
+
+[properties.Mesh.source]
+File = "bins/twocube.glb"
+
+[properties.Mesh]
+gen_material = true

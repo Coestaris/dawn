@@ -1,5 +1,5 @@
 use crate::systems::rendering::CustomPassEvent;
-use dawn_assets::ir::texture::{IRPixelDataType, IRPixelFormat, IRTexture, IRTextureType};
+use dawn_assets::ir::texture::{IRPixelFormat, IRTexture, IRTextureType};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::material::Material;
@@ -10,7 +10,7 @@ use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::RendererBackend;
-use glam::Mat4;
+use glam::{Mat4, UVec2};
 
 fn create_missing_texture() -> Texture {
     // Create a 2x2 checkerboard pattern (magenta and black)
@@ -41,7 +41,7 @@ fn create_missing_texture() -> Texture {
         .0
 }
 
-struct TriangleShaderContainer {
+struct GeometryShaderContainer {
     shader: TypedAsset<ShaderProgram>,
     model_location: UniformLocation,
     view_location: UniformLocation,
@@ -51,47 +51,45 @@ struct TriangleShaderContainer {
 
 pub(crate) struct GeometryPass {
     id: RenderPassTargetId,
-    shader: Option<TriangleShaderContainer>,
-    win_size: (usize, usize),
+    shader: Option<GeometryShaderContainer>,
     missing_texture: Texture,
     projection: Mat4,
     view: Mat4,
-    frame: usize,
 }
 
 impl GeometryPass {
-    pub fn new(id: RenderPassTargetId, win_size: (usize, usize)) -> Self {
+    pub fn new(id: RenderPassTargetId) -> Self {
         GeometryPass {
             id,
             shader: None,
-            win_size,
             missing_texture: create_missing_texture(),
             projection: Mat4::IDENTITY,
             view: Mat4::IDENTITY,
-            frame: 0,
         }
     }
 
-    fn update_projection(&mut self) {
+    fn calculate_projection(&mut self, win_size: UVec2) {
         self.projection = Mat4::perspective_rh(
             45.0f32.to_radians(),
-            self.win_size.0 as f32 / self.win_size.1 as f32,
+            win_size.x as f32 / win_size.y as f32,
             0.1,
             100.0,
         );
 
+        unsafe {
+            bindings::Viewport(0, 0, win_size.x as i32, win_size.y as i32);
+            bindings::Scissor(0, 0, win_size.x as i32, win_size.y as i32);
+        }
+    }
+
+    fn set_projection(&mut self) {
         if let Some(shader) = self.shader.as_mut() {
             // Load projection matrix into shader
             let program = shader.shader.cast();
-            program.bind();
+            ShaderProgram::bind(&program);
             program.set_uniform(shader.proj_location, self.projection);
             program.set_uniform(shader.base_color_texture_location, 0);
             ShaderProgram::unbind();
-        }
-
-        unsafe {
-            bindings::Viewport(0, 0, self.win_size.0 as i32, self.win_size.1 as i32);
-            bindings::Scissor(0, 0, self.win_size.0 as i32, self.win_size.1 as i32);
         }
     }
 }
@@ -110,7 +108,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         match event {
             CustomPassEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
-                self.shader = Some(TriangleShaderContainer {
+                self.shader = Some(GeometryShaderContainer {
                     shader: clone,
                     model_location: shader.cast().get_uniform_location("model").unwrap(),
                     view_location: shader.cast().get_uniform_location("view").unwrap(),
@@ -120,11 +118,11 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
                         .get_uniform_location("base_color_texture")
                         .unwrap(),
                 });
-                self.update_projection();
+                self.set_projection();
             }
-            CustomPassEvent::UpdateWindowSize(width, height) => {
-                self.win_size = (width, height);
-                self.update_projection();
+            CustomPassEvent::UpdateWindowSize(size) => {
+                self.calculate_projection(size);
+                self.set_projection();
             }
             CustomPassEvent::UpdateView(view) => {
                 self.view = view;
@@ -132,6 +130,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
             CustomPassEvent::DropAllAssets => {
                 self.shader = None;
             }
+            _ => {}
         }
     }
 
@@ -141,8 +140,6 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
 
     #[inline(always)]
     fn begin(&mut self, _: &RendererBackend<CustomPassEvent>) -> RenderResult {
-        self.frame += 1;
-
         unsafe {
             bindings::ClearColor(0.1, 0.1, 0.1, 1.0);
             bindings::ClearDepth(1.0);
@@ -152,7 +149,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         if let Some(shader) = self.shader.as_mut() {
             // Load view matrix into shader
             let program = shader.shader.cast();
-            program.bind();
+            ShaderProgram::bind(&program);
             program.set_uniform(shader.view_location, self.view);
         }
 
@@ -172,19 +169,21 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
 
             let mesh = renderable.mesh.cast();
             mesh.draw(|submesh| {
-                if let Some(material) = &submesh.material {
+                let base_color = if let Some(material) = &submesh.material {
                     let material = material.cast::<Material>();
                     if let Some(texture) = &material.base_color_texture {
                         let texture = texture.cast::<Texture>();
-                        texture.bind(0);
+                        texture
                     } else {
                         // Bind a default white texture if no texture is set
-                        self.missing_texture.bind(0);
+                        &self.missing_texture
                     }
                 } else {
                     // Bind a default white texture if no texture is set
-                    self.missing_texture.bind(0);
-                }
+                    &self.missing_texture
+                };
+
+                Texture::bind(bindings::TEXTURE_2D, base_color, 0);
 
                 (false, RenderResult::default())
             })
