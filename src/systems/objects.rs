@@ -1,6 +1,6 @@
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
-use dawn_graphics::gl::entities::material::Material;
-use dawn_graphics::gl::entities::mesh::Mesh;
+use dawn_ecs::events::TickEvent;
+use dawn_graphics::gl::mesh::Mesh;
 use dawn_graphics::renderable::{
     ObjectMaterial, ObjectMesh, ObjectPosition, ObjectRotation, ObjectScale,
 };
@@ -9,7 +9,6 @@ use evenio::entity::EntityId;
 use evenio::event::{Insert, Receiver, Sender};
 use evenio::fetch::{Fetcher, Single};
 use glam::{Quat, Vec3};
-use dawn_ecs::events::TickEvent;
 
 #[derive(Component)]
 pub struct GameObject;
@@ -28,8 +27,8 @@ fn map_assets_handler(
     mut insert: Sender<(Insert<ObjectMesh>, Insert<ObjectMaterial>)>,
 ) {
     match r.event {
-        AssetHubEvent::AssetLoaded(id) if *id == "sponza".into() => {
-            let mesh = hub.get_typed::<Mesh>("sponza".into()).unwrap();
+        AssetHubEvent::AssetLoaded(id) if *id == "barrel".into() => {
+            let mesh = hub.get_typed::<Mesh>("barrel".into()).unwrap();
             for (id, _) in f {
                 insert.insert(id, ObjectMesh(mesh.clone()));
             }

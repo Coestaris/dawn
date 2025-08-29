@@ -2,17 +2,15 @@ use crate::systems::rendering::CustomPassEvent;
 use dawn_assets::ir::texture::{IRPixelDataType, IRPixelFormat, IRTexture, IRTextureType};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
-use dawn_graphics::gl::entities::material::Material;
-use dawn_graphics::gl::entities::mesh::Mesh;
-use dawn_graphics::gl::entities::shader_program::{ShaderProgram, UniformLocation};
-use dawn_graphics::gl::entities::texture::Texture;
+use dawn_graphics::gl::material::Material;
+use dawn_graphics::gl::raii::shader_program::{ShaderProgram, UniformLocation};
+use dawn_graphics::gl::raii::texture::Texture;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::PassExecuteResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::RendererBackend;
-use glam::{Mat4, Vec3};
-use log::info;
+use glam::Mat4;
 
 fn create_missing_texture() -> Texture {
     // Create a 2x2 checkerboard pattern (magenta and black)

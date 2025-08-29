@@ -5,7 +5,6 @@ use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::TypedAsset;
 use dawn_graphics::construct_chain;
 use dawn_graphics::gl::bindings;
-use dawn_graphics::gl::entities::shader_program::ShaderProgram;
 use dawn_graphics::input::InputEvent;
 use dawn_graphics::passes::chain::ChainCons;
 use dawn_graphics::passes::chain::ChainNil;
@@ -19,6 +18,7 @@ use evenio::fetch::Single;
 use evenio::prelude::World;
 use glam::Mat4;
 use dawn_ecs::events::ExitEvent;
+use dawn_graphics::gl::raii::shader_program::ShaderProgram;
 
 mod aabb_pass;
 mod geometry_pass;
@@ -91,6 +91,7 @@ pub fn setup_rendering_system(
         texture_factory_binding: Some(bindings.texture),
         mesh_factory_binding: Some(bindings.mesh),
         material_factory_binding: Some(bindings.material),
+        font_factory_binding: Some(bindings.font),
     };
 
     let geometry_pass_id = RenderPassTargetId::new();
