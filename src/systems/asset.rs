@@ -6,7 +6,8 @@ use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::{BasicReader, ReaderBinding};
 use dawn_assets::{AssetHeader, AssetID, AssetType};
 use dawn_dac::reader::{read_asset, read_manifest};
-use dawn_dac::Manifest;
+use dawn_dac::{ContainerError, Manifest};
+use dawn_ecs::events::ExitEvent;
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::prelude::World;
@@ -16,7 +17,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 use std::time::Duration;
-use dawn_ecs::events::ExitEvent;
 
 #[derive(Component)]
 struct ReaderHandle {
@@ -49,8 +49,14 @@ impl ReaderHandle {
                 info!("Asset reader thread started");
                 while !thread_stop_signal.load(std::sync::atomic::Ordering::Relaxed) {
                     basic_reader.process_events(
-                        || Self::enumerate(),
-                        |aid| Self::load(aid),
+                        || {
+                            let res = Self::enumerate()?;
+                            Ok(res)
+                        },
+                        |aid| {
+                            let res = Self::load(aid)?;
+                            Ok(res)
+                        },
                         Duration::from_millis(100),
                     );
                 }
@@ -73,12 +79,11 @@ impl ReaderHandle {
         PathBuf::from(env!("DAC_FILE"))
     }
 
-    fn enumerate() -> Result<Vec<AssetHeader>, String> {
+    fn enumerate() -> Result<Vec<AssetHeader>, ContainerError> {
         info!("Enumerating assets");
         let file = std::fs::File::open(Self::dac_path()).unwrap();
         let mut reader = std::io::BufReader::new(file);
-        let manifest = read_manifest(&mut reader)
-            .map_err(|e| format!("Failed to read asset manifest: {}", e))?;
+        let manifest = read_manifest(&mut reader)?;
 
         #[rustfmt::skip]
             fn log(manifest: &Manifest) {
@@ -90,15 +95,15 @@ impl ReaderHandle {
                 debug!("> Tool: {} (version {})", manifest.tool, manifest.tool_version);
                 debug!("> Assets: {}", manifest.headers.len());
             }
+
         log(&manifest);
         Ok(manifest.headers)
     }
 
-    fn load(aid: AssetID) -> Result<IRAsset, String> {
+    fn load(aid: AssetID) -> Result<IRAsset, ContainerError> {
         let file = std::fs::File::open(Self::dac_path()).unwrap();
         let mut reader = std::io::BufReader::new(file);
         read_asset(&mut reader, aid.clone())
-            .map_err(|e| format!("Failed to read asset {}: {}", aid, e))
     }
 }
 
@@ -107,6 +112,7 @@ pub struct FactoryBindings {
     pub texture: FactoryBinding,
     pub mesh: FactoryBinding,
     pub material: FactoryBinding,
+    pub font: FactoryBinding,
 }
 
 fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut sender: Sender<ExitEvent>) {
@@ -134,6 +140,7 @@ pub fn setup_assets_system(world: &mut World) -> FactoryBindings {
         texture: hub.get_factory_biding(AssetType::Texture),
         mesh: hub.get_factory_biding(AssetType::Mesh),
         material: hub.get_factory_biding(AssetType::Material),
+        font: hub.get_factory_biding(AssetType::Font),
     };
 
     hub.attach_to_ecs(world);
