@@ -1,6 +1,6 @@
 use crate::systems::rendering::CustomPassEvent;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
-use dawn_graphics::passes::result::PassExecuteResult;
+use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::RendererBackend;
@@ -40,7 +40,7 @@ impl RenderPass<CustomPassEvent> for AABBPass {
         &mut self,
         _: &mut RendererBackend<CustomPassEvent>,
         renderable: &Renderable,
-    ) -> PassExecuteResult {
-        PassExecuteResult::ok(0, 0)
+    ) -> RenderResult {
+        RenderResult::ok(0, 0)
     }
 }

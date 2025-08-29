@@ -6,7 +6,7 @@ use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::raii::shader_program::{ShaderProgram, UniformLocation};
 use dawn_graphics::gl::raii::texture::Texture;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
-use dawn_graphics::passes::result::PassExecuteResult;
+use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::RendererBackend;
@@ -140,7 +140,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
     }
 
     #[inline(always)]
-    fn begin(&mut self, _: &RendererBackend<CustomPassEvent>) -> PassExecuteResult {
+    fn begin(&mut self, _: &RendererBackend<CustomPassEvent>) -> RenderResult {
         self.frame += 1;
 
         unsafe {
@@ -156,7 +156,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
             program.set_uniform(shader.view_location, self.view);
         }
 
-        PassExecuteResult::default()
+        RenderResult::default()
     }
 
     #[inline(always)]
@@ -164,7 +164,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         &mut self,
         _: &mut RendererBackend<CustomPassEvent>,
         renderable: &Renderable,
-    ) -> PassExecuteResult {
+    ) -> RenderResult {
         if let Some(shader) = self.shader.as_mut() {
             // Load view matrix into shader
             let program = shader.shader.cast();
@@ -186,17 +186,17 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
                     self.missing_texture.bind(0);
                 }
 
-                (false, PassExecuteResult::default())
+                (false, RenderResult::default())
             })
         } else {
-            PassExecuteResult::default()
+            RenderResult::default()
         }
     }
 
     #[inline(always)]
-    fn end(&mut self, _: &mut RendererBackend<CustomPassEvent>) -> PassExecuteResult {
+    fn end(&mut self, _: &mut RendererBackend<CustomPassEvent>) -> RenderResult {
         ShaderProgram::unbind();
         Texture::unbind(bindings::TEXTURE_2D, 0);
-        PassExecuteResult::default()
+        RenderResult::default()
     }
 }
