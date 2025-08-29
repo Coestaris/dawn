@@ -34,7 +34,13 @@ pub enum AndThen {
 pub fn load_assets(hub: &mut AssetHub) {
     hub.request(AssetRequest::Enumerate);
     hub.request(AssetRequest::Load(AssetRequestQuery::ByID(
-        "geometry".into(),
+        "geometry_shader".into(),
+    )));
+    hub.request(AssetRequest::Load(AssetRequestQuery::ByID(
+        "glyph_shader".into(),
+    )));
+    hub.request(AssetRequest::Load(AssetRequestQuery::ByID(
+        "arial_geo".into(),
     )));
     hub.request(AssetRequest::Load(AssetRequestQuery::ByID("barrel".into())));
 }
@@ -49,6 +55,10 @@ pub fn free_assets(hub: &mut AssetHub) -> AssetRequestID {
     //   Materials depends on Textures so cannot be freed first
     hub.request(AssetRequest::FreeNoDeps(AssetRequestQuery::ByType(
         AssetType::Material,
+    )));
+    // Same with Fonts
+    hub.request(AssetRequest::FreeNoDeps(AssetRequestQuery::ByType(
+        AssetType::Font,
     )));
     hub.request(AssetRequest::Free(AssetRequestQuery::All))
 }
@@ -77,6 +87,7 @@ fn drop_all_assets_handler(
         ids.aabb,
         CustomPassEvent::DropAllAssets,
     ));
+    sender.send(RenderPassEvent::new(ids.ui, CustomPassEvent::DropAllAssets));
 
     // Remove all assets from the ECS
     for entity in f.iter() {
