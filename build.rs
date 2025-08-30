@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use dawn_dacgen::config::WriteConfig;
 
 fn main() {
+    build_info_build::build_script();
+
     let current_dir = std::env::current_dir().unwrap().join("assets");
     let output = PathBuf::from(std::env::var("OUT_DIR").unwrap()).join("assets.dac");
     let file = std::fs::File::create(&output).unwrap();
