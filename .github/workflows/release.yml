@@ -28,11 +28,17 @@ jobs:
       run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libgl1-mesa-dev
     - name: Build
       run: cargo build --verbose --release
-    - name: Upload artifact
+    - name: Upload executable artifact
       uses: actions/upload-artifact@v4
       with:
         name: build-linux-x11
         path: target/release/dawn
+        retention-days: 5
+    - name: Upload assets artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: assets
+        path: target/release/assets.dac
         retention-days: 5
 
   build-windows:
@@ -71,6 +77,11 @@ jobs:
       uses: actions/download-artifact@v5
       with:
         name: build-windows
+    - name: Download assets artifact
+      uses: actions/download-artifact@v5
+      with:
+        name: assets
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -81,22 +92,33 @@ jobs:
         release_name: Release v${{ github.run_number }}
         draft: false
         prerelease: false
+
     - name: Upload Linux binary to Release
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dawn
+        asset_path: ./dawn-v${{ github.run_number }}-linux-x11
         asset_name: dawn-linux-x11
         asset_content_type: application/octet-stream
+
     - name: Upload Windows binary to Release
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dawn.exe
+        asset_path: ./dawn-v${{ github.run_number }}-windows.exe
         asset_name: dawn-windows.exe
         asset_content_type: application/octet-stream
 
+    - name: Upload assets to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./assets.dac
+        asset_name: assets.dac
+        asset_content_type: application/octet-stream

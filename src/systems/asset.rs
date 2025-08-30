@@ -76,19 +76,22 @@ impl ReaderHandle {
     }
 
     fn dac_path() -> PathBuf {
-        let path = PathBuf::from(env!("DAC_FILE"));
-        if !path.exists() {
-            // Try to find file with the same name in the current directory
-            let current_dir_path = std::env::current_dir()
-                .unwrap()
-                .join(path.file_name().unwrap());
-            if current_dir_path.exists() {
-                current_dir_path
-            } else {
-                panic!("DAC file not found: {:?}", path);
-            }
-        } else {
+        // Try to find file with the same name in the current directory
+        let path = std::env::current_dir().unwrap().join("assets.dac");
+        if path.exists() {
             path
+        } else {
+            let exe_dir = std::env::current_exe()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .to_path_buf();
+            let path = exe_dir.join("assets.dac");
+            if path.exists() {
+                path
+            } else {
+                panic!("DAC file not found. Please ensure 'assets.dac' is present in the current directory or the executable directory.");
+            }
         }
     }
 

@@ -34,7 +34,12 @@ fn main() {
     }
 
     let current_dir = std::env::current_dir().unwrap().join("assets");
-    let output = PathBuf::from(std::env::var("OUT_DIR").unwrap()).join("assets.dac");
+
+    let mut target_dir: PathBuf = std::env::var_os("CARGO_MANIFEST_DIR").unwrap().into();
+    target_dir.push("target");
+    target_dir.push(std::env::var_os("PROFILE").unwrap()); // "debug" or "release"
+    let output = target_dir.join("assets.dac");
+
     let file = std::fs::File::create(&output).unwrap();
     let mut writer = std::io::BufWriter::new(file);
 
@@ -62,5 +67,4 @@ fn main() {
     .unwrap();
 
     println!("cargo:rerun-if-changed=assets");
-    println!("cargo:rustc-env=DAC_FILE={}", output.display());
 }
