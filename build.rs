@@ -1,11 +1,37 @@
 use dawn_dac::{ChecksumAlgorithm, CompressionLevel, ReadMode};
-use dawn_dacgen::{write_from_directory};
+use dawn_dacgen::config::WriteConfig;
+use dawn_dacgen::write_from_directory;
 use dirs::cache_dir;
 use std::path::PathBuf;
-use dawn_dacgen::config::WriteConfig;
+use winresource::VersionInfo;
 
 fn main() {
-    build_info_build::build_script();
+    let build_info = build_info_build::build_script().build();
+
+    if std::env::var("CARGO_CFG_TARGET_OS").unwrap() == "windows" {
+        let mut res = winresource::WindowsResource::new();
+        res.set_icon("assets/icon.ico");
+
+        //  MAJOR << 48 | MINOR << 32 | PATCH << 16 | RELEASE)
+        macro_rules! version {
+            ($major:expr, $minor:expr, $patch:expr, $release:expr) => {
+                (($major as u64) << 48)
+                    | (($minor as u64) << 32)
+                    | (($patch as u64) << 16)
+                    | ($release as u64)
+            };
+        }
+
+        let version_code = version!(
+            build_info.crate_info.version.major,
+            build_info.crate_info.version.minor,
+            build_info.crate_info.version.patch,
+            0
+        );
+        res.set_version_info(VersionInfo::FILEVERSION, version_code);
+        res.set_version_info(VersionInfo::PRODUCTVERSION, version_code);
+        res.compile().unwrap();
+    }
 
     let current_dir = std::env::current_dir().unwrap().join("assets");
     let output = PathBuf::from(std::env::var("OUT_DIR").unwrap()).join("assets.dac");
