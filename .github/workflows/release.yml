@@ -62,14 +62,15 @@ jobs:
         profile: minimal
     - name: Cache cargo registry
       uses: Swatinem/rust-cache@v2
-    - name: Build
-      run: cargo build --verbose --release
 
     - name: Get Current Git Tag
       id: get_current_tag
       run: echo "TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
     - name: Update version in Cargo.toml
       run: cargo install cargo-edit && cargo set-version ${TAG#v}
+
+    - name: Build
+      run: cargo build --verbose --release --features no_assets
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
