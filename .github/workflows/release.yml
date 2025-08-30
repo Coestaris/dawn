@@ -29,7 +29,7 @@ jobs:
     - name: Build
       run: cargo build --verbose --release
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: build-linux-x11
         path: target/release/dawn
@@ -52,7 +52,7 @@ jobs:
     - name: Build
       run: cargo build --verbose --release
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: build-windows
         path: target/release/dawn
@@ -64,11 +64,11 @@ jobs:
     needs: [build-linux-x11, build-windows]
     steps:
     - name: Download Linux artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v5
       with:
         name: build-linux-x11
     - name: Download Windows artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v5
       with:
         name: build-windows
     - name: Create Release
