@@ -87,13 +87,14 @@ impl ReaderHandle {
 
         #[rustfmt::skip]
             fn log(manifest: &Manifest) {
-                debug!("> Version: {}", manifest.version.as_ref().unwrap_or(&"unknown".to_string()));
-                debug!("> Author: {}", manifest.author.as_ref().unwrap_or(&"unknown".to_string()));
-                debug!("> Description: {}", manifest.description.as_ref().unwrap_or(&"unknown".to_string()));
-                debug!("> License: {}", manifest.license.as_ref().unwrap_or(&"unknown".to_string()));
-                debug!("> Created: {}", format_system_time(manifest.created).unwrap());
-                debug!("> Tool: {} (version {})", manifest.tool, manifest.tool_version);
-                debug!("> Assets: {}", manifest.headers.len());
+                info!("DAC Manifest:");
+                info!("  Version: {}", manifest.version.as_ref().unwrap_or(&"unknown".to_string()));
+                info!("  Author: {}", manifest.author.as_ref().unwrap_or(&"unknown".to_string()));
+                info!("  Description: {}", manifest.description.as_ref().unwrap_or(&"unknown".to_string()));
+                info!("  License: {}", manifest.license.as_ref().unwrap_or(&"unknown".to_string()));
+                info!("  Created: {}", format_system_time(manifest.created).unwrap());
+                info!("  Tool: {} (version {})", manifest.tool, manifest.tool_version);
+                info!("  Assets: {}", manifest.headers.len());
             }
 
         log(&manifest);
@@ -118,8 +119,7 @@ pub struct FactoryBindings {
 fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut sender: Sender<ExitEvent>) {
     match r.event {
         AssetHubEvent::RequestFinished(request, Err(message)) => {
-            error!("Asset {} request failed: {}", request, message);
-            sender.send(ExitEvent);
+            panic!("Asset Request Failed {:?}: {:?}", request, message);
         }
         _ => {}
     }

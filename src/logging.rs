@@ -1,6 +1,8 @@
 use ansi_term::Color::{Blue, Cyan, Green, Red, Yellow};
-use log::{Level, Log, Metadata, Record};
+use build_info::VersionControl;
+use log::{Level, LevelFilter};
 use std::mem;
+use std::path::PathBuf;
 use std::ptr::addr_of_mut;
 use std::time::SystemTime;
 /* Use a simple format instead of something like strftime,
@@ -39,43 +41,67 @@ pub fn format_system_time(system_time: SystemTime) -> Option<String> {
     ))
 }
 
-pub struct CommonLogger;
+fn log_build_info() {
+    build_info::build_info!(fn build_info);
+    let bi = build_info();
 
-impl Log for CommonLogger {
-    fn enabled(&self, _: &Metadata) -> bool {
-        true
+    log::info!("Build Information:");
+    log::info!("  Timestamp: {}", bi.timestamp);
+    log::info!("  Profile: {}", bi.profile);
+    log::info!("  Optimizations: {}", bi.optimization_level);
+    log::info!("  Crate info: {}", bi.crate_info);
+    log::info!("  Target: {}", bi.target);
+    log::info!("  Compiler: {}", bi.compiler);
+    if let Some(VersionControl::Git(git)) = &bi.version_control {
+        log::info!("  VCS (Git) Information:");
+        log::info!("    Commit: {} ({})", git.commit_id, git.commit_timestamp);
+        log::info!("    Is dirty: {}", git.dirty);
+        log::info!("    Refs: {:?}, {:?}", git.branch, git.tags);
     }
+}
 
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            fn colored_level(level: Level) -> ansi_term::Colour {
-                match level {
-                    Level::Error => Red,
-                    Level::Warn => Yellow,
-                    Level::Info => Green,
-                    Level::Debug => Blue,
-                    Level::Trace => Cyan,
-                }
-            }
+pub fn setup_logging(level: LevelFilter, file_logging: Option<PathBuf>, colored: bool) {
+    let mut dispatch = fern::Dispatch::new().level(level).chain(std::io::stdout());
 
-            let formatted_date =
-                format_system_time(SystemTime::now()).unwrap_or("unknown".to_string());
-
-            println!(
+    if colored {
+        dispatch = dispatch.format(|out, message, record| {
+            out.finish(format_args!(
                 "[{}][{:>19}][{:>14}]: {} [{}:{}]",
-                Cyan.paint(formatted_date),
+                Cyan.paint(format_system_time(SystemTime::now()).unwrap_or("unknown".to_string())),
                 Yellow
                     .paint(std::thread::current().name().unwrap_or("main"))
                     .to_string(),
-                colored_level(record.level())
-                    .paint(record.level().to_string())
-                    .to_string(),
-                record.args(),
+                match record.level() {
+                    Level::Error => Red.paint(record.level().to_string()).to_string(),
+                    Level::Warn => Yellow.paint(record.level().to_string()).to_string(),
+                    Level::Info => Green.paint(record.level().to_string()).to_string(),
+                    Level::Debug => Blue.paint(record.level().to_string()).to_string(),
+                    Level::Trace => Cyan.paint(record.level().to_string()).to_string(),
+                },
+                message,
                 Green.paint(record.file().unwrap_or("unknown")),
                 Green.paint(record.line().unwrap_or(0).to_string())
-            );
-        }
+            ));
+        })
+    } else {
+        dispatch = dispatch.format(|out, message, record| {
+            out.finish(format_args!(
+                "[{}][{:>19}][{:>14}]: {} [{}:{}]",
+                format_system_time(SystemTime::now()).unwrap_or("unknown".to_string()),
+                std::thread::current().name().unwrap_or("main"),
+                record.level(),
+                message,
+                record.file().unwrap_or("unknown"),
+                record.line().unwrap_or(0)
+            ));
+        });
     }
 
-    fn flush(&self) {}
+    if let Some(path) = file_logging {
+        dispatch = dispatch.chain(fern::log_file(path).unwrap());
+    }
+
+    dispatch.apply().unwrap();
+
+    log_build_info();
 }
