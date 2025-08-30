@@ -11,11 +11,13 @@ members = [
 
 [package]
 name = "dawn"
+# The version is derived from git tags by GitHub Actions
 edition = "2021"
 
 [features]
 default = ["gl"]
 gl = ["dawn-graphics/gl"]
+no_assets = []
 
 [build-dependencies]
 dawn-dacgen = { path = "lib/crates/dacgen" }
