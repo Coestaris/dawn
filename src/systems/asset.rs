@@ -104,11 +104,11 @@ impl ReaderHandle {
         #[rustfmt::skip]
             fn log(manifest: &Manifest) {
                 info!("DAC Manifest:");
-                info!("  Version: {}", manifest.version.as_ref().unwrap_or(&"unknown".to_string()));
-                info!("  Author: {}", manifest.author.as_ref().unwrap_or(&"unknown".to_string()));
-                info!("  Description: {}", manifest.description.as_ref().unwrap_or(&"unknown".to_string()));
-                info!("  License: {}", manifest.license.as_ref().unwrap_or(&"unknown".to_string()));
-                info!("  Created: {}", format_system_time(manifest.created).unwrap());
+                info!("  Version: {:?}", manifest.version);
+                info!("  Author: {:?}", manifest.author);
+                info!("  Description: {:?}", manifest.description);
+                info!("  License: {:?}", manifest.license);
+                info!("  Created: {:?}", manifest.created);
                 info!("  Tool: {} (version {})", manifest.tool, manifest.tool_version);
                 info!("  Assets: {}", manifest.headers.len());
             }

@@ -660,7 +660,7 @@ dependencies = [
 
 [[package]]
 name = "dawn-assets"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "crossbeam-channel",
@@ -676,7 +676,7 @@ dependencies = [
 
 [[package]]
 name = "dawn-audio"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "cpal",
@@ -693,7 +693,7 @@ dependencies = [
 
 [[package]]
 name = "dawn-dac"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -708,10 +708,12 @@ dependencies = [
 
 [[package]]
 name = "dawn-dacgen"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "blake3",
+ "build-info",
+ "build-info-build",
  "dawn-assets",
  "dawn-dac",
  "dawn-util",
@@ -734,7 +736,7 @@ dependencies = [
 
 [[package]]
 name = "dawn-ecs"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "dawn-util",
  "evenio",
@@ -744,7 +746,7 @@ dependencies = [
 
 [[package]]
 name = "dawn-graphics"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "crossbeam-channel",
@@ -763,7 +765,7 @@ dependencies = [
 
 [[package]]
 name = "dawn-util"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "log",
 ]
