@@ -636,7 +636,7 @@ checksum = "0c87e182de0887fd5361989c677c4e8f5000cd9491d6d563161a8f3a5519fc7f"
 
 [[package]]
 name = "dawn"
-version = "0.2.0"
+version = "0.0.0"
 dependencies = [
  "ansi_term",
  "build-info",
