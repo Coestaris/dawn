@@ -119,8 +119,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dawn-${TAG}-linux-x11
-        asset_name: dawn-linux-x11
+        asset_path: ./build-linux-x11
+        asset_name: dawn-${TAG}-linux-x11
         asset_content_type: application/octet-stream
 
     - name: Upload Windows binary to Release
@@ -129,8 +129,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dawn-${TAG}-windows.exe
-        asset_name: dawn-windows.exe
+        asset_path: ./build-windows
+        asset_name: dawn-${TAG}-windows.exe
         asset_content_type: application/octet-stream
 
     - name: Upload assets to Release
