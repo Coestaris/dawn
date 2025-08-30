@@ -28,6 +28,9 @@ jobs:
     - name: Cache cargo registry
       uses: Swatinem/rust-cache@v2
 
+    - name: Install global dependencies
+      run: apt-get update && apt-get install -y libasound2-dev
+
     - name: Build
       run: cargo build --verbose
     - name: Run tests
