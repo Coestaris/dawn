@@ -108,8 +108,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ steps.get_latest_tag.outputs.tag }}
-        release_name: Release v${{ steps.get_latest_tag.outputs.tag }}
+        tag_name: ${TAG}
+        release_name: Release ${TAG}
         draft: false
         prerelease: false
 
@@ -119,7 +119,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dawn-v${{ steps.get_latest_tag.outputs.tag }}-linux-x11
+        asset_path: ./dawn-${TAG}-linux-x11
         asset_name: dawn-linux-x11
         asset_content_type: application/octet-stream
 
@@ -129,7 +129,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dawn-v${{ steps.get_latest_tag.outputs.tag }}-windows.exe
+        asset_path: ./dawn-${TAG}-windows.exe
         asset_name: dawn-windows.exe
         asset_content_type: application/octet-stream
 
