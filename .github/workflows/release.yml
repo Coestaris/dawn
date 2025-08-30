@@ -99,7 +99,7 @@ jobs:
         name: assets
 
     - name: Get Current Git Tag
-      id: get_current_tag
+      id: get_latest_tag
       run: echo "TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
 
     - name: Create Release
