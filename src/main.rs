@@ -1,3 +1,6 @@
+// Do not display a console window on Windows
+#![windows_subsystem = "windows"]
+
 use crate::components::fcam::FreeCamera;
 use crate::components::input::InputHolder;
 use crate::logging::setup_logging;

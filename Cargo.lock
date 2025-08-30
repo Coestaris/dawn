@@ -636,7 +636,7 @@ checksum = "0c87e182de0887fd5361989c677c4e8f5000cd9491d6d563161a8f3a5519fc7f"
 
 [[package]]
 name = "dawn"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "ansi_term",
  "build-info",
@@ -655,6 +655,7 @@ dependencies = [
  "libc",
  "log",
  "tinyrand",
+ "winresource",
 ]
 
 [[package]]
@@ -3673,6 +3674,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3edebf492c8125044983378ecb5766203ad3b4c2f7a922bd7dd207f6d443e95"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "winresource"
+version = "0.1.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edcacf11b6f48dd21b9ba002f991bdd5de29b2da8cc2800412f4b80f677e4957"
+dependencies = [
+ "toml 0.8.23",
+ "version_check",
 ]
 
 [[package]]

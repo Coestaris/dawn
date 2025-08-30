@@ -76,7 +76,20 @@ impl ReaderHandle {
     }
 
     fn dac_path() -> PathBuf {
-        PathBuf::from(env!("DAC_FILE"))
+        let path = PathBuf::from(env!("DAC_FILE"));
+        if !path.exists() {
+            // Try to find file with the same name in the current directory
+            let current_dir_path = std::env::current_dir()
+                .unwrap()
+                .join(path.file_name().unwrap());
+            if current_dir_path.exists() {
+                current_dir_path
+            } else {
+                panic!("DAC file not found: {:?}", path);
+            }
+        } else {
+            path
+        }
     }
 
     fn enumerate() -> Result<Vec<AssetHeader>, ContainerError> {
