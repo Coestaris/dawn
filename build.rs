@@ -1,4 +1,4 @@
-use dawn_dac::{ChecksumAlgorithm, CompressionLevel, ReadMode};
+use dawn_dac::{ChecksumAlgorithm, CompressionLevel, ReadMode, Version};
 use dawn_dacgen::config::WriteConfig;
 use dawn_dacgen::write_from_directory;
 use dirs::cache_dir;
@@ -61,7 +61,12 @@ fn main() {
                 cache_dir: cache_dir().unwrap().join("dawn_cache"),
                 author: Some("Coestaris <vk_vm@ukr.net>".to_string()),
                 description: Some("DAWN assets".to_string()),
-                version: Some("0.1.0".to_string()),
+                version: Some(Version::new(
+                    build_info.crate_info.version.major as u16,
+                    build_info.crate_info.version.minor as u16,
+                    build_info.crate_info.version.patch as u16,
+                    None,
+                )),
                 license: Some("MIT".to_string()),
             },
         )
