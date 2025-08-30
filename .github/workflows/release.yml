@@ -61,7 +61,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: build-windows
-        path: target/release/dawn
+        path: target/release/dawn.exe
         retention-days: 5
 
 
