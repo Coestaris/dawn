@@ -1,3 +1,4 @@
+use crate::components::imui::UICommand;
 use crate::systems::rendering::CustomPassEvent;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
@@ -9,6 +10,8 @@ use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::RendererBackend;
 use glam::{Mat4, UVec2, Vec2, Vec3, Vec4};
+use log::warn;
+use triple_buffer::Output;
 
 struct GlyphShaderContainer {
     shader: TypedAsset<ShaderProgram>,
@@ -22,16 +25,16 @@ pub(crate) struct UIPass {
     id: RenderPassTargetId,
     shader: Option<GlyphShaderContainer>,
     projection: Mat4,
-    font: Option<TypedAsset<Font>>,
+    stream: Output<Vec<UICommand>>,
 }
 
 impl UIPass {
-    pub fn new(id: RenderPassTargetId) -> Self {
+    pub fn new(id: RenderPassTargetId, stream: Output<Vec<UICommand>>) -> Self {
         UIPass {
             id,
             shader: None,
             projection: Mat4::IDENTITY,
-            font: None,
+            stream,
         }
     }
 
@@ -65,7 +68,6 @@ impl RenderPass<CustomPassEvent> for UIPass {
         match event {
             CustomPassEvent::DropAllAssets => {
                 self.shader = None;
-                self.font = None;
             }
             CustomPassEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
@@ -83,9 +85,7 @@ impl RenderPass<CustomPassEvent> for UIPass {
                 self.calculate_projection(size);
                 self.set_projection();
             }
-            CustomPassEvent::UpdateFont(font) => {
-                self.font = Some(font.clone());
-            }
+
             _ => {}
         }
     }
@@ -100,9 +100,6 @@ impl RenderPass<CustomPassEvent> for UIPass {
         if let None = self.shader {
             return RenderResult::default();
         }
-        if let None = self.font {
-            return RenderResult::default();
-        }
 
         // Disable depth testing for UI
         unsafe {
@@ -112,23 +109,55 @@ impl RenderPass<CustomPassEvent> for UIPass {
             bindings::Disable(bindings::CULL_FACE);
         }
 
-        let render = StringRender::new(
-            self.font.as_ref().unwrap(),
-            self.shader.as_ref().unwrap(),
-            Vec4::new(1.0, 1.0, 1.0, 1.0),
-            0.6,
-        );
+        let commands = self.stream.read();
+        let mut result = RenderResult::default();
 
-        render.render(
-            vec![
-                RenderCommand::Text("Hello, ".to_string()),
-                RenderCommand::Color(Vec4::new(1.0, 0.0, 0.0, 1.0)),
-                RenderCommand::Text("world!".to_string()),
-                RenderCommand::Color(Vec4::new(0.0, 1.0, 0.0, 1.0)),
-                RenderCommand::Text("\nThis is a UI Pass.".to_string()),
-            ],
-            Vec2::new(0.0, 0.0),
-        );
+        let mut style = None;
+        let mut color = Vec4::new(1.0, 1.0, 1.0, 1.0);
+
+        for command in commands {
+            match command {
+                UICommand::ApplyStyle(new_style) => {
+                    style = Some(new_style);
+                }
+                UICommand::ChangeColor(new_color) => {
+                    color = *new_color;
+                }
+                UICommand::Box(_pos, _size) => {
+                    unimplemented!()
+                }
+
+                UICommand::StaticText(pos, str) => {
+                    if style.is_none() {
+                        warn!("UI Command StaticText received before ApplyStyle, skipping");
+                        continue;
+                    }
+                    let style = style.as_ref().unwrap();
+                    let render = StringRender::new(
+                        &style.font,
+                        self.shader.as_ref().unwrap(),
+                        color,
+                        style.scale,
+                    );
+                    result += render.render_text(str, *pos);
+                }
+
+                UICommand::Text(pos, str) => {
+                    if style.is_none() {
+                        warn!("UI Command StaticText received before ApplyStyle, skipping");
+                        continue;
+                    }
+                    let style = style.as_ref().unwrap();
+                    let render = StringRender::new(
+                        &style.font,
+                        self.shader.as_ref().unwrap(),
+                        color,
+                        style.scale,
+                    );
+                    result += render.render_text(&str, *pos);
+                }
+            }
+        }
 
         RenderResult::ok(0, 0)
     }
@@ -147,11 +176,6 @@ impl RenderPass<CustomPassEvent> for UIPass {
 
         RenderResult::ok(0, 0)
     }
-}
-
-enum RenderCommand {
-    Text(String),
-    Color(Vec4),
 }
 
 struct StringRender<'a> {
@@ -187,10 +211,10 @@ impl<'a> StringRender<'a> {
         }
     }
 
-    fn render_text(&self, str: &str, start_x: f32, position: Vec2) -> Vec2 {
+    pub fn render_text(&self, str: &str, start_position: Vec2) -> RenderResult {
         let shader = self.glyph_shader.shader.cast();
 
-        let mut position = position;
+        let mut position = start_position;
         self.font.render_string(str, |char, glyph| {
             match char {
                 ' ' => {
@@ -199,7 +223,7 @@ impl<'a> StringRender<'a> {
                 }
 
                 '\n' => {
-                    position.x = start_x;
+                    position.x = start_position.x;
                     position.y += self.font.y_advance * self.scale;
                     return (true, RenderResult::default());
                 }
@@ -219,25 +243,7 @@ impl<'a> StringRender<'a> {
             shader.set_uniform(self.glyph_shader.model_location, model);
             position += Vec2::new(glyph.x_advance * self.scale, 0.0);
             (false, RenderResult::default())
-        });
-
-        position
-    }
-
-    pub fn render(&self, compiled: Vec<RenderCommand>, start_position: Vec2) {
-        let shader = self.glyph_shader.shader.cast();
-
-        let mut position = start_position;
-        for chunk in compiled.iter() {
-            match chunk {
-                RenderCommand::Text(text) => {
-                    position = self.render_text(text, start_position.x, position);
-                }
-                RenderCommand::Color(color) => {
-                    shader.set_uniform(self.glyph_shader.color_location, *color);
-                }
-            }
-        }
+        })
     }
 }
 

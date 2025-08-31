@@ -1,3 +1,4 @@
+use crate::components::imui::UICommand;
 use crate::logging;
 use crate::systems::asset::FactoryBindings;
 use crate::systems::rendering::aabb_pass::AABBPass;
@@ -23,8 +24,10 @@ use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
 use evenio::prelude::World;
 use glam::{Mat4, UVec2};
-use std::collections::HashMap;
 use log::info;
+use std::collections::HashMap;
+use std::sync::Arc;
+use triple_buffer::Output;
 
 mod aabb_pass;
 mod geometry_pass;
@@ -36,7 +39,6 @@ const WINDOW_SIZE: (u32, u32) = (1280, 720);
 pub(crate) enum CustomPassEvent {
     DropAllAssets,
     UpdateShader(TypedAsset<ShaderProgram>),
-    UpdateFont(TypedAsset<Font>),
     UpdateView(Mat4),
     UpdateWindowSize(UVec2),
 }
@@ -69,12 +71,6 @@ fn map_shaders_handler(
                 sender.send(RenderPassEvent::new(
                     *target,
                     CustomPassEvent::UpdateShader(shader),
-                ));
-            } else if *id == "martian_regular".into() {
-                let font = hub.get_typed::<Font>(id.clone()).unwrap();
-                sender.send(RenderPassEvent::new(
-                    ids.ui,
-                    CustomPassEvent::UpdateFont(font),
                 ));
             }
         }
@@ -128,6 +124,7 @@ pub fn setup_rendering_system(
     world: &mut World,
     bindings: FactoryBindings,
     synchronization: Option<ViewSynchronization>,
+    ui_stream: Output<Vec<UICommand>>,
 ) {
     let bi = logging::dawn_build_info();
     let view_config = ViewConfig {
@@ -167,7 +164,7 @@ pub fn setup_rendering_system(
 
         let geometry_pass = GeometryPass::new(geometry_pass_id);
         let aabb_pass = AABBPass::new(aabb_pass_id);
-        let ui_pass = ui_pass::UIPass::new(ui_pass_id);
+        let ui_pass = ui_pass::UIPass::new(ui_pass_id, ui_stream);
         Ok(RenderPipeline::new(construct_chain!(
             geometry_pass,
             aabb_pass,
