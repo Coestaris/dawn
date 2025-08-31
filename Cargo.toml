@@ -42,6 +42,8 @@ build-info = "0.0.41"
 glam = "0.30.5"
 libc = "0.2.172"
 tinyrand = "0.5.0"
+anyhow = "1.0.99"
+triple_buffer = "8.1.1"
 
 [profile.release]
 lto = true
