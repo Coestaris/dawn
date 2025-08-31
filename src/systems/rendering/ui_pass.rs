@@ -8,7 +8,7 @@ use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::RendererBackend;
-use glam::{Mat4, UVec2, Vec2};
+use glam::{Mat4, UVec2, Vec2, Vec3, Vec4};
 
 struct GlyphShaderContainer {
     shader: TypedAsset<ShaderProgram>,
@@ -37,7 +37,7 @@ impl UIPass {
 
     fn calculate_projection(&mut self, win_size: UVec2) {
         self.projection =
-            Mat4::orthographic_rh_gl(0.0, win_size.x as f32, 0.0, win_size.y as f32, -1.0, 1.0);
+            Mat4::orthographic_rh_gl(0.0, win_size.x as f32, win_size.y as f32, 0.0, -1.0, 1.0);
     }
 
     fn set_projection(&mut self) {
@@ -95,44 +95,155 @@ impl RenderPass<CustomPassEvent> for UIPass {
     }
 
     fn begin(&mut self, _backend: &RendererBackend<CustomPassEvent>) -> RenderResult {
+        // return RenderResult::default();
+
         if let None = self.shader {
             return RenderResult::default();
         }
         if let None = self.font {
             return RenderResult::default();
         }
-        let shader = self.shader.as_ref().unwrap();
-        let program = shader.shader.cast();
 
-        ShaderProgram::bind(&program);
-        // program.set_uniform(shader.color_location, Vec2::new(1.0, 1.0));
+        // Disable depth testing for UI
+        unsafe {
+            bindings::Disable(bindings::DEPTH_TEST);
+            bindings::Enable(bindings::BLEND);
+            bindings::BlendFunc(bindings::SRC_ALPHA, bindings::ONE_MINUS_SRC_ALPHA);
+            bindings::Disable(bindings::CULL_FACE);
+        }
 
-        let font = self.font.as_ref().unwrap().cast();
-        let atlas = font.atlas.cast::<Texture>();
-        Texture::bind(bindings::TEXTURE_2D, atlas, 0);
+        let render = StringRender::new(
+            self.font.as_ref().unwrap(),
+            self.shader.as_ref().unwrap(),
+            Vec4::new(1.0, 1.0, 1.0, 1.0),
+            0.6,
+        );
 
-        let string = "123456";
-        let mut text_position = Vec2::new(25.0, 25.0);
-        font.render_string(string, |glyph| {
-            // Something
-            // let model = Mat4::from_translation(Vec3::new(
-            //     text_position.x + glyph.x_offset,
-            //     text_position.y - glyph.y_offset,
-            //     0.0,
-            // ));
-            let model = Mat4::IDENTITY;
-            program.set_uniform(shader.model_location, model);
-            text_position += Vec2::new(glyph.x_advance, 0.0);
-            (false, RenderResult::default())
-        });
+        render.render(
+            vec![
+                RenderCommand::Text("Hello, ".to_string()),
+                RenderCommand::Color(Vec4::new(1.0, 0.0, 0.0, 1.0)),
+                RenderCommand::Text("world!".to_string()),
+                RenderCommand::Color(Vec4::new(0.0, 1.0, 0.0, 1.0)),
+                RenderCommand::Text("\nThis is a UI Pass.".to_string()),
+            ],
+            Vec2::new(0.0, 0.0),
+        );
 
-        ShaderProgram::bind(program);
         RenderResult::ok(0, 0)
     }
 
     fn end(&mut self, _backend: &mut RendererBackend<CustomPassEvent>) -> RenderResult {
         ShaderProgram::unbind();
         Texture::unbind(bindings::TEXTURE_2D, 0);
+
+        // Re-enable depth testing after UI pass
+        unsafe {
+            bindings::Enable(bindings::CULL_FACE);
+            bindings::Enable(bindings::DEPTH_TEST);
+            bindings::DepthFunc(bindings::LEQUAL);
+            bindings::Disable(bindings::BLEND);
+        }
+
         RenderResult::ok(0, 0)
+    }
+}
+
+enum RenderCommand {
+    Text(String),
+    Color(Vec4),
+}
+
+struct StringRender<'a> {
+    glyph_shader: &'a GlyphShaderContainer,
+    font: &'a Font,
+    atlas: &'a Texture,
+    scale: f32,
+    color: Vec4,
+}
+
+impl<'a> StringRender<'a> {
+    fn new(
+        font_asset: &'a TypedAsset<Font>,
+        shader: &'a GlyphShaderContainer,
+        color: Vec4,
+        scale: f32,
+    ) -> Self {
+        let font = font_asset.cast();
+        let atlas = font.atlas.cast::<Texture>();
+
+        let program = shader.shader.cast();
+        ShaderProgram::bind(program);
+        // Assume projection and atlas location is already set
+        program.set_uniform(shader.color_location, color);
+        Texture::bind(bindings::TEXTURE_2D, atlas, 0);
+
+        StringRender {
+            glyph_shader: shader,
+            font,
+            atlas,
+            scale,
+            color,
+        }
+    }
+
+    fn render_text(&self, str: &str, start_x: f32, position: Vec2) -> Vec2 {
+        let shader = self.glyph_shader.shader.cast();
+
+        let mut position = position;
+        self.font.render_string(str, |char, glyph| {
+            match char {
+                ' ' => {
+                    position += Vec2::new(self.font.space_advance * self.scale, 0.0); // Simple space handling
+                    return (true, RenderResult::default());
+                }
+
+                '\n' => {
+                    position.x = start_x;
+                    position.y += self.font.y_advance * self.scale;
+                    return (true, RenderResult::default());
+                }
+
+                _ => {}
+            }
+            let glyph = glyph.unwrap();
+
+            // Something
+            let model = Mat4::from_translation(Vec3::new(
+                position.x + glyph.x_offset * self.scale,
+                position.y + glyph.y_offset * self.scale,
+                0.0,
+            ));
+            let model = model * Mat4::from_scale(Vec3::splat(self.scale));
+
+            shader.set_uniform(self.glyph_shader.model_location, model);
+            position += Vec2::new(glyph.x_advance * self.scale, 0.0);
+            (false, RenderResult::default())
+        });
+
+        position
+    }
+
+    pub fn render(&self, compiled: Vec<RenderCommand>, start_position: Vec2) {
+        let shader = self.glyph_shader.shader.cast();
+
+        let mut position = start_position;
+        for chunk in compiled.iter() {
+            match chunk {
+                RenderCommand::Text(text) => {
+                    position = self.render_text(text, start_position.x, position);
+                }
+                RenderCommand::Color(color) => {
+                    shader.set_uniform(self.glyph_shader.color_location, *color);
+                }
+            }
+        }
+    }
+}
+
+impl Drop for StringRender<'_> {
+    fn drop(&mut self) {
+        ShaderProgram::unbind();
+        Texture::unbind(bindings::TEXTURE_2D, 0);
     }
 }
