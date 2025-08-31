@@ -25,7 +25,7 @@ struct FreeAllAssetsRequest(AssetRequestID, pub AndThen);
 #[derive(GlobalEvent)]
 pub struct DropAllAssetsEvent(pub AndThen);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum AndThen {
     StopMainLoop,
     ReloadAssets,
@@ -78,6 +78,8 @@ fn drop_all_assets_handler(
         Insert<Timer>,
     )>,
 ) {
+    info!("DropAllAssetsEvent received: {:?}", r.event.0);
+
     // Ask renderer to drop all owned assets
     sender.send(RenderPassEvent::new(
         ids.geometry,
@@ -142,11 +144,7 @@ fn timer_handler(
     }
 }
 
-fn free_assets_handler(
-    r: Receiver<AllAssetsDroppedEvent>,
-    mut hub: Single<&mut AssetHub>,
-    mut sender: Sender<(Spawn, Insert<FreeAllAssetsRequest>)>,
-) {
+fn print_assets(hub: &AssetHub) {
     let mut sorted = hub.asset_infos();
     sorted.sort_by(|a, b| a.id.as_str().cmp(&b.id.as_str()));
     for (i, info) in sorted.iter().enumerate() {
@@ -161,14 +159,21 @@ fn free_assets_handler(
             }
         };
         info!(
-            "[{}] [{:<8}] {:<30} | {}",
+            "[{:<3}] [{:<8}] {:<45} | {}",
             i,
             info.header.asset_type.to_string(),
             info.id.as_str(),
             state
         );
     }
+}
 
+fn free_assets_handler(
+    r: Receiver<AllAssetsDroppedEvent>,
+    mut hub: Single<&mut AssetHub>,
+    mut sender: Sender<(Spawn, Insert<FreeAllAssetsRequest>)>,
+) {
+    print_assets(*hub);
     let request = sender.spawn();
     sender.insert(
         request,
