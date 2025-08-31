@@ -70,7 +70,7 @@ fn map_shaders_handler(
                     *target,
                     CustomPassEvent::UpdateShader(shader),
                 ));
-            } else if *id == "arial_geo".into() {
+            } else if *id == "martian_regular".into() {
                 let font = hub.get_typed::<Font>(id.clone()).unwrap();
                 sender.send(RenderPassEvent::new(
                     ids.ui,

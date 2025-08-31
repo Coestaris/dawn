@@ -40,7 +40,7 @@ pub fn load_assets(hub: &mut AssetHub) {
         "glyph_shader".into(),
     )));
     hub.request(AssetRequest::Load(AssetRequestQuery::ByID(
-        "arial_geo".into(),
+        "martian_regular".into(),
     )));
     hub.request(AssetRequest::Load(AssetRequestQuery::ByID("barrel".into())));
 }
