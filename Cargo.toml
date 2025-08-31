@@ -34,7 +34,6 @@ dawn-ecs = { path = "lib/crates/ecs" }
 dawn-graphics = { path = "lib/crates/graphics" }
 dawn-util = { path = "lib/crates/util" }
 dawn-dac = { path = "lib/crates/dac" }
-ansi_term = "0.12.1"
 evenio = "0.6.0"
 log = "0.4.27"
 fern = "0.7"
