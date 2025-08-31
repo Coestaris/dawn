@@ -1,10 +1,11 @@
-use ansi_term::Color::{Blue, Cyan, Green, Red, Yellow};
 use build_info::VersionControl;
+use fern::FormatCallback;
 use log::{Level, LevelFilter};
-use std::mem;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::ptr::addr_of_mut;
-use std::time::SystemTime;
+use std::sync::OnceLock;
+use std::time::{Instant, SystemTime};
+use std::{fmt, mem};
 /* Use a simple format instead of something like strftime,
  * to avoid unnecessary complexity, and to not extend the
  * dependency tree with a crate that provides it. */
@@ -45,6 +46,7 @@ fn log_build_info() {
     build_info::build_info!(fn build_info);
     let bi = build_info();
 
+    log::info!("Current time: {}", format_system_time(SystemTime::now()).unwrap());
     log::info!("Build Information:");
     log::info!("  Timestamp: {}", bi.timestamp);
     log::info!("  Profile: {}", bi.profile);
@@ -60,41 +62,64 @@ fn log_build_info() {
     }
 }
 
+// Store the start time of the application
+// Used for logging elapsed time
+static START_TIME: OnceLock<Instant> = OnceLock::new();
+
+fn format<const COLORED: bool>(
+    callback: FormatCallback,
+    message: &fmt::Arguments,
+    record: &log::Record,
+) {
+    let (red, yellow, green, blue, magenta, cyan, white, reset) = if COLORED {
+        (
+            "\x1B[31m", // Red
+            "\x1B[33m", // Yellow
+            "\x1B[32m", // Green
+            "\x1B[34m", // Blue
+            "\x1B[35m", // Magenta
+            "\x1B[36m", // Cyan
+            "\x1B[37m", // White
+            "\x1B[0m",  // Reset
+        )
+    } else {
+        ("", "", "", "", "", "", "", "")
+    };
+
+    let elapsed = START_TIME.get().map(|start| start.elapsed()).unwrap();
+
+    // Keep only the file name, not the full path since that can be very long
+    // and filename is really additional info anyway
+    let file = Path::new(record.file().unwrap_or("unknown"));
+    let base = file.file_name().unwrap_or_default().to_string_lossy();
+    let location = format!("{}:{}", base, record.line().unwrap_or(0));
+
+    callback.finish(format_args!(
+        "[{cyan}{:^10.3}{reset}][{magenta}{:^30}{reset}][{yellow}{:^10}{reset}][{}{:>5}{reset}]: {}",
+        elapsed.as_secs_f32(),
+        location,
+        std::thread::current().name().unwrap_or("main"),
+        match record.level() {
+            Level::Error => red,
+            Level::Warn => yellow,
+            Level::Info => green,
+            Level::Debug => blue,
+            Level::Trace => white,
+        },
+        record.level(),
+        message,
+    ));
+}
+
 pub fn setup_logging(level: LevelFilter, file_logging: Option<PathBuf>, colored: bool) {
+    START_TIME.set(Instant::now()).ok();
+
     let mut dispatch = fern::Dispatch::new().level(level).chain(std::io::stdout());
 
     if colored {
-        dispatch = dispatch.format(|out, message, record| {
-            out.finish(format_args!(
-                "[{}][{:>19}][{:>14}]: {} [{}:{}]",
-                Cyan.paint(format_system_time(SystemTime::now()).unwrap_or("unknown".to_string())),
-                Yellow
-                    .paint(std::thread::current().name().unwrap_or("main"))
-                    .to_string(),
-                match record.level() {
-                    Level::Error => Red.paint(record.level().to_string()).to_string(),
-                    Level::Warn => Yellow.paint(record.level().to_string()).to_string(),
-                    Level::Info => Green.paint(record.level().to_string()).to_string(),
-                    Level::Debug => Blue.paint(record.level().to_string()).to_string(),
-                    Level::Trace => Cyan.paint(record.level().to_string()).to_string(),
-                },
-                message,
-                Green.paint(record.file().unwrap_or("unknown")),
-                Green.paint(record.line().unwrap_or(0).to_string())
-            ));
-        })
+        dispatch = dispatch.format(format::<true>);
     } else {
-        dispatch = dispatch.format(|out, message, record| {
-            out.finish(format_args!(
-                "[{}][{:>19}][{:>14}]: {} [{}:{}]",
-                format_system_time(SystemTime::now()).unwrap_or("unknown".to_string()),
-                std::thread::current().name().unwrap_or("main"),
-                record.level(),
-                message,
-                record.file().unwrap_or("unknown"),
-                record.line().unwrap_or(0)
-            ));
-        });
+        dispatch = dispatch.format(format::<false>);
     }
 
     if let Some(path) = file_logging {

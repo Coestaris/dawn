@@ -1,5 +1,5 @@
 // Do not display a console window on Windows
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use crate::components::fcam::FreeCamera;
 use crate::components::input::InputHolder;
@@ -11,12 +11,11 @@ use crate::systems::objects::setup_objects_system;
 use crate::systems::rendering::setup_rendering_system;
 use dawn_ecs::main_loop::{synchronized_loop_with_monitoring, unsynchronized_loop_with_monitoring};
 use dawn_graphics::input::{InputEvent, KeyCode};
-use dawn_graphics::view::{ViewHandle, ViewSynchronization};
+use dawn_graphics::view::ViewSynchronization;
 use dawn_util::rendezvous::Rendezvous;
 use evenio::event::{Receiver, Sender};
 use evenio::world::World;
-use std::panic;
-use log::info;
+use log::error;
 
 mod components;
 mod logging;
@@ -52,19 +51,25 @@ fn escape_handler(r: Receiver<InputEvent>, mut s: Sender<DropAllAssetsEvent>) {
 fn main() {
     // For development, it's more convenient to see the panic messages in the console.
     #[cfg(not(debug_assertions))]
-    panic::set_hook(Box::new(|info| {
-        ViewHandle::error_box(
-            "A fatal error occurred",
-            &format!("The application has encountered a fatal error and needs to close.\n\nError details: {}", info),
-        );
-        eprintln!("Fatal error: {}", info);
-        std::process::exit(1);
-    }));
+    {
+        use dawn_graphics::view::ViewHandle;
+        use crate::logging::format_system_time;
+        use log::info;
+        use std::panic;
+
+        panic::set_hook(Box::new(|info| {
+            ViewHandle::error_box(
+                "A fatal error occurred",
+                &format!("The application has encountered a fatal error and needs to close.\n\nError details: {}", info),
+            );
+            error!("Panic: {}", info);
+        }));
+
+        setup_logging(log::LevelFilter::Info, Some("dawn_log".into()), false);
+    }
+
     #[cfg(debug_assertions)]
     setup_logging(log::LevelFilter::Debug, None, true);
-
-    #[cfg(not(debug_assertions))]
-    setup_logging(log::LevelFilter::Info, Some("app.log".into()), false);
 
     // Setup the world and standalone components
     let mut world = World::new();
