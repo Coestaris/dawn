@@ -11,7 +11,7 @@ use dawn_ecs::events::ExitEvent;
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::prelude::World;
-use log::{debug, error, info};
+use log::{debug, info};
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -132,7 +132,7 @@ pub struct FactoryBindings {
     pub font: FactoryBinding,
 }
 
-fn assets_failed_handler(r: Receiver<AssetHubEvent>, mut sender: Sender<ExitEvent>) {
+fn assets_failed_handler(r: Receiver<AssetHubEvent>, sender: Sender<ExitEvent>) {
     match r.event {
         AssetHubEvent::RequestFinished(request, Err(message)) => {
             panic!("Asset Request Failed {:?}: {:?}", request, message);

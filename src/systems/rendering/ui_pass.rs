@@ -8,7 +8,7 @@ use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::RendererBackend;
-use glam::{Mat4, UVec2, Vec2, Vec3};
+use glam::{Mat4, UVec2, Vec2};
 
 struct GlyphShaderContainer {
     shader: TypedAsset<ShaderProgram>,
