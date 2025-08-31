@@ -9,5 +9,5 @@ uniform sampler2D atlas;
 void main()
 {
     vec4 sampled = vec4(1.0, 1.0, 1.0, texture(atlas, TexCoords).r);
-    FragColor = vec4(1.0, 1.0, 1.0, 1.0) * sampled + vec4(1.0, 1.0, 1.0, 1.0);
+    FragColor = color * sampled;
 }
