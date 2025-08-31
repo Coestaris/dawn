@@ -11,11 +11,12 @@ use crate::systems::objects::setup_objects_system;
 use crate::systems::rendering::setup_rendering_system;
 use dawn_ecs::main_loop::{synchronized_loop_with_monitoring, unsynchronized_loop_with_monitoring};
 use dawn_graphics::input::{InputEvent, KeyCode};
-use dawn_graphics::view::ViewSynchronization;
+use dawn_graphics::view::{ViewHandle, ViewSynchronization};
 use dawn_util::rendezvous::Rendezvous;
 use evenio::event::{Receiver, Sender};
 use evenio::world::World;
-use log::error;
+use log::{error, info};
+use std::panic;
 
 mod components;
 mod logging;
@@ -48,25 +49,24 @@ fn escape_handler(r: Receiver<InputEvent>, mut s: Sender<DropAllAssetsEvent>) {
     }
 }
 
-fn main() {
+fn panic_hook(info: &panic::PanicHookInfo) {
     // For development, it's more convenient to see the panic messages in the console.
     #[cfg(not(debug_assertions))]
     {
-        use dawn_graphics::view::ViewHandle;
-        use crate::logging::format_system_time;
-        use log::info;
-        use std::panic;
-
-        panic::set_hook(Box::new(|info| {
-            ViewHandle::error_box(
-                "A fatal error occurred",
-                &format!("The application has encountered a fatal error and needs to close.\n\nError details: {}", info),
-            );
-            error!("Panic: {}", info);
-        }));
-
-        setup_logging(log::LevelFilter::Info, Some("dawn_log".into()), false);
+        ViewHandle::error_box(
+            "A fatal error occurred",
+            &format!("The application has encountered a fatal error and needs to close.\n\nError details: {}", info),
+        );
     }
+
+    error!("Panic: {}", info);
+}
+
+fn main() {
+    // Disable colors in the release builds to not consume extra resources.
+    // It also makes the log files much more readable.
+    #[cfg(not(debug_assertions))]
+    setup_logging(log::LevelFilter::Info, Some("dawn_log".into()), false);
 
     #[cfg(debug_assertions)]
     setup_logging(log::LevelFilter::Debug, None, true);
@@ -86,12 +86,34 @@ fn main() {
     // Run the event loop
     match WORLD_SYNC_MODE {
         WorldSyncMode::FixedTickRate(tps) => {
+            panic::set_hook(Box::new(|info| {
+                panic_hook(info);
+            }));
+
             setup_rendering_system(&mut world, bindings, None);
             unsynchronized_loop_with_monitoring(&mut world, tps as f32);
         }
         WorldSyncMode::SynchronizedWithMonitor => {
             let before_frame = Rendezvous::new(2);
             let after_frame = Rendezvous::new(2);
+
+            {
+                // We need to leak the rendezvous points to make sure they
+                // live for the entire duration of the program.
+                let before_frame = Box::leak(Box::new(before_frame.clone()));
+                let after_frame = Box::leak(Box::new(after_frame.clone()));
+
+                panic::set_hook(Box::new(|info| {
+                    panic_hook(info);
+
+                    // TODO: Maybe move this to the library side?
+                    // In case of a panic, we want to make sure that both threads can exit cleanly.
+                    // So we signal both rendezvous points to avoid deadlocks.
+                    before_frame.unlock();
+                    after_frame.unlock();
+                }));
+            }
+
             setup_rendering_system(
                 &mut world,
                 bindings,
@@ -103,4 +125,6 @@ fn main() {
             synchronized_loop_with_monitoring(&mut world, before_frame, after_frame);
         }
     }
+
+    info!("Main loop has exited");
 }
