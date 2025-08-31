@@ -1,3 +1,4 @@
+use crate::logging;
 use crate::systems::asset::FactoryBindings;
 use crate::systems::rendering::aabb_pass::AABBPass;
 use crate::systems::rendering::geometry_pass::GeometryPass;
@@ -8,23 +9,28 @@ use dawn_graphics::construct_chain;
 use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::font::Font;
 use dawn_graphics::gl::raii::shader_program::ShaderProgram;
-use dawn_graphics::input::InputEvent;
+use dawn_graphics::input::{InputEvent, KeyCode};
 use dawn_graphics::passes::chain::ChainCons;
 use dawn_graphics::passes::chain::ChainNil;
 use dawn_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
 use dawn_graphics::passes::pipeline::RenderPipeline;
-use dawn_graphics::renderer::{Renderer, RendererBackendConfig};
-use dawn_graphics::view::{PlatformSpecificViewConfig, ViewConfig, ViewSynchronization};
+use dawn_graphics::renderer::{Renderer, RendererBackendConfig, ViewEvent};
+use dawn_graphics::view::{
+    PlatformSpecificViewConfig, ViewConfig, ViewCursor, ViewGeometry, ViewSynchronization,
+};
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
 use evenio::prelude::World;
 use glam::{Mat4, UVec2};
 use std::collections::HashMap;
+use log::info;
 
 mod aabb_pass;
 mod geometry_pass;
 mod ui_pass;
+
+const WINDOW_SIZE: (u32, u32) = (1280, 720);
 
 #[derive(Debug, Clone)]
 pub(crate) enum CustomPassEvent {
@@ -33,6 +39,11 @@ pub(crate) enum CustomPassEvent {
     UpdateFont(TypedAsset<Font>),
     UpdateView(Mat4),
     UpdateWindowSize(UVec2),
+}
+
+#[derive(Component)]
+struct CurrentGeometry {
+    is_fullscreen: bool,
 }
 
 #[derive(Component)]
@@ -78,6 +89,7 @@ fn viewport_resized_handler(
 ) {
     match ie.event {
         InputEvent::Resize { width, height } => {
+            info!("Viewport resized to {}x{}", width, height);
             sender.send(RenderPassEvent::new(
                 ids.geometry,
                 CustomPassEvent::UpdateWindowSize(UVec2::new(*width as u32, *height as u32)),
@@ -91,17 +103,38 @@ fn viewport_resized_handler(
     }
 }
 
+fn fullscreen_handler(
+    ie: Receiver<InputEvent>,
+    mut cg: Single<&mut CurrentGeometry>,
+    mut sender: Sender<ViewEvent>,
+) {
+    match ie.event {
+        InputEvent::KeyPress(KeyCode::Function(11)) => {
+            cg.is_fullscreen = !cg.is_fullscreen;
+            if cg.is_fullscreen {
+                sender.send(ViewEvent::SetGeometry(ViewGeometry::BorderlessFullscreen));
+            } else {
+                sender.send(ViewEvent::SetGeometry(ViewGeometry::Normal(
+                    WINDOW_SIZE.0,
+                    WINDOW_SIZE.1,
+                )));
+            }
+        }
+        _ => {}
+    }
+}
+
 pub fn setup_rendering_system(
     world: &mut World,
     bindings: FactoryBindings,
     synchronization: Option<ViewSynchronization>,
 ) {
-    let win_size = (1280, 720); // Default window size
+    let bi = logging::dawn_build_info();
     let view_config = ViewConfig {
         platform_specific: PlatformSpecificViewConfig {},
-        title: "Hello world".to_string(),
-        width: win_size.0,
-        height: win_size.1,
+        title: format!("Dawn v{} - {}", bi.crate_info.version, bi.profile),
+        geometry: ViewGeometry::Normal(WINDOW_SIZE.0, WINDOW_SIZE.1),
+        cursor: ViewCursor::Crosshair,
         synchronization,
     };
 
@@ -154,6 +187,15 @@ pub fn setup_rendering_system(
         },
     );
 
+    let e = world.spawn();
+    world.insert(
+        e,
+        CurrentGeometry {
+            is_fullscreen: false,
+        },
+    );
+
+    world.add_handler(fullscreen_handler);
     world.add_handler(map_shaders_handler);
     world.add_handler(viewport_resized_handler);
 }

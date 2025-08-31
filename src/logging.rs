@@ -42,9 +42,10 @@ pub fn format_system_time(system_time: SystemTime) -> Option<String> {
     ))
 }
 
+build_info::build_info!(pub fn dawn_build_info);
+
 fn prelude() {
-    build_info::build_info!(fn build_info);
-    let bi = build_info();
+    let bi = dawn_build_info();
 
     info!(r" _______       ___   ____    __    ____ .__   __.");
     info!(r"|       \     /   \  \   \  /  \  /   / |  \ |  |");
