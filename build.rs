@@ -8,7 +8,10 @@ use winresource::VersionInfo;
 fn main() {
     let build_info = build_info_build::build_script().build();
 
-    if std::env::var("CARGO_CFG_TARGET_OS").unwrap() == "windows" {
+    // Set up Windows resources (icon, version info) in release builds
+    if std::env::var("CARGO_CFG_TARGET_OS").unwrap() == "windows"
+        && std::env::var("PROFILE").unwrap() == "release"
+    {
         let mut res = winresource::WindowsResource::new();
         res.set_icon("assets/icon.ico");
 
