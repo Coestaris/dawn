@@ -1,6 +1,6 @@
 use build_info::VersionControl;
 use fern::FormatCallback;
-use log::{Level, LevelFilter};
+use log::{info, Level, LevelFilter};
 use std::path::{Path, PathBuf};
 use std::ptr::addr_of_mut;
 use std::sync::OnceLock;
@@ -42,23 +42,32 @@ pub fn format_system_time(system_time: SystemTime) -> Option<String> {
     ))
 }
 
-fn log_build_info() {
+fn prelude() {
     build_info::build_info!(fn build_info);
     let bi = build_info();
 
-    log::info!("Current time: {}", format_system_time(SystemTime::now()).unwrap());
-    log::info!("Build Information:");
-    log::info!("  Timestamp: {}", bi.timestamp);
-    log::info!("  Profile: {}", bi.profile);
-    log::info!("  Optimizations: {}", bi.optimization_level);
-    log::info!("  Crate info: {}", bi.crate_info);
-    log::info!("  Target: {}", bi.target);
-    log::info!("  Compiler: {}", bi.compiler);
+    info!(r" _______       ___   ____    __    ____ .__   __.");
+    info!(r"|       \     /   \  \   \  /  \  /   / |  \ |  |");
+    info!(r"|  .--.  |   /  ^  \  \   \/    \/   /  |   \|  |");
+    info!(r"|  |  |  |  /  /_\  \  \            /   |  . `  |");
+    info!(r"|  '--'  | /  _____  \  \    /\    /    |  |\   |");
+    info!(r"|_______/ /__/     \__\  \__/  \__/     |__| \__|");
+    info!(
+        "Current time: {}",
+        format_system_time(SystemTime::now()).unwrap()
+    );
+    info!("Build Information:");
+    info!("  Timestamp: {}", bi.timestamp);
+    info!("  Profile: {}", bi.profile);
+    info!("  Optimizations: {}", bi.optimization_level);
+    info!("  Crate info: {}", bi.crate_info);
+    info!("  Target: {}", bi.target);
+    info!("  Compiler: {}", bi.compiler);
     if let Some(VersionControl::Git(git)) = &bi.version_control {
-        log::info!("  VCS (Git) Information:");
-        log::info!("    Commit: {} ({})", git.commit_id, git.commit_timestamp);
-        log::info!("    Is dirty: {}", git.dirty);
-        log::info!("    Refs: {:?}, {:?}", git.branch, git.tags);
+        info!("  VCS (Git) Information:");
+        info!("    Commit: {} ({})", git.commit_id, git.commit_timestamp);
+        info!("    Is dirty: {}", git.dirty);
+        info!("    Refs: {:?}, {:?}", git.branch, git.tags);
     }
 }
 
@@ -128,5 +137,5 @@ pub fn setup_logging(level: LevelFilter, file_logging: Option<PathBuf>, colored:
 
     dispatch.apply().unwrap();
 
-    log_build_info();
+    prelude();
 }
