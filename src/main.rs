@@ -6,9 +6,9 @@ use crate::components::input::InputHolder;
 use crate::logging::setup_logging;
 use crate::systems::asset::setup_assets_system;
 use crate::systems::asset_swap::{setup_asset_swap_system, AndThen, DropAllAssetsEvent};
-use crate::systems::monitoring::setup_monitoring_system;
 use crate::systems::objects::setup_objects_system;
 use crate::systems::rendering::setup_rendering_system;
+use crate::systems::ui::setup_ui_system;
 use dawn_ecs::main_loop::{synchronized_loop_with_monitoring, unsynchronized_loop_with_monitoring};
 use dawn_graphics::input::{InputEvent, KeyCode};
 use dawn_graphics::view::ViewSynchronization;
@@ -79,10 +79,10 @@ fn main() {
 
     // Setup the systems
     setup_asset_swap_system(&mut world);
-    setup_monitoring_system(&mut world);
     setup_objects_system(&mut world);
     world.add_handler(escape_handler);
     let bindings = setup_assets_system(&mut world);
+    let ui_stream = setup_ui_system(&mut world);
 
     // Run the event loop
     match WORLD_SYNC_MODE {
@@ -91,7 +91,7 @@ fn main() {
                 panic_hook(info);
             }));
 
-            setup_rendering_system(&mut world, bindings, None);
+            setup_rendering_system(&mut world, bindings, None, ui_stream);
             unsynchronized_loop_with_monitoring(&mut world, tps as f32);
         }
         WorldSyncMode::SynchronizedWithMonitor => {
@@ -122,6 +122,7 @@ fn main() {
                     before_frame: before_frame.clone(),
                     after_frame: after_frame.clone(),
                 }),
+                ui_stream
             );
             synchronized_loop_with_monitoring(&mut world, before_frame, after_frame);
         }
