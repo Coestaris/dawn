@@ -1,8 +1,8 @@
+use dawn_ecs::main_loop::MainLoopMonitorEvent;
 use dawn_graphics::renderer::RendererMonitorEvent;
 use evenio::event::Receiver;
 use evenio::world::World;
 use log::info;
-use dawn_ecs::main_loop::MainLoopMonitorEvent;
 
 fn main_loop_monitoring_handler(r: Receiver<MainLoopMonitorEvent>) {
     info!(

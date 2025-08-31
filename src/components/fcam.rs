@@ -1,5 +1,6 @@
 use crate::components::input::InputHolder;
 use crate::systems::rendering::{CustomPassEvent, RenderPassIDs};
+use dawn_ecs::events::TickEvent;
 use dawn_graphics::input::{InputEvent, KeyCode, MouseButton};
 use dawn_graphics::passes::events::RenderPassEvent;
 use evenio::component::Component;
@@ -9,7 +10,6 @@ use evenio::handler::IntoHandler;
 use evenio::world::World;
 use glam::{FloatExt, Mat4, Vec2, Vec3};
 use std::f32::consts::PI;
-use dawn_ecs::events::TickEvent;
 
 pub struct CameraData {
     position: Vec3,

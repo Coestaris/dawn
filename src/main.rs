@@ -11,7 +11,7 @@ use crate::systems::objects::setup_objects_system;
 use crate::systems::rendering::setup_rendering_system;
 use dawn_ecs::main_loop::{synchronized_loop_with_monitoring, unsynchronized_loop_with_monitoring};
 use dawn_graphics::input::{InputEvent, KeyCode};
-use dawn_graphics::view::{ViewHandle, ViewSynchronization};
+use dawn_graphics::view::ViewSynchronization;
 use dawn_util::rendezvous::Rendezvous;
 use evenio::event::{Receiver, Sender};
 use evenio::world::World;
@@ -53,6 +53,7 @@ fn panic_hook(info: &panic::PanicHookInfo) {
     // For development, it's more convenient to see the panic messages in the console.
     #[cfg(not(debug_assertions))]
     {
+        use dawn_graphics::view::ViewHandle;
         ViewHandle::error_box(
             "A fatal error occurred",
             &format!("The application has encountered a fatal error and needs to close.\n\nError details: {}", info),
