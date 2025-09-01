@@ -1,0 +1,10 @@
+[header]
+asset_type = "Shader"
+
+[[properties.Shader.sources]]
+kind = "Vertex"
+origin.External.File = "bins/aabb.vsh"
+
+[[properties.Shader.sources]]
+kind = "Fragment"
+origin.External.File = "bins/aabb.fsh"

@@ -40,6 +40,7 @@ pub(crate) enum CustomPassEvent {
     DropAllAssets,
     UpdateShader(TypedAsset<ShaderProgram>),
     ToggleWireframeMode,
+    ToggleAABB,
     UpdateView(Mat4),
     UpdateWindowSize(UVec2),
 }
@@ -65,7 +66,11 @@ fn map_shaders_handler(
 ) {
     match r.event {
         AssetHubEvent::AssetLoaded(id) => {
-            let map = HashMap::from([("geometry_shader", ids.geometry), ("glyph_shader", ids.ui)]);
+            let map = HashMap::from([
+                ("geometry_shader", ids.geometry),
+                ("glyph_shader", ids.ui),
+                ("aabb_shader", ids.aabb),
+            ]);
 
             if let Some(target) = map.get(id.as_str()) {
                 let shader = hub.get_typed::<ShaderProgram>(id.clone()).unwrap();
@@ -87,14 +92,13 @@ fn viewport_resized_handler(
     match ie.event {
         InputEvent::Resize { width, height } => {
             info!("Viewport resized to {}x{}", width, height);
-            sender.send(RenderPassEvent::new(
-                ids.geometry,
-                CustomPassEvent::UpdateWindowSize(UVec2::new(*width as u32, *height as u32)),
-            ));
-            sender.send(RenderPassEvent::new(
-                ids.ui,
-                CustomPassEvent::UpdateWindowSize(UVec2::new(*width as u32, *height as u32)),
-            ));
+            let broadcast = [ids.geometry, ids.aabb, ids.ui];
+            for id in broadcast.iter() {
+                sender.send(RenderPassEvent::new(
+                    *id,
+                    CustomPassEvent::UpdateWindowSize(UVec2::new(*width as u32, *height as u32)),
+                ));
+            }
         }
 
         InputEvent::KeyPress(KeyCode::Function(3)) => {
@@ -102,6 +106,9 @@ fn viewport_resized_handler(
                 ids.geometry,
                 CustomPassEvent::ToggleWireframeMode,
             ));
+        }
+        InputEvent::KeyPress(KeyCode::Function(4)) => {
+            sender.send(RenderPassEvent::new(ids.aabb, CustomPassEvent::ToggleAABB));
         }
         _ => {}
     }

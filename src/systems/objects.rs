@@ -27,8 +27,8 @@ fn map_assets_handler(
     mut insert: Sender<(Insert<ObjectMesh>, Insert<ObjectMaterial>)>,
 ) {
     match r.event {
-        AssetHubEvent::AssetLoaded(id) if *id == "barrel".into() => {
-            let mesh = hub.get_typed::<Mesh>("barrel".into()).unwrap();
+        AssetHubEvent::AssetLoaded(id) if *id == "twocube".into() => {
+            let mesh = hub.get_typed::<Mesh>("twocube".into()).unwrap();
             for (id, _) in f {
                 insert.insert(id, ObjectMesh(mesh.clone()));
             }
