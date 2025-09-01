@@ -22,20 +22,22 @@ struct Cube {
 
 fn create_cube_mesh() -> Cube {
     let vertex = [
-        -0.5, 0.5, 0.5, //front top left
-        0.5, 0.5, 0.5, //front top right
-        -0.5, -0.5, 0.5, //front bottom left
-        0.5, -0.5, 0.5, //front bottom right
-        -0.5, 0.5, -0.5, //back top left
-        0.5, 0.5, -0.5, //back top right
-        -0.5, -0.5, -0.5, //back bottom left
-        0.5, -0.5, -0.5, //back bottom right
+        // Top face
+        1.0f32, 1.0, 1.0, // 0
+        1.0, 1.0, -1.0, // 1
+        -1.0, 1.0, -1.0, // 2
+        -1.0, 1.0, 1.0, // 3
+        // Bottom face
+        1.0, -1.0, 1.0, // 4
+        1.0, -1.0, -1.0, // 5
+        -1.0, -1.0, -1.0, // 6
+        -1.0, -1.0, 1.0, // 7
     ];
 
     let indices_edges = [
-        0u16, 1, 1, 3, 3, 2, 2, 0, // front face
-        4, 5, 5, 7, 7, 6, 6, 4, // back face
-        0, 4, 1, 5, 2, 6, 3, 7, // side edges
+        0u16, 1, 1, 2, 2, 3, 3, 0, // Top face edges
+        4, 5, 5, 6, 6, 7, 7, 4, // Bottom face edges
+        0, 4, 1, 5, 2, 6, 3, 7, // Side edges
     ];
     let vao = VertexArray::new(IRTopology::Lines, IRIndexType::U16).unwrap();
     let mut vbo = ArrayBuffer::new().unwrap();
@@ -67,7 +69,7 @@ fn create_cube_mesh() -> Cube {
         vao,
         vbo,
         ebo,
-        indices_count: indices_edges.len(),
+        indices_count: indices_edges.len()
     }
 }
 
@@ -84,12 +86,12 @@ impl Cube {
         let program = shader.shader.cast();
 
         // Assume projection and view matrices are already set
-        let position: Vec3 = min;
-        let size: Vec3 = max - min;
-        let scale = Mat4::from_scale(size);
-        let translation = Mat4::from_translation(position + size * 0.5);
-        let model = translation * scale * model;
-        // let model = model;
+
+        // Calculate the translation matrix to transform the 1/1/1 cube to the min/max box
+        let translation = Mat4::from_translation((min + max) / 2.0);
+        let scale = Mat4::from_scale((max - min) / 2.0);
+        // Note: The order of multiplication matters
+        let model = model * translation * scale;
 
         program.set_uniform(shader.model_location, model);
         program.set_uniform(shader.color_location, color);

@@ -211,7 +211,7 @@ fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>)
                 ));
 
                 stacked.push_down(format!(
-                    "Primitives: {:.1e}/{:.1e}/{:.1e}. Draw Calls: {:.1}/{:.1}/{:.1}",
+                    "Primitives: {:.1e}/{:.1e}/{:.1e}. Draw Calls: {:.1e}/{:.1e}/{:.1e}",
                     renderer.drawn_primitives.min(),
                     renderer.drawn_primitives.average(),
                     renderer.drawn_primitives.max(),
