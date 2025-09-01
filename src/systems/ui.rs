@@ -42,6 +42,19 @@ fn toggle_detailed_handler(r: Receiver<InputEvent>, mut ui: Single<&mut UISystem
 fn drop_all_assets_handler(r: Receiver<DropAllAssetsEvent>, mut ui: Single<&mut UISystem>) {
     debug!("Dropping all UI assets");
     ui.font = None;
+
+    // Flush the content of the input buffer
+    // The triple buffer must be cleared... you guessed it... three times
+    // It's ugly, but it works
+    let vec = ui.input.input_buffer_mut();
+    vec.clear();
+    ui.input.publish();
+    let vec = ui.input.input_buffer_mut();
+    vec.clear();
+    ui.input.publish();
+    let vec = ui.input.input_buffer_mut();
+    vec.clear();
+    ui.input.publish();
 }
 
 fn main_loop_monitoring_handler(r: Receiver<MainLoopMonitorEvent>, mut ui: Single<&mut UISystem>) {
@@ -120,7 +133,7 @@ impl<'a> Stacked<'a> {
     }
 }
 
-fn stream_ui_handler(t: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>) {
+fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>) {
     let font = ui.font.as_ref().map(|f| f.clone());
     let main_loop = ui.main_loop.as_ref().map(|f| f.clone());
     let renderer = ui.renderer.as_ref().map(|f| f.clone());
