@@ -146,10 +146,14 @@ impl FreeCamera {
             let data = cam.data.lerp(&cam.instant, LERP * delta * 30.0);
             if cam.data != data {
                 cam.data = data;
-                sender.send(RenderPassEvent::new(
-                    ids.geometry,
-                    CustomPassEvent::UpdateView(cam.as_view()),
-                ));
+
+                let broadcast = [ids.geometry, ids.aabb];
+                for id in broadcast.iter() {
+                    sender.send(RenderPassEvent::new(
+                        *id,
+                        CustomPassEvent::UpdateView(cam.as_view()),
+                    ));
+                }
             }
         }
 

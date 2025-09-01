@@ -33,16 +33,7 @@ pub enum AndThen {
 
 pub fn load_assets(hub: &mut AssetHub) {
     hub.request(AssetRequest::Enumerate);
-    hub.request(AssetRequest::Load(AssetRequestQuery::ByID(
-        "geometry_shader".into(),
-    )));
-    hub.request(AssetRequest::Load(AssetRequestQuery::ByID(
-        "glyph_shader".into(),
-    )));
-    hub.request(AssetRequest::Load(AssetRequestQuery::ByID(
-        "martian_regular".into(),
-    )));
-    hub.request(AssetRequest::Load(AssetRequestQuery::ByID("barrel".into())));
+    hub.request(AssetRequest::Load(AssetRequestQuery::All));
 }
 
 pub fn free_assets(hub: &mut AssetHub) -> AssetRequestID {
@@ -81,15 +72,10 @@ fn drop_all_assets_handler(
     info!("DropAllAssetsEvent received: {:?}", r.event.0);
 
     // Ask renderer to drop all owned assets
-    sender.send(RenderPassEvent::new(
-        ids.geometry,
-        CustomPassEvent::DropAllAssets,
-    ));
-    sender.send(RenderPassEvent::new(
-        ids.aabb,
-        CustomPassEvent::DropAllAssets,
-    ));
-    sender.send(RenderPassEvent::new(ids.ui, CustomPassEvent::DropAllAssets));
+    let broadcast = [ids.geometry, ids.aabb, ids.ui];
+    for id in broadcast.iter() {
+        sender.send(RenderPassEvent::new(*id, CustomPassEvent::DropAllAssets));
+    }
 
     // Remove all assets from the ECS
     for entity in f.iter() {
