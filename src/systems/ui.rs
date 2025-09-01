@@ -141,12 +141,13 @@ fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>)
             let stacked = &mut Stacked::new(Vec2::new(5.0, viewport.y), viewport, vec, &style);
             // Change color to yellow
             stacked.color(Vec4::new(1.0, 1.0, 0.0, 1.0));
-            stacked.push_up_str("ESC  - Quit");
+            stacked.push_up_str("WASD/Shift/Space + Mouse Drag - Move camera");
             stacked.push_up_str("F11  - Toggle fullscreen");
             stacked.push_up_str("F5   - Refresh assets");
+            stacked.push_up_str("F4   - Toggle AABB");
             stacked.push_up_str("F3   - Toggle wireframe");
             stacked.push_up_str("F1   - Toggle detailed info");
-            stacked.push_up_str("WASD + Mouse Drag - Move camera");
+            stacked.push_up_str("ESC  - Quit");
             stacked.push_up_str("Controls: ");
         }
 

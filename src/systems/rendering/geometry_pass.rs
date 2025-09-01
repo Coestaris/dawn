@@ -41,7 +41,7 @@ fn create_missing_texture() -> Texture {
         .0
 }
 
-struct GeometryShaderContainer {
+struct ShaderContainer {
     shader: TypedAsset<ShaderProgram>,
     model_location: UniformLocation,
     view_location: UniformLocation,
@@ -51,7 +51,7 @@ struct GeometryShaderContainer {
 
 pub(crate) struct GeometryPass {
     id: RenderPassTargetId,
-    shader: Option<GeometryShaderContainer>,
+    shader: Option<ShaderContainer>,
     missing_texture: Texture,
     projection: Mat4,
     view: Mat4,
@@ -110,7 +110,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         match event {
             CustomPassEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
-                self.shader = Some(GeometryShaderContainer {
+                self.shader = Some(ShaderContainer {
                     shader: clone,
                     model_location: shader.cast().get_uniform_location("model").unwrap(),
                     view_location: shader.cast().get_uniform_location("view").unwrap(),

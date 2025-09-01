@@ -13,7 +13,7 @@ use glam::{Mat4, UVec2, Vec2, Vec3, Vec4};
 use log::warn;
 use triple_buffer::Output;
 
-struct GlyphShaderContainer {
+struct ShaderContainer {
     shader: TypedAsset<ShaderProgram>,
     model_location: UniformLocation,
     proj_location: UniformLocation,
@@ -23,7 +23,7 @@ struct GlyphShaderContainer {
 
 pub(crate) struct UIPass {
     id: RenderPassTargetId,
-    shader: Option<GlyphShaderContainer>,
+    shader: Option<ShaderContainer>,
     projection: Mat4,
     stream: Output<Vec<UICommand>>,
 }
@@ -72,7 +72,7 @@ impl RenderPass<CustomPassEvent> for UIPass {
             CustomPassEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
                 let casted = shader.cast();
-                self.shader = Some(GlyphShaderContainer {
+                self.shader = Some(ShaderContainer {
                     shader: clone,
                     model_location: casted.get_uniform_location("model").unwrap(),
                     proj_location: casted.get_uniform_location("projection").unwrap(),
@@ -179,7 +179,7 @@ impl RenderPass<CustomPassEvent> for UIPass {
 }
 
 struct StringRender<'a> {
-    glyph_shader: &'a GlyphShaderContainer,
+    glyph_shader: &'a ShaderContainer,
     font: &'a Font,
     atlas: &'a Texture,
     scale: f32,
@@ -189,7 +189,7 @@ struct StringRender<'a> {
 impl<'a> StringRender<'a> {
     fn new(
         font_asset: &'a TypedAsset<Font>,
-        shader: &'a GlyphShaderContainer,
+        shader: &'a ShaderContainer,
         color: Vec4,
         scale: f32,
     ) -> Self {
