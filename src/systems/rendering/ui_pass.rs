@@ -68,6 +68,8 @@ impl RenderPass<CustomPassEvent> for UIPass {
         match event {
             CustomPassEvent::DropAllAssets => {
                 self.shader = None;
+                let stream = self.stream.output_buffer_mut();
+                stream.clear();
             }
             CustomPassEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
@@ -159,7 +161,7 @@ impl RenderPass<CustomPassEvent> for UIPass {
             }
         }
 
-        RenderResult::ok(0, 0)
+        result
     }
 
     fn end(&mut self, _backend: &mut RendererBackend<CustomPassEvent>) -> RenderResult {

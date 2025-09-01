@@ -1,3 +1,4 @@
+use crate::components::frustum::FrustumCulling;
 use crate::systems::rendering::CustomPassEvent;
 use dawn_assets::ir::texture::{IRPixelFormat, IRTexture, IRTextureType};
 use dawn_assets::TypedAsset;
@@ -56,6 +57,7 @@ pub(crate) struct GeometryPass {
     projection: Mat4,
     view: Mat4,
     is_wireframe: bool,
+    frustum: FrustumCulling,
 }
 
 impl GeometryPass {
@@ -67,6 +69,7 @@ impl GeometryPass {
             projection: Mat4::IDENTITY,
             view: Mat4::IDENTITY,
             is_wireframe: false,
+            frustum: FrustumCulling::new(Mat4::IDENTITY, Mat4::IDENTITY),
         }
     }
 
@@ -77,6 +80,7 @@ impl GeometryPass {
             0.1,
             100.0,
         );
+        self.frustum = FrustumCulling::new(self.projection, self.view);
 
         unsafe {
             bindings::Viewport(0, 0, win_size.x as i32, win_size.y as i32);
@@ -128,6 +132,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
             }
             CustomPassEvent::UpdateView(view) => {
                 self.view = view;
+                self.frustum = FrustumCulling::new(self.projection, self.view);
             }
             CustomPassEvent::DropAllAssets => {
                 self.shader = None;
@@ -172,12 +177,32 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         renderable: &Renderable,
     ) -> RenderResult {
         if let Some(shader) = self.shader.as_mut() {
+            let mesh = renderable.mesh.cast();
+
+            // Check if the mesh is within the camera frustum
+            // otherwise, skip rendering it at all
+            if !self
+                .frustum
+                .is_visible(mesh.min, mesh.max, renderable.model)
+            {
+                return RenderResult::default();
+            }
+
             // Load view matrix into shader
             let program = shader.shader.cast();
             program.set_uniform(shader.model_location, renderable.model);
 
-            let mesh = renderable.mesh.cast();
             mesh.draw(|submesh| {
+                // Check if the submesh at the camera frustum
+                // otherwise, skip rendering
+                // TODO: Is it worth to do frustum culling per submesh?
+                if !self
+                    .frustum
+                    .is_visible(submesh.min, submesh.max, renderable.model)
+                {
+                    return (true, RenderResult::default());
+                }
+
                 let base_color = if let Some(material) = &submesh.material {
                     let material = material.cast::<Material>();
                     if let Some(texture) = &material.base_color_texture {
