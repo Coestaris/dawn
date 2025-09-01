@@ -39,6 +39,7 @@ const WINDOW_SIZE: (u32, u32) = (1280, 720);
 pub(crate) enum CustomPassEvent {
     DropAllAssets,
     UpdateShader(TypedAsset<ShaderProgram>),
+    ToggleWireframeMode,
     UpdateView(Mat4),
     UpdateWindowSize(UVec2),
 }
@@ -93,6 +94,13 @@ fn viewport_resized_handler(
             sender.send(RenderPassEvent::new(
                 ids.ui,
                 CustomPassEvent::UpdateWindowSize(UVec2::new(*width as u32, *height as u32)),
+            ));
+        }
+
+        InputEvent::KeyPress(KeyCode::Function(3)) => {
+            sender.send(RenderPassEvent::new(
+                ids.geometry,
+                CustomPassEvent::ToggleWireframeMode,
             ));
         }
         _ => {}
