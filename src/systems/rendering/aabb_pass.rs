@@ -20,60 +20,60 @@ struct Cube {
     pub indices_count: usize,
 }
 
-fn create_cube_mesh() -> Cube {
-    let vertex = [
-        // Top face
-        1.0f32, 1.0, 1.0, // 0
-        1.0, 1.0, -1.0, // 1
-        -1.0, 1.0, -1.0, // 2
-        -1.0, 1.0, 1.0, // 3
-        // Bottom face
-        1.0, -1.0, 1.0, // 4
-        1.0, -1.0, -1.0, // 5
-        -1.0, -1.0, -1.0, // 6
-        -1.0, -1.0, 1.0, // 7
-    ];
-
-    let indices_edges = [
-        0u16, 1, 1, 2, 2, 3, 3, 0, // Top face edges
-        4, 5, 5, 6, 6, 7, 7, 4, // Bottom face edges
-        0, 4, 1, 5, 2, 6, 3, 7, // Side edges
-    ];
-    let vao = VertexArray::new(IRTopology::Lines, IRIndexType::U16).unwrap();
-    let mut vbo = ArrayBuffer::new().unwrap();
-    let mut ebo = ElementArrayBuffer::new().unwrap();
-
-    let vao_binding = vao.bind();
-    let vbo_binding = vbo.bind();
-    let ebo_binding = ebo.bind();
-
-    vbo_binding.feed(&vertex, ArrayBufferUsage::StaticDraw);
-    ebo_binding.feed(&indices_edges, ElementArrayBufferUsage::StaticDraw);
-
-    vao_binding.setup_attribute(
-        0,
-        &IRLayout {
-            field: IRLayoutField::Position,
-            sample_type: IRLayoutSampleType::Float,
-            samples: 3,
-            stride_bytes: 12,
-            offset_bytes: 0,
-        },
-    );
-
-    drop(vbo_binding);
-    drop(ebo_binding);
-    drop(vao_binding);
-
-    Cube {
-        vao,
-        vbo,
-        ebo,
-        indices_count: indices_edges.len()
-    }
-}
-
 impl Cube {
+    fn new() -> Self {
+        let vertex = [
+            // Top face
+            1.0f32, 1.0, 1.0, // 0
+            1.0, 1.0, -1.0, // 1
+            -1.0, 1.0, -1.0, // 2
+            -1.0, 1.0, 1.0, // 3
+            // Bottom face
+            1.0, -1.0, 1.0, // 4
+            1.0, -1.0, -1.0, // 5
+            -1.0, -1.0, -1.0, // 6
+            -1.0, -1.0, 1.0, // 7
+        ];
+
+        let indices_edges = [
+            0u16, 1, 1, 2, 2, 3, 3, 0, // Top face edges
+            4, 5, 5, 6, 6, 7, 7, 4, // Bottom face edges
+            0, 4, 1, 5, 2, 6, 3, 7, // Side edges
+        ];
+        let vao = VertexArray::new(IRTopology::Lines, IRIndexType::U16).unwrap();
+        let mut vbo = ArrayBuffer::new().unwrap();
+        let mut ebo = ElementArrayBuffer::new().unwrap();
+
+        let vao_binding = vao.bind();
+        let vbo_binding = vbo.bind();
+        let ebo_binding = ebo.bind();
+
+        vbo_binding.feed(&vertex, ArrayBufferUsage::StaticDraw);
+        ebo_binding.feed(&indices_edges, ElementArrayBufferUsage::StaticDraw);
+
+        vao_binding.setup_attribute(
+            0,
+            &IRLayout {
+                field: IRLayoutField::Position,
+                sample_type: IRLayoutSampleType::Float,
+                samples: 3,
+                stride_bytes: 12,
+                offset_bytes: 0,
+            },
+        );
+
+        drop(vbo_binding);
+        drop(ebo_binding);
+        drop(vao_binding);
+
+        Cube {
+            vao,
+            vbo,
+            ebo,
+            indices_count: indices_edges.len(),
+        }
+    }
+
     fn draw(
         &self,
         shader: &ShaderContainer,
@@ -123,7 +123,7 @@ impl AABBPass {
         AABBPass {
             id,
             shader: None,
-            cube: create_cube_mesh(),
+            cube: Cube::new(),
             projection: Mat4::IDENTITY,
             view: Mat4::IDENTITY,
             enabled: false,

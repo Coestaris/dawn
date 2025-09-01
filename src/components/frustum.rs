@@ -1,12 +1,11 @@
-// https://gist.github.com/griffi-gh/a6ed5ed3bc7e7ac8e29974502abafb40
-// basically ported from c++
-// - used as a reference:
+// Taken from:
+// [ https://gist.github.com/griffi-gh/a6ed5ed3bc7e7ac8e29974502abafb40 ]
+// That is ported from C++. Used as a reference:
 //   [ https://github.com/Beastwick18/gltest/blob/main/src/renderer/Frustum.cpp ]
 //   - original code:
 //     [ https://gist.github.com/podgorskiy/e698d18879588ada9014768e3e82a644 ]
 //     - which uses cube vs frustum intersection code from:
 //       [ http://iquilezles.org/www/articles/frustumcorrect/frustumcorrect.htm ]
-// three layers of stolen code, yay!
 
 use glam::*;
 
