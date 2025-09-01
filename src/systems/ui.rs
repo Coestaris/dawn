@@ -58,23 +58,10 @@ fn drop_all_assets_handler(r: Receiver<DropAllAssetsEvent>, mut ui: Single<&mut 
 }
 
 fn main_loop_monitoring_handler(r: Receiver<MainLoopMonitorEvent>, mut ui: Single<&mut UISystem>) {
-    info!(
-        "Main loop: {:.1}tps ({:.1}%)",
-        r.event.tps.average(),
-        r.event.load.average() * 100.0
-    );
-
     ui.main_loop = Some(r.event.clone());
 }
 
 fn renderer_monitoring_handler(r: Receiver<RendererMonitorEvent>, mut ui: Single<&mut UISystem>) {
-    info!(
-        "Renderer: {:.1} FPS. {:.1}/{:.1}",
-        r.event.fps.average(),
-        r.event.render.average().as_millis(),
-        r.event.view.average().as_millis(),
-    );
-
     ui.renderer = Some(r.event.clone());
 }
 
@@ -216,7 +203,7 @@ fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>)
                 ));
 
                 stacked.push_down(format!(
-                    "Primitives: {:.1}/{:.1}/{:.1}. Draw Calls: {:.1}/{:.1}/{:.1}",
+                    "Primitives: {:.1e}/{:.1e}/{:.1e}. Draw Calls: {:.1}/{:.1}/{:.1}",
                     renderer.drawn_primitives.min(),
                     renderer.drawn_primitives.average(),
                     renderer.drawn_primitives.max(),

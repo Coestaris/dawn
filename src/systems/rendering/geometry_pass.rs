@@ -55,6 +55,7 @@ pub(crate) struct GeometryPass {
     missing_texture: Texture,
     projection: Mat4,
     view: Mat4,
+    is_wireframe: bool,
 }
 
 impl GeometryPass {
@@ -65,6 +66,7 @@ impl GeometryPass {
             missing_texture: create_missing_texture(),
             projection: Mat4::IDENTITY,
             view: Mat4::IDENTITY,
+            is_wireframe: false,
         }
     }
 
@@ -130,6 +132,9 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
             CustomPassEvent::DropAllAssets => {
                 self.shader = None;
             }
+            CustomPassEvent::ToggleWireframeMode => {
+                self.is_wireframe = !self.is_wireframe;
+            }
             _ => {}
         }
     }
@@ -144,6 +149,10 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
             bindings::ClearColor(0.1, 0.1, 0.1, 1.0);
             bindings::ClearDepth(1.0);
             bindings::Clear(bindings::COLOR_BUFFER_BIT | bindings::DEPTH_BUFFER_BIT);
+
+            if self.is_wireframe {
+                bindings::PolygonMode(bindings::FRONT_AND_BACK, bindings::LINE);
+            }
         }
 
         if let Some(shader) = self.shader.as_mut() {
@@ -194,6 +203,10 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
 
     #[inline(always)]
     fn end(&mut self, _: &mut RendererBackend<CustomPassEvent>) -> RenderResult {
+        unsafe {
+            bindings::PolygonMode(bindings::FRONT_AND_BACK, bindings::FILL);
+        }
+
         ShaderProgram::unbind();
         Texture::unbind(bindings::TEXTURE_2D, 0);
         RenderResult::default()
