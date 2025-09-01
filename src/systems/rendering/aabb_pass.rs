@@ -95,9 +95,7 @@ impl Cube {
         program.set_uniform(shader.color_location, color);
 
         let binding = self.vao.bind();
-        binding.draw_elements(self.indices_count, 0);
-
-        RenderResult::default()
+        binding.draw_elements(self.indices_count, 0)
     }
 }
 
