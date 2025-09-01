@@ -3,13 +3,18 @@ use crate::logging;
 use crate::systems::asset::FactoryBindings;
 use crate::systems::rendering::aabb_pass::AABBPass;
 use crate::systems::rendering::geometry_pass::GeometryPass;
+use crate::systems::rendering::screen_pass::ScreenPass;
+use crate::systems::rendering::ui_pass::UIPass;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
+use dawn_assets::ir::texture::{IRPixelFormat, IRTextureType};
 use dawn_assets::TypedAsset;
 use dawn_ecs::events::ExitEvent;
 use dawn_graphics::construct_chain;
-use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::font::Font;
+use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
 use dawn_graphics::gl::raii::shader_program::ShaderProgram;
+use dawn_graphics::gl::raii::texture::Texture;
+use dawn_graphics::gl::{bindings, raii};
 use dawn_graphics::input::{InputEvent, KeyCode};
 use dawn_graphics::passes::chain::ChainCons;
 use dawn_graphics::passes::chain::ChainNil;
@@ -31,6 +36,7 @@ use triple_buffer::Output;
 
 mod aabb_pass;
 mod geometry_pass;
+mod screen_pass;
 mod ui_pass;
 
 const WINDOW_SIZE: (u32, u32) = (1280, 720);
@@ -56,6 +62,7 @@ pub struct RenderPassIDs {
     pub geometry: RenderPassTargetId,
     pub aabb: RenderPassTargetId,
     pub ui: RenderPassTargetId,
+    pub screen: RenderPassTargetId,
 }
 
 fn map_shaders_handler(
@@ -70,6 +77,7 @@ fn map_shaders_handler(
                 ("geometry_shader", ids.geometry),
                 ("glyph_shader", ids.ui),
                 ("aabb_shader", ids.aabb),
+                ("screen_shader", ids.screen),
             ]);
 
             if let Some(target) = map.get(id.as_str()) {
@@ -92,7 +100,7 @@ fn viewport_resized_handler(
     match ie.event {
         InputEvent::Resize { width, height } => {
             info!("Viewport resized to {}x{}", width, height);
-            let broadcast = [ids.geometry, ids.aabb, ids.ui];
+            let broadcast = [ids.geometry, ids.aabb, ids.ui, ids.screen];
             for id in broadcast.iter() {
                 sender.send(RenderPassEvent::new(
                     *id,
@@ -161,14 +169,12 @@ pub fn setup_rendering_system(
     let geometry_pass_id = RenderPassTargetId::new();
     let aabb_pass_id = RenderPassTargetId::new();
     let ui_pass_id = RenderPassTargetId::new();
+    let screen_pass_id = RenderPassTargetId::new();
 
     let renderer = Renderer::new_with_monitoring(view_config, backend_config, move |_| {
         // Setup OpenGL state
         unsafe {
             // Enable wireframe mode
-            // bindings::PolygonMode(bindings::FRONT_AND_BACK, bindings::LINE);
-
-            bindings::ShadeModel(bindings::SMOOTH);
             bindings::Enable(bindings::DEPTH_TEST);
             bindings::DepthFunc(bindings::LEQUAL);
             bindings::Enable(bindings::MULTISAMPLE);
@@ -177,11 +183,36 @@ pub fn setup_rendering_system(
             bindings::BlendFunc(bindings::SRC_ALPHA, bindings::ONE_MINUS_SRC_ALPHA);
         }
 
-        let geometry_pass = GeometryPass::new(geometry_pass_id);
+        let color_texture = Texture::new2d().unwrap();
+        Texture::bind(bindings::TEXTURE_2D, &color_texture, 0);
+        color_texture
+            .texture_image_2d(0, 800, 600, false, IRPixelFormat::R8G8B8A8, None)
+            .unwrap();
+        color_texture.generate_mipmap();
+        Texture::unbind(bindings::TEXTURE_2D, 0);
+
+        let depth_texture = Texture::new2d().unwrap();
+        Texture::bind(bindings::TEXTURE_2D, &depth_texture, 0);
+        depth_texture
+            .texture_image_2d(0, 800, 600, false, IRPixelFormat::DEPTH32F, None)
+            .unwrap();
+        depth_texture.generate_mipmap();
+        Texture::unbind(bindings::TEXTURE_2D, 0);
+
+        let mut fbo = Framebuffer::new().unwrap();
+        Framebuffer::bind(&fbo);
+        fbo.attach_texture_2d(FramebufferAttachment::Color0, &color_texture, 0);
+        fbo.attach_texture_2d(FramebufferAttachment::Depth, &depth_texture, 0);
+        assert_eq!(fbo.is_complete(), true);
+        Framebuffer::unbind();
+
+        let geometry_pass = GeometryPass::new(geometry_pass_id, fbo);
         let aabb_pass = AABBPass::new(aabb_pass_id);
-        let ui_pass = ui_pass::UIPass::new(ui_pass_id, ui_stream);
+        let ui_pass = UIPass::new(ui_pass_id, ui_stream);
+        let screen_pass = ScreenPass::new(screen_pass_id, color_texture, depth_texture);
         Ok(RenderPipeline::new(construct_chain!(
             geometry_pass,
+            screen_pass,
             aabb_pass,
             ui_pass,
         )))
@@ -196,6 +227,7 @@ pub fn setup_rendering_system(
             geometry: geometry_pass_id,
             aabb: aabb_pass_id,
             ui: ui_pass_id,
+            screen: screen_pass_id,
         },
     );
 
