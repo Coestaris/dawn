@@ -4,6 +4,7 @@ use dawn_assets::ir::texture::{IRPixelFormat, IRTexture, IRTextureType};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::material::Material;
+use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::{ShaderProgram, UniformLocation};
 use dawn_graphics::gl::raii::texture::Texture;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
@@ -58,10 +59,11 @@ pub(crate) struct GeometryPass {
     view: Mat4,
     is_wireframe: bool,
     frustum: FrustumCulling,
+    target: Framebuffer,
 }
 
 impl GeometryPass {
-    pub fn new(id: RenderPassTargetId) -> Self {
+    pub fn new(id: RenderPassTargetId, target: Framebuffer) -> Self {
         GeometryPass {
             id,
             shader: None,
@@ -70,6 +72,7 @@ impl GeometryPass {
             view: Mat4::IDENTITY,
             is_wireframe: false,
             frustum: FrustumCulling::new(Mat4::IDENTITY, Mat4::IDENTITY),
+            target,
         }
     }
 
@@ -150,6 +153,8 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
 
     #[inline(always)]
     fn begin(&mut self, _: &RendererBackend<CustomPassEvent>) -> RenderResult {
+        Framebuffer::bind(&self.target);
+
         unsafe {
             bindings::ClearColor(0.1, 0.1, 0.1, 1.0);
             bindings::ClearDepth(1.0);
@@ -234,6 +239,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
 
         ShaderProgram::unbind();
         Texture::unbind(bindings::TEXTURE_2D, 0);
+        Framebuffer::unbind();
         RenderResult::default()
     }
 }

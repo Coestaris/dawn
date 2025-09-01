@@ -72,7 +72,7 @@ fn drop_all_assets_handler(
     info!("DropAllAssetsEvent received: {:?}", r.event.0);
 
     // Ask renderer to drop all owned assets
-    let broadcast = [ids.geometry, ids.aabb, ids.ui];
+    let broadcast = [ids.geometry, ids.aabb, ids.ui, ids.screen];
     for id in broadcast.iter() {
         sender.send(RenderPassEvent::new(*id, CustomPassEvent::DropAllAssets));
     }
