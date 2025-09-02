@@ -4,7 +4,7 @@ use dawn_assets::hub::{AssetHub, AssetHubEvent, AssetInfoState};
 use dawn_assets::requests::{AssetRequest, AssetRequestID, AssetRequestQuery};
 use dawn_assets::AssetType;
 use dawn_ecs::events::{ExitEvent, TickEvent};
-use dawn_graphics::ecs::{InvalidateRendererCache, ObjectMaterial, ObjectMesh};
+use dawn_graphics::ecs::{InvalidateRendererCache, ObjectMesh};
 use dawn_graphics::passes::events::RenderPassEvent;
 use evenio::component::Component;
 use evenio::entity::EntityId;
@@ -34,6 +34,15 @@ pub enum AndThen {
 
 pub fn load_assets(hub: &mut AssetHub) {
     hub.request(AssetRequest::Enumerate);
+    hub.request(AssetRequest::Load(AssetRequestQuery::ByType(
+        AssetType::Shader,
+    )));
+    hub.request(AssetRequest::Load(AssetRequestQuery::ByType(
+        AssetType::Font,
+    )));
+    hub.request(AssetRequest::Load(AssetRequestQuery::ByType(
+        AssetType::Dictionary
+    )));
     hub.request(AssetRequest::Load(AssetRequestQuery::All));
 }
 
@@ -75,30 +84,14 @@ fn drop_all_assets_in_pipeline_handler(
 
 fn drop_all_assets_in_world_handler(
     r: Receiver<DropAllAssetsEvent>,
-    f: Fetcher<(EntityId, Or<&ObjectMesh, &ObjectMaterial>)>,
-    mut sender: Sender<(
-        Remove<ObjectMesh>,
-        Remove<ObjectMaterial>,
-        Spawn,
-        Insert<Timer>,
-    )>,
+    f: Fetcher<(EntityId, &ObjectMesh)>,
+    mut sender: Sender<(Remove<ObjectMesh>, Spawn, Insert<Timer>)>,
 ) {
     info!("DropAllAssetsEvent received: {:?}", r.event.0);
 
     // Remove all assets from the ECS
-    for entity in f.iter() {
-        match entity.1 {
-            Or::Left(_) => {
-                sender.remove::<ObjectMesh>(entity.0);
-            }
-            Or::Right(_) => {
-                sender.remove::<ObjectMaterial>(entity.0);
-            }
-            Or::Both(_, _) => {
-                sender.remove::<ObjectMesh>(entity.0);
-                sender.remove::<ObjectMaterial>(entity.0);
-            }
-        }
+    for (entity, _) in f.iter() {
+        sender.remove::<ObjectMesh>(entity);
     }
 
     // Assuming that the rendering thread is not throttled, so a logic update

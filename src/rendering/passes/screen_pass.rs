@@ -87,8 +87,6 @@ impl RenderPass<RenderingEvent> for ScreenPass {
             return RenderResult::default();
         }
 
-        println!("Point lights: {:?}", frame.point_lights);
-
         unsafe {
             bindings::Disable(bindings::DEPTH_TEST);
             bindings::ClearColor(0.1, 0.1, 0.1, 1.0);

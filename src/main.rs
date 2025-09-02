@@ -1,13 +1,12 @@
 // Do not display a console window on Windows
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use crate::asset_swap::{setup_asset_swap_system, AndThen, DropAllAssetsEvent};
 use crate::components::fcam::FreeCamera;
 use crate::components::input::InputHolder;
 use crate::logging::setup_logging;
-use crate::systems::asset::setup_assets_system;
-use crate::systems::asset_swap::{setup_asset_swap_system, AndThen, DropAllAssetsEvent};
-use crate::systems::objects::setup_objects_system;
-use crate::systems::ui::setup_ui_system;
+use crate::maps::setup_maps_system;
+use crate::rendering::setup_rendering_system;
 use dawn_ecs::main_loop::{synchronized_loop_with_monitoring, unsynchronized_loop_with_monitoring};
 use dawn_graphics::input::{InputEvent, KeyCode};
 use dawn_graphics::view::ViewSynchronization;
@@ -16,12 +15,16 @@ use evenio::event::{Receiver, Sender};
 use evenio::world::World;
 use log::{error, info};
 use std::panic;
-use crate::rendering::setup_rendering_system;
+use crate::asset::setup_assets_system;
+use crate::ui::setup_ui_system;
 
+mod asset;
+mod asset_swap;
 mod components;
 mod logging;
-mod systems;
+mod maps;
 pub mod rendering;
+mod ui;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
@@ -80,7 +83,7 @@ fn main() {
 
     // Setup the systems
     setup_asset_swap_system(&mut world);
-    setup_objects_system(&mut world);
+    setup_maps_system(&mut world);
     world.add_handler(escape_handler);
     let bindings = setup_assets_system(&mut world);
     let ui_stream = setup_ui_system(&mut world);
@@ -123,7 +126,7 @@ fn main() {
                     before_frame: before_frame.clone(),
                     after_frame: after_frame.clone(),
                 }),
-                ui_stream
+                ui_stream,
             );
             synchronized_loop_with_monitoring(&mut world, before_frame, after_frame);
         }
