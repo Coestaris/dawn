@@ -8,7 +8,6 @@ use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
 use crate::rendering::passes::screen_pass::ScreenPass;
 use crate::rendering::passes::ui_pass::UIPass;
-use crate::systems::asset::FactoryBindings;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_graphics::construct_chain;
 use dawn_graphics::gl::bindings;
@@ -27,6 +26,7 @@ use glam::UVec2;
 use std::ops::Deref;
 use std::rc::Rc;
 use triple_buffer::Output;
+use crate::asset::FactoryBindings;
 
 pub mod dispatcher;
 pub mod event;
