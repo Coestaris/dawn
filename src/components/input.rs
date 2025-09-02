@@ -31,8 +31,8 @@ impl InputHolder {
                 InputEvent::MouseButtonRelease(button) => {
                     holder.button_pressed.remove(&button);
                 }
-                InputEvent::MouseMove { x, y } => {
-                    holder.mouse_pos = Vec2::new(*x, *y);
+                InputEvent::MouseMove(pos) => {
+                    holder.mouse_pos = *pos;
                 }
                 _ => {}
             }

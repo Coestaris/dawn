@@ -1,5 +1,7 @@
-use crate::systems::rendering::gbuffer::GBuffer;
-use crate::systems::rendering::CustomPassEvent;
+use crate::rendering::event::RenderingEvent;
+use crate::rendering::frustum::FrustumCulling;
+use crate::rendering::gbuffer::GBuffer;
+use crate::rendering::primitive::cube::Cube;
 use dawn_assets::ir::mesh::{IRIndexType, IRLayout, IRLayoutField, IRLayoutSampleType, IRTopology};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
@@ -19,94 +21,6 @@ use glam::{Mat4, UVec2, Vec3, Vec4};
 use log::debug;
 use std::rc::Rc;
 
-struct Cube {
-    pub vao: VertexArray,
-    pub vbo: ArrayBuffer,
-    pub ebo: ElementArrayBuffer,
-    pub indices_count: usize,
-}
-
-impl Cube {
-    fn new() -> Self {
-        let vertex = [
-            // Top face
-            1.0f32, 1.0, 1.0, // 0
-            1.0, 1.0, -1.0, // 1
-            -1.0, 1.0, -1.0, // 2
-            -1.0, 1.0, 1.0, // 3
-            // Bottom face
-            1.0, -1.0, 1.0, // 4
-            1.0, -1.0, -1.0, // 5
-            -1.0, -1.0, -1.0, // 6
-            -1.0, -1.0, 1.0, // 7
-        ];
-
-        let indices_edges = [
-            0u16, 1, 1, 2, 2, 3, 3, 0, // Top face edges
-            4, 5, 5, 6, 6, 7, 7, 4, // Bottom face edges
-            0, 4, 1, 5, 2, 6, 3, 7, // Side edges
-        ];
-        let vao = VertexArray::new(IRTopology::Lines, IRIndexType::U16).unwrap();
-        let mut vbo = ArrayBuffer::new().unwrap();
-        let mut ebo = ElementArrayBuffer::new().unwrap();
-
-        let vao_binding = vao.bind();
-        let vbo_binding = vbo.bind();
-        let ebo_binding = ebo.bind();
-
-        vbo_binding.feed(&vertex, ArrayBufferUsage::StaticDraw);
-        ebo_binding.feed(&indices_edges, ElementArrayBufferUsage::StaticDraw);
-
-        vao_binding.setup_attribute(
-            0,
-            &IRLayout {
-                field: IRLayoutField::Position,
-                sample_type: IRLayoutSampleType::Float,
-                samples: 3,
-                stride_bytes: 12,
-                offset_bytes: 0,
-            },
-        );
-
-        drop(vbo_binding);
-        drop(ebo_binding);
-        drop(vao_binding);
-
-        Cube {
-            vao,
-            vbo,
-            ebo,
-            indices_count: indices_edges.len(),
-        }
-    }
-
-    fn draw(
-        &self,
-        shader: &ShaderContainer,
-        color: Vec4,
-        model: Mat4,
-        min: Vec3,
-        max: Vec3,
-    ) -> RenderResult {
-        // Assume shader is already bound
-        let program = shader.shader.cast();
-
-        // Assume projection and view matrices are already set
-
-        // Calculate the translation matrix to transform the 1/1/1 cube to the min/max box
-        let translation = Mat4::from_translation((min + max) / 2.0);
-        let scale = Mat4::from_scale((max - min) / 2.0);
-        // Note: The order of multiplication matters
-        let model = model * translation * scale;
-
-        program.set_uniform(shader.model_location, model);
-        program.set_uniform(shader.color_location, color);
-
-        let binding = self.vao.bind();
-        binding.draw_elements(self.indices_count, 0)
-    }
-}
-
 struct ShaderContainer {
     shader: TypedAsset<ShaderProgram>,
     model_location: UniformLocation,
@@ -116,26 +30,30 @@ struct ShaderContainer {
 }
 
 #[derive(Debug)]
-pub enum AABBMode {
-    Disable,
-    IgnoreDepthBuffer,
-    RespectDepthBuffer,
+enum Mode {
+    Disabled,
+    AABBRespectDepthBuffer,
+    OBBRespectDepthBuffer,
+    OBBIgnoreDepthBuffer,
+    AABBIgnoreDepthBuffer,
 }
 
-impl AABBMode {
+impl Mode {
     fn cycle(&mut self) {
         *self = match self {
-            AABBMode::Disable => AABBMode::IgnoreDepthBuffer,
-            AABBMode::IgnoreDepthBuffer => AABBMode::RespectDepthBuffer,
-            AABBMode::RespectDepthBuffer => AABBMode::Disable,
+            Mode::Disabled => Mode::AABBRespectDepthBuffer,
+            Mode::AABBRespectDepthBuffer => Mode::OBBRespectDepthBuffer,
+            Mode::OBBRespectDepthBuffer => Mode::OBBIgnoreDepthBuffer,
+            Mode::OBBIgnoreDepthBuffer => Mode::AABBIgnoreDepthBuffer,
+            Mode::AABBIgnoreDepthBuffer => Mode::Disabled,
         }
     }
 }
 
-pub(crate) struct AABBPass {
+pub(crate) struct BoundingPass {
     id: RenderPassTargetId,
     cube: Cube,
-    mode: AABBMode,
+    mode: Mode,
     shader: Option<ShaderContainer>,
     projection: Mat4,
     usize: UVec2,
@@ -143,16 +61,16 @@ pub(crate) struct AABBPass {
     gbuffer: Rc<GBuffer>,
 }
 
-impl AABBPass {
+impl BoundingPass {
     pub fn new(id: RenderPassTargetId, gbuffer: Rc<GBuffer>) -> Self {
-        AABBPass {
+        BoundingPass {
             id,
             shader: None,
             cube: Cube::new(),
             projection: Mat4::IDENTITY,
             usize: UVec2::ZERO,
             view: Mat4::IDENTITY,
-            mode: AABBMode::Disable,
+            mode: Mode::Disabled,
             gbuffer,
         }
     }
@@ -177,19 +95,22 @@ impl AABBPass {
     }
 }
 
-impl RenderPass<CustomPassEvent> for AABBPass {
-    fn get_target(&self) -> Vec<PassEventTarget<CustomPassEvent>> {
-        fn dispatch_aabb_pass(ptr: *mut u8, event: CustomPassEvent) {
-            let pass = unsafe { &mut *(ptr as *mut AABBPass) };
+impl RenderPass<RenderingEvent> for BoundingPass {
+    fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
+        fn dispatch_bounding_pass(ptr: *mut u8, event: RenderingEvent) {
+            let pass = unsafe { &mut *(ptr as *mut BoundingPass) };
             pass.dispatch(event);
         }
 
-        vec![PassEventTarget::new(dispatch_aabb_pass, self.id, self)]
+        vec![PassEventTarget::new(dispatch_bounding_pass, self.id, self)]
     }
 
-    fn dispatch(&mut self, event: CustomPassEvent) {
+    fn dispatch(&mut self, event: RenderingEvent) {
         match event {
-            CustomPassEvent::UpdateShader(shader) => {
+            RenderingEvent::DropAllAssets => {
+                self.shader = None;
+            }
+            RenderingEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
                 let casted = shader.cast();
                 self.shader = Some(ShaderContainer {
@@ -201,40 +122,40 @@ impl RenderPass<CustomPassEvent> for AABBPass {
                 });
                 self.set_projection();
             }
-            CustomPassEvent::UpdateWindowSize(size) => {
+            RenderingEvent::ViewportResized(size) => {
                 self.usize = size;
-                self.calculate_projection(size);
+            }
+            RenderingEvent::PerspectiveProjectionUpdated(proj) => {
+                self.projection = proj;
                 self.set_projection();
             }
-            CustomPassEvent::ToggleAABB => {
-                self.mode.cycle();
-                debug!("AABBPass mode: {:?}", self.mode);
-            }
-            CustomPassEvent::UpdateView(view) => {
+            RenderingEvent::ViewUpdated(view) => {
                 self.view = view;
             }
-            CustomPassEvent::DropAllAssets => {
-                self.shader = None;
+
+            RenderingEvent::ToggleBoundingBox => {
+                self.mode.cycle();
+                debug!("Bounding Box mode: {:?}", self.mode);
             }
+
             _ => {}
         }
     }
 
     fn name(&self) -> &str {
-        "AABBPass"
+        "BoundingBox"
     }
 
-    fn begin(&mut self, _backend: &RendererBackend<CustomPassEvent>) -> RenderResult {
+    fn begin(&mut self, _backend: &RendererBackend<RenderingEvent>) -> RenderResult {
         if self.shader.is_none() {
             return RenderResult::default();
         }
 
         match self.mode {
-            AABBMode::Disable => {
+            Mode::Disabled => {
                 return RenderResult::default();
             }
-            AABBMode::IgnoreDepthBuffer => {}
-            AABBMode::RespectDepthBuffer => {
+            Mode::AABBRespectDepthBuffer | Mode::OBBRespectDepthBuffer => {
                 // Blit the depth buffer to the default framebuffer
                 Framebuffer::blit_to_default(
                     &self.gbuffer.fbo,
@@ -249,6 +170,7 @@ impl RenderPass<CustomPassEvent> for AABBPass {
                     bindings::DepthFunc(bindings::LEQUAL);
                 }
             }
+            _ => {}
         }
 
         // Bind shader
@@ -265,47 +187,75 @@ impl RenderPass<CustomPassEvent> for AABBPass {
     #[inline(always)]
     fn on_renderable(
         &mut self,
-        _: &mut RendererBackend<CustomPassEvent>,
+        _: &mut RendererBackend<RenderingEvent>,
         renderable: &Renderable,
     ) -> RenderResult {
         if self.shader.is_none() {
             return RenderResult::default();
         }
-        if matches!(self.mode, AABBMode::Disable) {
+        if matches!(self.mode, Mode::Disabled) {
             return RenderResult::default();
         }
 
         let mesh = renderable.mesh.cast();
         let shader = self.shader.as_ref().unwrap();
+        let program = shader.shader.cast();
         let mut result = RenderResult::default();
-        result += self.cube.draw(
-            shader,
-            Vec4::new(1.0, 0.0, 0.0, 1.0),
-            renderable.model,
-            mesh.min,
-            mesh.max,
-        );
 
+        static MESH_COLOR: Vec4 = Vec4::new(1.0, 0.0, 0.0, 1.0);
+        static SUBMESH_COLOR: Vec4 = Vec4::new(0.0, 1.0, 0.0, 1.0);
+
+        fn draw_cube(
+            pass: &BoundingPass,
+            renderable_model: Mat4,
+            min: Vec3,
+            max: Vec3,
+        ) -> RenderResult {
+            let shader = pass.shader.as_ref().unwrap();
+            let program = shader.shader.cast();
+
+            if matches!(
+                pass.mode,
+                Mode::OBBIgnoreDepthBuffer | Mode::OBBRespectDepthBuffer
+            ) {
+                pass.cube.draw(
+                    |model| {
+                        let obb = renderable_model * model;
+                        program.set_uniform(shader.model_location, obb);
+                    },
+                    min,
+                    max,
+                )
+            } else {
+                let (min, max) = FrustumCulling::obb_to_aabb(min, max, renderable_model);
+                pass.cube.draw(
+                    |model| {
+                        program.set_uniform(shader.model_location, model);
+                    },
+                    min,
+                    max,
+                )
+            }
+        }
+
+        program.set_uniform(shader.color_location, MESH_COLOR);
+        result += draw_cube(self, renderable.model, mesh.min, mesh.max);
+
+        program.set_uniform(shader.color_location, SUBMESH_COLOR);
         for bucket in &mesh.buckets {
             for submesh in &bucket.submesh {
-                result += self.cube.draw(
-                    shader,
-                    Vec4::new(0.0, 1.0, 0.0, 1.0),
-                    renderable.model,
-                    submesh.min,
-                    submesh.max,
-                );
+                result += draw_cube(self, renderable.model, submesh.min, submesh.max);
             }
         }
 
         result
     }
 
-    fn end(&mut self, _backend: &mut RendererBackend<CustomPassEvent>) -> RenderResult {
+    fn end(&mut self, _backend: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         if self.shader.is_none() {
             return RenderResult::default();
         }
-        if matches!(self.mode, AABBMode::Disable) {
+        if matches!(self.mode, Mode::Disabled) {
             return RenderResult::default();
         }
 

@@ -1,5 +1,5 @@
 use crate::components::imui::UICommand;
-use crate::systems::rendering::CustomPassEvent;
+use crate::rendering::event::RenderingEvent;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::font::Font;
@@ -38,11 +38,6 @@ impl UIPass {
         }
     }
 
-    fn calculate_projection(&mut self, win_size: UVec2) {
-        self.projection =
-            Mat4::orthographic_rh_gl(0.0, win_size.x as f32, win_size.y as f32, 0.0, -1.0, 1.0);
-    }
-
     fn set_projection(&mut self) {
         if let Some(shader) = self.shader.as_mut() {
             let program = shader.shader.cast();
@@ -54,9 +49,9 @@ impl UIPass {
     }
 }
 
-impl RenderPass<CustomPassEvent> for UIPass {
-    fn get_target(&self) -> Vec<PassEventTarget<CustomPassEvent>> {
-        fn dispatch_ui_pass(ptr: *mut u8, event: CustomPassEvent) {
+impl RenderPass<RenderingEvent> for UIPass {
+    fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
+        fn dispatch_ui_pass(ptr: *mut u8, event: RenderingEvent) {
             let pass = unsafe { &mut *(ptr as *mut UIPass) };
             pass.dispatch(event);
         }
@@ -64,14 +59,14 @@ impl RenderPass<CustomPassEvent> for UIPass {
         vec![PassEventTarget::new(dispatch_ui_pass, self.id, self)]
     }
 
-    fn dispatch(&mut self, event: CustomPassEvent) {
+    fn dispatch(&mut self, event: RenderingEvent) {
         match event {
-            CustomPassEvent::DropAllAssets => {
+            RenderingEvent::DropAllAssets => {
                 self.shader = None;
                 let stream = self.stream.output_buffer_mut();
                 stream.clear();
             }
-            CustomPassEvent::UpdateShader(shader) => {
+            RenderingEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
                 let casted = shader.cast();
                 self.shader = Some(ShaderContainer {
@@ -83,8 +78,8 @@ impl RenderPass<CustomPassEvent> for UIPass {
                 });
                 self.set_projection();
             }
-            CustomPassEvent::UpdateWindowSize(size) => {
-                self.calculate_projection(size);
+            RenderingEvent::OrthographicProjectionUpdated(proj) => {
+                self.projection = proj;
                 self.set_projection();
             }
 
@@ -96,7 +91,7 @@ impl RenderPass<CustomPassEvent> for UIPass {
         "UIPass"
     }
 
-    fn begin(&mut self, _backend: &RendererBackend<CustomPassEvent>) -> RenderResult {
+    fn begin(&mut self, _backend: &RendererBackend<RenderingEvent>) -> RenderResult {
         // return RenderResult::default();
 
         if let None = self.shader {
@@ -164,7 +159,7 @@ impl RenderPass<CustomPassEvent> for UIPass {
         result
     }
 
-    fn end(&mut self, _backend: &mut RendererBackend<CustomPassEvent>) -> RenderResult {
+    fn end(&mut self, _backend: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         ShaderProgram::unbind();
         Texture::unbind(bindings::TEXTURE_2D, 0);
 
