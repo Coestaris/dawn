@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use crate::components::frustum::FrustumCulling;
 use crate::systems::rendering::CustomPassEvent;
 use dawn_assets::ir::texture::{IRPixelFormat, IRTexture, IRTextureType};
@@ -13,6 +14,7 @@ use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::RendererBackend;
 use glam::{Mat4, UVec2};
+use crate::systems::rendering::gbuffer::GBuffer;
 
 fn create_missing_texture() -> Texture {
     // Create a 2x2 checkerboard pattern (magenta and black)
@@ -29,7 +31,7 @@ fn create_missing_texture() -> Texture {
             width: 2,
             height: 2,
         },
-        pixel_format: IRPixelFormat::R8G8B8,
+        pixel_format: IRPixelFormat::RGB8,
         use_mipmaps: false,
         min_filter: Default::default(),
         mag_filter: Default::default(),
@@ -59,11 +61,11 @@ pub(crate) struct GeometryPass {
     view: Mat4,
     is_wireframe: bool,
     frustum: FrustumCulling,
-    target: Framebuffer,
+    gbuffer: Rc<GBuffer>,
 }
 
 impl GeometryPass {
-    pub fn new(id: RenderPassTargetId, target: Framebuffer) -> Self {
+    pub fn new(id: RenderPassTargetId, gbuffer: Rc<GBuffer>) -> Self {
         GeometryPass {
             id,
             shader: None,
@@ -72,7 +74,7 @@ impl GeometryPass {
             view: Mat4::IDENTITY,
             is_wireframe: false,
             frustum: FrustumCulling::new(Mat4::IDENTITY, Mat4::IDENTITY),
-            target,
+            gbuffer,
         }
     }
 
@@ -153,7 +155,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
 
     #[inline(always)]
     fn begin(&mut self, _: &RendererBackend<CustomPassEvent>) -> RenderResult {
-        Framebuffer::bind(&self.target);
+        Framebuffer::bind(&self.gbuffer.fbo);
 
         unsafe {
             bindings::ClearColor(0.1, 0.1, 0.1, 1.0);

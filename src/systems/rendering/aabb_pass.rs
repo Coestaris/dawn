@@ -1,8 +1,13 @@
+use crate::systems::rendering::gbuffer::GBuffer;
 use crate::systems::rendering::CustomPassEvent;
 use dawn_assets::ir::mesh::{IRIndexType, IRLayout, IRLayoutField, IRLayoutSampleType, IRTopology};
 use dawn_assets::TypedAsset;
+use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::raii::array_buffer::{ArrayBuffer, ArrayBufferUsage};
 use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementArrayBufferUsage};
+use dawn_graphics::gl::raii::framebuffer::{
+    BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
+};
 use dawn_graphics::gl::raii::shader_program::{ShaderProgram, UniformLocation};
 use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
@@ -12,6 +17,7 @@ use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::RendererBackend;
 use glam::{Mat4, UVec2, Vec3, Vec4};
 use log::debug;
+use std::rc::Rc;
 
 struct Cube {
     pub vao: VertexArray,
@@ -109,24 +115,45 @@ struct ShaderContainer {
     color_location: UniformLocation,
 }
 
+#[derive(Debug)]
+pub enum AABBMode {
+    Disable,
+    IgnoreDepthBuffer,
+    RespectDepthBuffer,
+}
+
+impl AABBMode {
+    fn cycle(&mut self) {
+        *self = match self {
+            AABBMode::Disable => AABBMode::IgnoreDepthBuffer,
+            AABBMode::IgnoreDepthBuffer => AABBMode::RespectDepthBuffer,
+            AABBMode::RespectDepthBuffer => AABBMode::Disable,
+        }
+    }
+}
+
 pub(crate) struct AABBPass {
     id: RenderPassTargetId,
     cube: Cube,
-    enabled: bool,
+    mode: AABBMode,
     shader: Option<ShaderContainer>,
     projection: Mat4,
+    usize: UVec2,
     view: Mat4,
+    gbuffer: Rc<GBuffer>,
 }
 
 impl AABBPass {
-    pub fn new(id: RenderPassTargetId) -> Self {
+    pub fn new(id: RenderPassTargetId, gbuffer: Rc<GBuffer>) -> Self {
         AABBPass {
             id,
             shader: None,
             cube: Cube::new(),
             projection: Mat4::IDENTITY,
+            usize: UVec2::ZERO,
             view: Mat4::IDENTITY,
-            enabled: false,
+            mode: AABBMode::Disable,
+            gbuffer,
         }
     }
 
@@ -175,12 +202,13 @@ impl RenderPass<CustomPassEvent> for AABBPass {
                 self.set_projection();
             }
             CustomPassEvent::UpdateWindowSize(size) => {
+                self.usize = size;
                 self.calculate_projection(size);
                 self.set_projection();
             }
             CustomPassEvent::ToggleAABB => {
-                self.enabled = !self.enabled;
-                debug!("AABBPass enabled: {}", self.enabled);
+                self.mode.cycle();
+                debug!("AABBPass mode: {:?}", self.mode);
             }
             CustomPassEvent::UpdateView(view) => {
                 self.view = view;
@@ -200,8 +228,27 @@ impl RenderPass<CustomPassEvent> for AABBPass {
         if self.shader.is_none() {
             return RenderResult::default();
         }
-        if !self.enabled {
-            return RenderResult::default();
+
+        match self.mode {
+            AABBMode::Disable => {
+                return RenderResult::default();
+            }
+            AABBMode::IgnoreDepthBuffer => {}
+            AABBMode::RespectDepthBuffer => {
+                // Blit the depth buffer to the default framebuffer
+                Framebuffer::blit_to_default(
+                    &self.gbuffer.fbo,
+                    self.usize,
+                    BlitFramebufferMask::Depth,
+                    BlitFramebufferFilter::Nearest,
+                );
+
+                // Enable depth test
+                unsafe {
+                    bindings::Enable(bindings::DEPTH_TEST);
+                    bindings::DepthFunc(bindings::LEQUAL);
+                }
+            }
         }
 
         // Bind shader
@@ -224,7 +271,7 @@ impl RenderPass<CustomPassEvent> for AABBPass {
         if self.shader.is_none() {
             return RenderResult::default();
         }
-        if !self.enabled {
+        if matches!(self.mode, AABBMode::Disable) {
             return RenderResult::default();
         }
 
@@ -258,7 +305,7 @@ impl RenderPass<CustomPassEvent> for AABBPass {
         if self.shader.is_none() {
             return RenderResult::default();
         }
-        if !self.enabled {
+        if matches!(self.mode, AABBMode::Disable) {
             return RenderResult::default();
         }
 
