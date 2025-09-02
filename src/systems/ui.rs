@@ -12,7 +12,7 @@ use evenio::component::Component;
 use evenio::event::Receiver;
 use evenio::fetch::Single;
 use evenio::world::World;
-use glam::{Vec2, Vec4};
+use glam::{UVec2, Vec2, Vec4};
 use log::{debug, info};
 use triple_buffer::{triple_buffer, Input, Output};
 
@@ -22,7 +22,7 @@ struct UISystem {
     font: Option<TypedAsset<Font>>,
     main_loop: Option<MainLoopMonitorEvent>,
     renderer: Option<RendererMonitorEvent>,
-    viewport: Option<Vec2>,
+    viewport: Option<UVec2>,
     detailed: bool,
 }
 
@@ -32,9 +32,7 @@ fn toggle_detailed_handler(r: Receiver<InputEvent>, mut ui: Single<&mut UISystem
             ui.detailed = !ui.detailed;
             debug!("Toggled detailed UI: {}", ui.detailed);
         }
-        InputEvent::Resize { width, height } => {
-            ui.viewport = Some(Vec2::new(*width as f32, *height as f32));
-        }
+        InputEvent::Resize(size) => ui.viewport = Some(*size),
         _ => {}
     }
 }
@@ -67,21 +65,14 @@ fn renderer_monitoring_handler(r: Receiver<RendererMonitorEvent>, mut ui: Single
 
 struct Stacked<'a> {
     position: Vec2,
-    viewport: Vec2,
     output: &'a mut Vec<UICommand>,
     style: &'a Style,
 }
 
 impl<'a> Stacked<'a> {
-    pub fn new(
-        position: Vec2,
-        viewport: Vec2,
-        output: &'a mut Vec<UICommand>,
-        style: &'a Style,
-    ) -> Self {
+    pub fn new(position: Vec2, output: &'a mut Vec<UICommand>, style: &'a Style) -> Self {
         Self {
             position,
-            viewport,
             output,
             style,
         }
@@ -124,7 +115,7 @@ fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>)
     let font = ui.font.as_ref().map(|f| f.clone());
     let main_loop = ui.main_loop.as_ref().map(|f| f.clone());
     let renderer = ui.renderer.as_ref().map(|f| f.clone());
-    let viewport = ui.viewport.unwrap_or(Vec2::new(800.0, 600.0));
+    let viewport = ui.viewport.unwrap_or(UVec2::new(800, 600));
     let detailed = ui.detailed;
 
     let vec = ui.input.input_buffer_mut();
@@ -139,13 +130,13 @@ fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>)
 
         if !detailed {
             {
-                let stacked = &mut Stacked::new(Vec2::new(5.0, viewport.y), viewport, vec, &style);
+                let stacked = &mut Stacked::new(Vec2::new(5.0, viewport.y as f32), vec, &style);
                 // Change color to yellow
                 stacked.color(Vec4::new(1.0, 1.0, 0.0, 1.0));
                 stacked.push_up_str("Press F1 for detailed info");
             }
 
-            let stacked = &mut Stacked::new(Vec2::new(5.0, 5.0), viewport, vec, &style);
+            let stacked = &mut Stacked::new(Vec2::new(5.0, 5.0), vec, &style);
             stacked.color(Vec4::new(0.0, 1.0, 0.0, 1.0));
             if let Some(main_loop) = main_loop {
                 stacked.push_down(format!(
@@ -165,20 +156,20 @@ fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>)
             }
         } else {
             {
-                let stacked = &mut Stacked::new(Vec2::new(5.0, viewport.y), viewport, vec, &style);
+                let stacked = &mut Stacked::new(Vec2::new(5.0, viewport.y as f32), vec, &style);
                 // Change color to yellow
                 stacked.color(Vec4::new(1.0, 1.0, 0.0, 1.0));
                 stacked.push_up_str("WASD/Shift/Space + Mouse Drag - Move camera");
                 stacked.push_up_str("F11  - Toggle fullscreen");
                 stacked.push_up_str("F5   - Refresh assets");
-                stacked.push_up_str("F4   - Toggle AABB");
+                stacked.push_up_str("F4   - Toggle Bounding Boxes");
                 stacked.push_up_str("F3   - Toggle wireframe");
                 stacked.push_up_str("F1   - Toggle detailed info");
                 stacked.push_up_str("ESC  - Quit");
                 stacked.push_up_str("Controls: ");
             }
 
-            let stacked = &mut Stacked::new(Vec2::new(5.0, 5.0), viewport, vec, &style);
+            let stacked = &mut Stacked::new(Vec2::new(5.0, 5.0), vec, &style);
             stacked.color(Vec4::new(0.0, 1.0, 0.0, 1.0));
             if let Some(main_loop) = main_loop {
                 stacked.push_down(format!(

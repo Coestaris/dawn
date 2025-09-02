@@ -1,4 +1,5 @@
-use crate::systems::rendering::{CustomPassEvent, RenderPassIDs};
+use crate::rendering::dispatcher::RenderDispatcher;
+use crate::rendering::event::RenderingEvent;
 use dawn_assets::hub::{AssetHub, AssetHubEvent, AssetInfoState};
 use dawn_assets::requests::{AssetRequest, AssetRequestID, AssetRequestQuery};
 use dawn_assets::AssetType;
@@ -57,12 +58,18 @@ pub fn free_assets(hub: &mut AssetHub) -> AssetRequestID {
 #[derive(GlobalEvent)]
 struct AllAssetsDroppedEvent(pub AndThen);
 
-fn drop_all_assets_handler(
+fn drop_all_assets_in_pipeline_handler(
+    r: Receiver<DropAllAssetsEvent>,
+    dispatcher: Single<&RenderDispatcher>,
+    sender: Sender<RenderPassEvent<RenderingEvent>>,
+) {
+    dispatcher.dispatch_drop_assets(sender);
+}
+
+fn drop_all_assets_in_world_handler(
     r: Receiver<DropAllAssetsEvent>,
     f: Fetcher<(EntityId, Or<&ObjectMesh, &ObjectMaterial>)>,
-    ids: Single<&RenderPassIDs>,
     mut sender: Sender<(
-        RenderPassEvent<CustomPassEvent>,
         Remove<ObjectMesh>,
         Remove<ObjectMaterial>,
         Spawn,
@@ -70,12 +77,6 @@ fn drop_all_assets_handler(
     )>,
 ) {
     info!("DropAllAssetsEvent received: {:?}", r.event.0);
-
-    // Ask renderer to drop all owned assets
-    let broadcast = [ids.geometry, ids.aabb, ids.ui, ids.screen];
-    for id in broadcast.iter() {
-        sender.send(RenderPassEvent::new(*id, CustomPassEvent::DropAllAssets));
-    }
 
     // Remove all assets from the ECS
     for entity in f.iter() {
@@ -198,7 +199,8 @@ fn request_finished(
 
 pub fn setup_asset_swap_system(world: &mut World) {
     // First we wait for DropAllAssets event
-    world.add_handler(drop_all_assets_handler);
+    world.add_handler(drop_all_assets_in_world_handler);
+    world.add_handler(drop_all_assets_in_pipeline_handler);
     // Then we wait for the timer to finish
     world.add_handler(timer_handler);
     // Then we request the AssetHub to free all assets

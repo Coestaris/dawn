@@ -129,7 +129,7 @@ impl FrustumCulling {
     }
 
     #[inline]
-    pub fn aabb_after_transform(min: Vec3, max: Vec3, model: Mat4) -> (Vec3, Vec3) {
+    pub fn obb_to_aabb(min: Vec3, max: Vec3, model: Mat4) -> (Vec3, Vec3) {
         let c = (min + max) * 0.5;
         let e = (max - min) * 0.5;
 
@@ -145,7 +145,7 @@ impl FrustumCulling {
     }
 
     pub fn is_visible(&self, minp: Vec3, maxp: Vec3, model: Mat4) -> bool {
-        let (minp, maxp) = Self::aabb_after_transform(minp, maxp, model);
+        let (minp, maxp) = Self::obb_to_aabb(minp, maxp, model);
         self.is_box_visible(minp, maxp)
     }
 

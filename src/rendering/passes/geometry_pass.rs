@@ -1,6 +1,6 @@
-use std::rc::Rc;
-use crate::components::frustum::FrustumCulling;
-use crate::systems::rendering::CustomPassEvent;
+use crate::rendering::event::RenderingEvent;
+use crate::rendering::frustum::FrustumCulling;
+use crate::rendering::gbuffer::GBuffer;
 use dawn_assets::ir::texture::{IRPixelFormat, IRTexture, IRTextureType};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
@@ -13,8 +13,8 @@ use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::RendererBackend;
-use glam::{Mat4, UVec2};
-use crate::systems::rendering::gbuffer::GBuffer;
+use glam::Mat4;
+use std::rc::Rc;
 
 fn create_missing_texture() -> Texture {
     // Create a 2x2 checkerboard pattern (magenta and black)
@@ -40,7 +40,7 @@ fn create_missing_texture() -> Texture {
         wrap_r: Default::default(),
     };
 
-    Texture::from_ir::<CustomPassEvent>(texture_ir)
+    Texture::from_ir::<RenderingEvent>(texture_ir)
         .expect("Failed to create missing texture")
         .0
 }
@@ -78,21 +78,6 @@ impl GeometryPass {
         }
     }
 
-    fn calculate_projection(&mut self, win_size: UVec2) {
-        self.projection = Mat4::perspective_rh(
-            45.0f32.to_radians(),
-            win_size.x as f32 / win_size.y as f32,
-            0.1,
-            100.0,
-        );
-        self.frustum = FrustumCulling::new(self.projection, self.view);
-
-        unsafe {
-            bindings::Viewport(0, 0, win_size.x as i32, win_size.y as i32);
-            bindings::Scissor(0, 0, win_size.x as i32, win_size.y as i32);
-        }
-    }
-
     fn set_projection(&mut self) {
         if let Some(shader) = self.shader.as_mut() {
             // Load projection matrix into shader
@@ -105,9 +90,9 @@ impl GeometryPass {
     }
 }
 
-impl RenderPass<CustomPassEvent> for GeometryPass {
-    fn get_target(&self) -> Vec<PassEventTarget<CustomPassEvent>> {
-        fn dispatch_geometry_pass(ptr: *mut u8, event: CustomPassEvent) {
+impl RenderPass<RenderingEvent> for GeometryPass {
+    fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
+        fn dispatch_geometry_pass(ptr: *mut u8, event: RenderingEvent) {
             let pass = unsafe { &mut *(ptr as *mut GeometryPass) };
             pass.dispatch(event);
         }
@@ -115,9 +100,12 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
         vec![PassEventTarget::new(dispatch_geometry_pass, self.id, self)]
     }
 
-    fn dispatch(&mut self, event: CustomPassEvent) {
+    fn dispatch(&mut self, event: RenderingEvent) {
         match event {
-            CustomPassEvent::UpdateShader(shader) => {
+            RenderingEvent::DropAllAssets => {
+                self.shader = None;
+            }
+            RenderingEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
                 self.shader = Some(ShaderContainer {
                     shader: clone,
@@ -131,18 +119,21 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
                 });
                 self.set_projection();
             }
-            CustomPassEvent::UpdateWindowSize(size) => {
-                self.calculate_projection(size);
+            RenderingEvent::ViewportResized(size) => unsafe {
+                bindings::Viewport(0, 0, size.x as i32, size.y as i32);
+                bindings::Scissor(0, 0, size.x as i32, size.y as i32);
+            },
+            RenderingEvent::PerspectiveProjectionUpdated(proj) => {
+                self.projection = proj;
+                self.frustum = FrustumCulling::new(self.projection, self.view);
                 self.set_projection();
             }
-            CustomPassEvent::UpdateView(view) => {
+            RenderingEvent::ViewUpdated(view) => {
                 self.view = view;
                 self.frustum = FrustumCulling::new(self.projection, self.view);
             }
-            CustomPassEvent::DropAllAssets => {
-                self.shader = None;
-            }
-            CustomPassEvent::ToggleWireframeMode => {
+
+            RenderingEvent::ToggleWireframeMode => {
                 self.is_wireframe = !self.is_wireframe;
             }
             _ => {}
@@ -154,7 +145,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
     }
 
     #[inline(always)]
-    fn begin(&mut self, _: &RendererBackend<CustomPassEvent>) -> RenderResult {
+    fn begin(&mut self, _: &RendererBackend<RenderingEvent>) -> RenderResult {
         Framebuffer::bind(&self.gbuffer.fbo);
 
         unsafe {
@@ -180,7 +171,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
     #[inline(always)]
     fn on_renderable(
         &mut self,
-        _: &mut RendererBackend<CustomPassEvent>,
+        _: &mut RendererBackend<RenderingEvent>,
         renderable: &Renderable,
     ) -> RenderResult {
         if let Some(shader) = self.shader.as_mut() {
@@ -234,7 +225,7 @@ impl RenderPass<CustomPassEvent> for GeometryPass {
     }
 
     #[inline(always)]
-    fn end(&mut self, _: &mut RendererBackend<CustomPassEvent>) -> RenderResult {
+    fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         unsafe {
             bindings::PolygonMode(bindings::FRONT_AND_BACK, bindings::FILL);
         }

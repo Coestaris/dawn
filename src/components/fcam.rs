@@ -1,5 +1,6 @@
 use crate::components::input::InputHolder;
-use crate::systems::rendering::{CustomPassEvent, RenderPassIDs};
+use crate::rendering::dispatcher::RenderDispatcher;
+use crate::rendering::event::RenderingEvent;
 use dawn_ecs::events::TickEvent;
 use dawn_graphics::input::{InputEvent, KeyCode, MouseButton};
 use dawn_graphics::passes::events::RenderPassEvent;
@@ -100,8 +101,8 @@ impl FreeCamera {
             r: Receiver<TickEvent>,
             holder: Single<&mut InputHolder>,
             mut cam: Single<&mut FreeCamera>,
-            ids: Single<&RenderPassIDs>,
-            mut sender: Sender<RenderPassEvent<CustomPassEvent>>,
+            dispatcher: Single<&RenderDispatcher>,
+            mut sender: Sender<RenderPassEvent<RenderingEvent>>,
         ) {
             const MOVE_SPEED: f32 = 25.0;
             const ROTATE_SPEED: f32 = 0.001;
@@ -146,14 +147,7 @@ impl FreeCamera {
             let data = cam.data.lerp(&cam.instant, LERP * delta * 30.0);
             if cam.data != data {
                 cam.data = data;
-
-                let broadcast = [ids.geometry, ids.aabb];
-                for id in broadcast.iter() {
-                    sender.send(RenderPassEvent::new(
-                        *id,
-                        CustomPassEvent::UpdateView(cam.as_view()),
-                    ));
-                }
+                dispatcher.dispatch_update_view(cam.as_view(), sender);
             }
         }
 

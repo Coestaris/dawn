@@ -7,7 +7,6 @@ use crate::logging::setup_logging;
 use crate::systems::asset::setup_assets_system;
 use crate::systems::asset_swap::{setup_asset_swap_system, AndThen, DropAllAssetsEvent};
 use crate::systems::objects::setup_objects_system;
-use crate::systems::rendering::setup_rendering_system;
 use crate::systems::ui::setup_ui_system;
 use dawn_ecs::main_loop::{synchronized_loop_with_monitoring, unsynchronized_loop_with_monitoring};
 use dawn_graphics::input::{InputEvent, KeyCode};
@@ -17,10 +16,12 @@ use evenio::event::{Receiver, Sender};
 use evenio::world::World;
 use log::{error, info};
 use std::panic;
+use crate::rendering::setup_rendering_system;
 
 mod components;
 mod logging;
 mod systems;
+pub mod rendering;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
@@ -72,7 +73,7 @@ fn main() {
     #[cfg(debug_assertions)]
     setup_logging(log::LevelFilter::Info, None, true);
 
-    // Setup the world and standalone components
+    // Set up the world and standalone components
     let mut world = World::new();
     InputHolder::new().attach_to_ecs(&mut world);
     FreeCamera::new().attach_to_ecs(&mut world);
