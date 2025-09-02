@@ -9,7 +9,7 @@ use dawn_graphics::gl::raii::texture::Texture;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
-use dawn_graphics::renderer::RendererBackend;
+use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use std::rc::Rc;
 
 struct ShaderContainer {
@@ -78,10 +78,16 @@ impl RenderPass<RenderingEvent> for ScreenPass {
     }
 
     #[inline(always)]
-    fn begin(&mut self, _: &RendererBackend<RenderingEvent>) -> RenderResult {
+    fn begin(
+        &mut self,
+        _: &RendererBackend<RenderingEvent>,
+        frame: &DataStreamFrame,
+    ) -> RenderResult {
         if self.shader.is_none() {
             return RenderResult::default();
         }
+
+        println!("Point lights: {:?}", frame.point_lights);
 
         unsafe {
             bindings::Disable(bindings::DEPTH_TEST);
@@ -91,7 +97,7 @@ impl RenderPass<RenderingEvent> for ScreenPass {
 
         let shader = self.shader.as_ref().unwrap();
         ShaderProgram::bind(&shader.shader.cast());
-        Texture::bind(TEXTURE_2D, &self.gbuffer.normal_texture.texture, 0);
+        Texture::bind(TEXTURE_2D, &self.gbuffer.color_texture.texture, 0);
         self.quad.draw()
     }
 

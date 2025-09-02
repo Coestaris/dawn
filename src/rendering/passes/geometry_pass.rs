@@ -12,7 +12,7 @@ use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
-use dawn_graphics::renderer::RendererBackend;
+use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::Mat4;
 use std::rc::Rc;
 
@@ -145,7 +145,11 @@ impl RenderPass<RenderingEvent> for GeometryPass {
     }
 
     #[inline(always)]
-    fn begin(&mut self, _: &RendererBackend<RenderingEvent>) -> RenderResult {
+    fn begin(
+        &mut self,
+        _: &RendererBackend<RenderingEvent>,
+        _frame: &DataStreamFrame,
+    ) -> RenderResult {
         Framebuffer::bind(&self.gbuffer.fbo);
 
         unsafe {
