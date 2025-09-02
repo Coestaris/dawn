@@ -8,7 +8,7 @@ use dawn_graphics::gl::raii::texture::Texture;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
-use dawn_graphics::renderer::RendererBackend;
+use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::{Mat4, UVec2, Vec2, Vec3, Vec4};
 use log::warn;
 use triple_buffer::Output;
@@ -91,7 +91,11 @@ impl RenderPass<RenderingEvent> for UIPass {
         "UIPass"
     }
 
-    fn begin(&mut self, _backend: &RendererBackend<RenderingEvent>) -> RenderResult {
+    fn begin(
+        &mut self,
+        _backend: &RendererBackend<RenderingEvent>,
+        _frame: &DataStreamFrame,
+    ) -> RenderResult {
         // return RenderResult::default();
 
         if let None = self.shader {

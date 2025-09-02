@@ -4,8 +4,8 @@ use dawn_assets::hub::{AssetHub, AssetHubEvent, AssetInfoState};
 use dawn_assets::requests::{AssetRequest, AssetRequestID, AssetRequestQuery};
 use dawn_assets::AssetType;
 use dawn_ecs::events::{ExitEvent, TickEvent};
+use dawn_graphics::ecs::{InvalidateRendererCache, ObjectMaterial, ObjectMesh};
 use dawn_graphics::passes::events::RenderPassEvent;
-use dawn_graphics::renderable::{ObjectMaterial, ObjectMesh};
 use evenio::component::Component;
 use evenio::entity::EntityId;
 use evenio::event::{GlobalEvent, Insert, Receiver, Remove, Sender, Spawn};
@@ -58,8 +58,15 @@ pub fn free_assets(hub: &mut AssetHub) -> AssetRequestID {
 #[derive(GlobalEvent)]
 struct AllAssetsDroppedEvent(pub AndThen);
 
+fn drop_all_assets_in_renderer_handler(
+    _: Receiver<DropAllAssetsEvent>,
+    mut sender: Sender<InvalidateRendererCache>,
+) {
+    sender.send(InvalidateRendererCache);
+}
+
 fn drop_all_assets_in_pipeline_handler(
-    r: Receiver<DropAllAssetsEvent>,
+    _: Receiver<DropAllAssetsEvent>,
     dispatcher: Single<&RenderDispatcher>,
     sender: Sender<RenderPassEvent<RenderingEvent>>,
 ) {
@@ -199,6 +206,7 @@ fn request_finished(
 
 pub fn setup_asset_swap_system(world: &mut World) {
     // First we wait for DropAllAssets event
+    world.add_handler(drop_all_assets_in_renderer_handler);
     world.add_handler(drop_all_assets_in_world_handler);
     world.add_handler(drop_all_assets_in_pipeline_handler);
     // Then we wait for the timer to finish
