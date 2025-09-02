@@ -70,7 +70,7 @@ fn main() {
     setup_logging(log::LevelFilter::Info, Some("dawn_log".into()), false);
 
     #[cfg(debug_assertions)]
-    setup_logging(log::LevelFilter::Debug, None, true);
+    setup_logging(log::LevelFilter::Info, None, true);
 
     // Setup the world and standalone components
     let mut world = World::new();

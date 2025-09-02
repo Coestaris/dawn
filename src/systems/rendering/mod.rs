@@ -2,6 +2,7 @@ use crate::components::imui::UICommand;
 use crate::logging;
 use crate::systems::asset::FactoryBindings;
 use crate::systems::rendering::aabb_pass::AABBPass;
+use crate::systems::rendering::gbuffer::GBuffer;
 use crate::systems::rendering::geometry_pass::GeometryPass;
 use crate::systems::rendering::screen_pass::ScreenPass;
 use crate::systems::rendering::ui_pass::UIPass;
@@ -31,10 +32,12 @@ use evenio::prelude::World;
 use glam::{Mat4, UVec2};
 use log::info;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::Arc;
 use triple_buffer::Output;
 
 mod aabb_pass;
+mod gbuffer;
 mod geometry_pass;
 mod screen_pass;
 mod ui_pass;
@@ -183,33 +186,11 @@ pub fn setup_rendering_system(
             bindings::BlendFunc(bindings::SRC_ALPHA, bindings::ONE_MINUS_SRC_ALPHA);
         }
 
-        let color_texture = Texture::new2d().unwrap();
-        Texture::bind(bindings::TEXTURE_2D, &color_texture, 0);
-        color_texture
-            .texture_image_2d(0, 800, 600, false, IRPixelFormat::R8G8B8A8, None)
-            .unwrap();
-        color_texture.generate_mipmap();
-        Texture::unbind(bindings::TEXTURE_2D, 0);
-
-        let depth_texture = Texture::new2d().unwrap();
-        Texture::bind(bindings::TEXTURE_2D, &depth_texture, 0);
-        depth_texture
-            .texture_image_2d(0, 800, 600, false, IRPixelFormat::DEPTH32F, None)
-            .unwrap();
-        depth_texture.generate_mipmap();
-        Texture::unbind(bindings::TEXTURE_2D, 0);
-
-        let mut fbo = Framebuffer::new().unwrap();
-        Framebuffer::bind(&fbo);
-        fbo.attach_texture_2d(FramebufferAttachment::Color0, &color_texture, 0);
-        fbo.attach_texture_2d(FramebufferAttachment::Depth, &depth_texture, 0);
-        assert_eq!(fbo.is_complete(), true);
-        Framebuffer::unbind();
-
-        let geometry_pass = GeometryPass::new(geometry_pass_id, fbo);
-        let aabb_pass = AABBPass::new(aabb_pass_id);
+        let gbuffer = Rc::new(GBuffer::new(UVec2::new(WINDOW_SIZE.0, WINDOW_SIZE.1)));
+        let geometry_pass = GeometryPass::new(geometry_pass_id, gbuffer.clone());
+        let aabb_pass = AABBPass::new(aabb_pass_id, gbuffer.clone());
         let ui_pass = UIPass::new(ui_pass_id, ui_stream);
-        let screen_pass = ScreenPass::new(screen_pass_id, color_texture, depth_texture);
+        let screen_pass = ScreenPass::new(screen_pass_id, gbuffer.clone());
         Ok(RenderPipeline::new(construct_chain!(
             geometry_pass,
             screen_pass,

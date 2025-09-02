@@ -1,3 +1,4 @@
+use crate::systems::rendering::gbuffer::GBuffer;
 use crate::systems::rendering::CustomPassEvent;
 use dawn_assets::ir::mesh::{IRIndexType, IRLayout, IRLayoutField, IRLayoutSampleType, IRTopology};
 use dawn_assets::ir::texture::IRPixelFormat;
@@ -13,6 +14,7 @@ use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::RendererBackend;
+use std::rc::Rc;
 
 struct Quad {
     vao: VertexArray,
@@ -82,26 +84,22 @@ impl Quad {
 struct ShaderContainer {
     shader: TypedAsset<ShaderProgram>,
     color_texture_location: UniformLocation,
-    depth_texture_location: UniformLocation,
 }
 
 pub(crate) struct ScreenPass {
     id: RenderPassTargetId,
     shader: Option<ShaderContainer>,
     quad: Quad,
-
-    color_texture: Texture,
-    depth_texture: Texture,
+    gbuffer: Rc<GBuffer>,
 }
 
 impl ScreenPass {
-    pub fn new(id: RenderPassTargetId, color_texture: Texture, depth_texture: Texture) -> Self {
+    pub fn new(id: RenderPassTargetId, gbuffer: Rc<GBuffer>) -> Self {
         ScreenPass {
             id,
             shader: None,
             quad: Quad::new(),
-            color_texture,
-            depth_texture,
+            gbuffer,
         }
     }
 }
@@ -122,10 +120,6 @@ impl RenderPass<CustomPassEvent> for ScreenPass {
                 let clone = shader.clone();
                 self.shader = Some(ShaderContainer {
                     shader: clone,
-                    depth_texture_location: shader
-                        .cast()
-                        .get_uniform_location("depth_texture")
-                        .unwrap(),
                     color_texture_location: shader
                         .cast()
                         .get_uniform_location("color_texture")
@@ -136,39 +130,10 @@ impl RenderPass<CustomPassEvent> for ScreenPass {
                     let program = shader.shader.cast();
                     ShaderProgram::bind(&program);
                     program.set_uniform(shader.color_texture_location, 0);
-                    program.set_uniform(shader.depth_texture_location, 1);
                     ShaderProgram::unbind();
                 }
             }
-            CustomPassEvent::UpdateWindowSize(size) => {
-                Texture::bind(bindings::TEXTURE_2D, &self.color_texture, 0);
-                self.color_texture
-                    .texture_image_2d(
-                        0,
-                        size.x as usize,
-                        size.y as usize,
-                        false,
-                        IRPixelFormat::R8G8B8A8,
-                        None,
-                    )
-                    .unwrap();
-                self.color_texture.generate_mipmap();
-                Texture::unbind(bindings::TEXTURE_2D, 0);
-
-                Texture::bind(bindings::TEXTURE_2D, &self.depth_texture, 0);
-                self.depth_texture
-                    .texture_image_2d(
-                        0,
-                        size.x as usize,
-                        size.y as usize,
-                        false,
-                        IRPixelFormat::DEPTH32F,
-                        None,
-                    )
-                    .unwrap();
-                self.depth_texture.generate_mipmap();
-                Texture::unbind(bindings::TEXTURE_2D, 0);
-            }
+            CustomPassEvent::UpdateWindowSize(size) => self.gbuffer.resize(size),
             CustomPassEvent::DropAllAssets => {
                 self.shader = None;
             }
@@ -194,8 +159,7 @@ impl RenderPass<CustomPassEvent> for ScreenPass {
 
         let shader = self.shader.as_ref().unwrap();
         ShaderProgram::bind(&shader.shader.cast());
-        Texture::bind(TEXTURE_2D, &self.color_texture, 0);
-        Texture::bind(TEXTURE_2D, &self.depth_texture, 1);
+        Texture::bind(TEXTURE_2D, &self.gbuffer.color_texture.texture, 0);
         self.quad.draw()
     }
 
@@ -203,7 +167,6 @@ impl RenderPass<CustomPassEvent> for ScreenPass {
     fn end(&mut self, _: &mut RendererBackend<CustomPassEvent>) -> RenderResult {
         ShaderProgram::unbind();
         Texture::unbind(TEXTURE_2D, 0);
-        Texture::unbind(TEXTURE_2D, 1);
         RenderResult::default()
     }
 }
