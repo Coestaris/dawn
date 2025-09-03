@@ -2,8 +2,8 @@ use crate::components::input::InputHolder;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
 use dawn_ecs::events::TickEvent;
-use dawn_graphics::input::{InputEvent, KeyCode, MouseButton};
 use dawn_graphics::passes::events::RenderPassEvent;
+use dawn_graphics::renderer::InputEvent;
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
@@ -11,6 +11,8 @@ use evenio::handler::IntoHandler;
 use evenio::world::World;
 use glam::{FloatExt, Mat4, Vec2, Vec3};
 use std::f32::consts::PI;
+use winit::event::{ElementState, MouseButton, WindowEvent};
+use winit::keyboard::{Key, NamedKey};
 
 pub struct CameraData {
     position: Vec3,
@@ -89,8 +91,12 @@ impl FreeCamera {
             holder: Single<&mut InputHolder>,
             mut cam: Single<&mut FreeCamera>,
         ) {
-            match r.event {
-                InputEvent::MouseButtonPress(MouseButton::Left) => {
+            match &r.event.0 {
+                WindowEvent::MouseInput {
+                    state: ElementState::Pressed,
+                    button: MouseButton::Left,
+                    ..
+                } => {
                     cam.click_pos = holder.mouse_pos();
                 }
                 _ => {}
@@ -114,22 +120,22 @@ impl FreeCamera {
             let right = direction.cross(Vec3::Y).normalize();
             let up = direction.cross(right).normalize();
 
-            if holder.key_pressed(KeyCode::Latin('W')) {
+            if holder.key_pressed(Key::Character("W".into())) {
                 cam.instant.position += direction * -delta * MOVE_SPEED;
             }
-            if holder.key_pressed(KeyCode::Latin('S')) {
+            if holder.key_pressed(Key::Character("S".into())) {
                 cam.instant.position += direction * delta * MOVE_SPEED;
             }
-            if holder.key_pressed(KeyCode::Latin('A')) {
+            if holder.key_pressed(Key::Character("A".into())) {
                 cam.instant.position += right * delta * MOVE_SPEED;
             }
-            if holder.key_pressed(KeyCode::Latin('D')) {
+            if holder.key_pressed(Key::Character("D".into())) {
                 cam.instant.position += right * -delta * MOVE_SPEED;
             }
-            if holder.key_pressed(KeyCode::Space) {
+            if holder.key_pressed(Key::Named(NamedKey::Space)) {
                 cam.instant.position += up * -delta * MOVE_SPEED;
             }
-            if holder.key_pressed(KeyCode::ShiftL) {
+            if holder.key_pressed(Key::Named(NamedKey::Shift)) {
                 cam.instant.position += up * delta * MOVE_SPEED;
             }
             if holder.button_pressed(MouseButton::Left) {

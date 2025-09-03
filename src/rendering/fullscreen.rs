@@ -1,7 +1,5 @@
 use crate::rendering::WINDOW_SIZE;
-use dawn_graphics::input::{InputEvent, KeyCode};
-use dawn_graphics::renderer::ViewEvent;
-use dawn_graphics::view::ViewGeometry;
+use dawn_graphics::renderer::{InputEvent, ViewEvent};
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
@@ -17,17 +15,7 @@ fn fullscreen_handler(
     mut cg: Single<&mut CurrentGeometry>,
     mut sender: Sender<ViewEvent>,
 ) {
-    match ie.event {
-        InputEvent::KeyPress(KeyCode::Function(11)) => {
-            cg.is_fullscreen = !cg.is_fullscreen;
-            if cg.is_fullscreen {
-                sender.send(ViewEvent::SetGeometry(ViewGeometry::BorderlessFullscreen));
-            } else {
-                sender.send(ViewEvent::SetGeometry(ViewGeometry::Normal(WINDOW_SIZE)));
-            }
-        }
-        _ => {}
-    }
+    // TODO!
 }
 
 pub fn setup_fullscreen_system(world: &mut World) {
