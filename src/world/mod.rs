@@ -4,11 +4,10 @@ use evenio::component::Component;
 use evenio::event::Receiver;
 use evenio::fetch::{Fetcher, Single};
 use glam::Quat;
-use winit::keyboard::{Key, NamedKey};
+use winit::keyboard::{Key, KeyCode, NamedKey, PhysicalKey};
 use crate::world::input::InputHolder;
 
 pub mod asset;
-pub mod asset_swap;
 pub mod dictionaries;
 pub mod exit;
 pub mod fcam;
@@ -34,22 +33,22 @@ fn move_light_handler(
 ) {
     for (pos, _) in f {
         const SPEED: f32 = 10.0;
-        if holder.key_pressed(Key::Named(NamedKey::ArrowUp)) {
+        if holder.key_pressed(PhysicalKey::Code(KeyCode::ArrowUp)) {
             pos.0.y += t.event.delta * SPEED;
         }
-        if holder.key_pressed(Key::Named(NamedKey::ArrowDown)) {
+        if holder.key_pressed(PhysicalKey::Code(KeyCode::ArrowDown)) {
             pos.0.y -= t.event.delta * SPEED;
         }
-        if holder.key_pressed(Key::Named(NamedKey::ArrowLeft)) {
+        if holder.key_pressed(PhysicalKey::Code(KeyCode::ArrowLeft)) {
             pos.0.x -= t.event.delta * SPEED;
         }
-        if holder.key_pressed(Key::Named(NamedKey::ArrowRight)) {
+        if holder.key_pressed(PhysicalKey::Code(KeyCode::ArrowRight)) {
             pos.0.x += t.event.delta * SPEED;
         }
-        if holder.key_pressed(Key::Named(NamedKey::PageUp)) {
+        if holder.key_pressed(PhysicalKey::Code(KeyCode::PageUp)) {
             pos.0.z += t.event.delta * SPEED;
         }
-        if holder.key_pressed(Key::Named(NamedKey::PageDown)) {
+        if holder.key_pressed(PhysicalKey::Code(KeyCode::PageDown)) {
             pos.0.z -= t.event.delta * SPEED;
         }
     }

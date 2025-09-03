@@ -38,7 +38,7 @@ impl RenderDispatcher {
     fn recalculate_projection(&mut self, screen: UVec2) {
         let aspect = screen.x as f32 / screen.y as f32;
         self.perspective_projection =
-            Mat4::perspective_rh_gl(std::f32::consts::FRAC_PI_4, aspect, 0.1, 100.0);
+            Mat4::perspective_rh_gl(std::f32::consts::FRAC_PI_3, aspect, 0.1, 100.0);
         self.ortho_projection =
             Mat4::orthographic_rh_gl(0.0, screen.x as f32, screen.y as f32, 0.0, -1.0, 1.0);
     }
@@ -160,7 +160,7 @@ impl RenderDispatcher {
         }
     }
 
-    pub(crate) fn attach_to_ecs(self, world: &mut World) {
+    pub(crate) fn attach_to_ecs(self, world: &mut World, win_size: UVec2) {
         fn asset_events_handler(
             r: Receiver<AssetHubEvent>,
             hub: Single<&mut AssetHub>,
@@ -178,9 +178,15 @@ impl RenderDispatcher {
             dispatcher.dispatch_input(r.event, sender);
         }
 
+        // Well, I'll deal with this later...
+        world.send(InputEvent(WindowEvent::Resized(winit::dpi::PhysicalSize {
+            width: win_size.x as u32,
+            height: win_size.y as u32,
+        })));
+
         let entity = world.spawn();
         world.insert(entity, self);
-        
+
         world.add_handler(asset_events_handler);
         world.add_handler(input_events_handler);
     }
