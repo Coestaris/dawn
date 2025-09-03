@@ -1,3 +1,4 @@
+use crate::asset_swap::DropAllAssetsEvent;
 use crate::components::imui::{Style, UICommand};
 use build_info::semver::Op;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
@@ -5,8 +6,7 @@ use dawn_assets::TypedAsset;
 use dawn_ecs::events::InterSyncEvent;
 use dawn_ecs::main_loop::MainLoopMonitorEvent;
 use dawn_graphics::gl::font::Font;
-use dawn_graphics::input::{InputEvent, KeyCode};
-use dawn_graphics::renderer::RendererMonitorEvent;
+use dawn_graphics::renderer::{InputEvent, RendererMonitorEvent};
 use evenio::component::Component;
 use evenio::event::Receiver;
 use evenio::fetch::Single;
@@ -14,7 +14,8 @@ use evenio::world::World;
 use glam::{UVec2, Vec2, Vec4};
 use log::{debug, info};
 use triple_buffer::{triple_buffer, Input, Output};
-use crate::asset_swap::DropAllAssetsEvent;
+use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
+use winit::keyboard::{Key, NamedKey};
 
 #[derive(Component)]
 struct UISystem {
@@ -27,12 +28,26 @@ struct UISystem {
 }
 
 fn toggle_detailed_handler(r: Receiver<InputEvent>, mut ui: Single<&mut UISystem>) {
-    match r.event {
-        InputEvent::KeyPress(KeyCode::Function(1)) => {
-            ui.detailed = !ui.detailed;
-            debug!("Toggled detailed UI: {}", ui.detailed);
+    match &r.event.0 {
+        WindowEvent::Resized(size) => {
+            ui.viewport = Some(UVec2::new(size.width, size.height));
         }
-        InputEvent::Resize(size) => ui.viewport = Some(*size),
+        WindowEvent::KeyboardInput {
+            event:
+                KeyEvent {
+                    logical_key: key,
+                    state: ElementState::Released,
+                    ..
+                },
+            ..
+        } => match key.as_ref() {
+            Key::Named(NamedKey::F1) => {
+                ui.detailed = !ui.detailed;
+                debug!("Toggled detailed UI: {}", ui.detailed);
+            }
+            _ => {}
+        },
+
         _ => {}
     }
 }

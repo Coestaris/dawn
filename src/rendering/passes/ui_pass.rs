@@ -11,6 +11,7 @@ use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::{Mat4, UVec2, Vec2, Vec3, Vec4};
 use log::warn;
+use std::sync::Arc;
 use triple_buffer::Output;
 
 struct ShaderContainer {
@@ -25,11 +26,11 @@ pub(crate) struct UIPass {
     id: RenderPassTargetId,
     shader: Option<ShaderContainer>,
     projection: Mat4,
-    stream: Output<Vec<UICommand>>,
+    stream: Arc<Output<Vec<UICommand>>>,
 }
 
 impl UIPass {
-    pub fn new(id: RenderPassTargetId, stream: Output<Vec<UICommand>>) -> Self {
+    pub fn new(id: RenderPassTargetId, stream: Arc<Output<Vec<UICommand>>>) -> Self {
         UIPass {
             id,
             shader: None,
@@ -63,7 +64,12 @@ impl RenderPass<RenderingEvent> for UIPass {
         match event {
             RenderingEvent::DropAllAssets => {
                 self.shader = None;
-                let stream = self.stream.output_buffer_mut();
+
+                // I know this is ugly, but it works.
+                // Hoping the renderer will not be created more than once
+                let stream = Arc::get_mut(&mut self.stream).unwrap();
+                let stream = stream.output_buffer_mut();
+
                 stream.clear();
             }
             RenderingEvent::UpdateShader(shader) => {
@@ -110,7 +116,8 @@ impl RenderPass<RenderingEvent> for UIPass {
             bindings::Disable(bindings::CULL_FACE);
         }
 
-        let commands = self.stream.read();
+        let stream = Arc::get_mut(&mut self.stream).unwrap();
+        let commands = stream.read();
         let mut result = RenderResult::default();
 
         let mut style = None;

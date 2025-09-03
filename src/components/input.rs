@@ -1,4 +1,4 @@
-use dawn_graphics::input::{InputEvent, KeyCode, MouseButton};
+use dawn_graphics::renderer::InputEvent;
 use evenio::component::Component;
 use evenio::event::Receiver;
 use evenio::fetch::Single;
@@ -6,33 +6,59 @@ use evenio::handler::IntoHandler;
 use evenio::world::World;
 use glam::Vec2;
 use std::collections::HashSet;
+use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
+use winit::keyboard::Key;
 
 #[derive(Component)]
 pub struct InputHolder {
     // TODO: Store keys in more efficient way
-    key_pressed: HashSet<KeyCode>,
+    key_pressed: HashSet<Key>,
     button_pressed: HashSet<MouseButton>,
     mouse_pos: Vec2,
 }
 
 impl InputHolder {
     pub fn attach_to_ecs(self, world: &mut World) {
-        fn events_handler(ie: Receiver<InputEvent>, mut holder: Single<&mut InputHolder>) {
-            match ie.event {
-                InputEvent::KeyPress(key) => {
+        fn events_handler(r: Receiver<InputEvent>, mut holder: Single<&mut InputHolder>) {
+            match &r.event.0 {
+                WindowEvent::KeyboardInput {
+                    event:
+                        KeyEvent {
+                            logical_key: key,
+                            state: ElementState::Released,
+                            ..
+                        },
+                    ..
+                } => {
+                    holder.key_pressed.remove(key);
+                }
+                WindowEvent::KeyboardInput {
+                    event:
+                        KeyEvent {
+                            logical_key: key,
+                            state: ElementState::Pressed,
+                            ..
+                        },
+                    ..
+                } => {
                     holder.key_pressed.insert(key.clone());
                 }
-                InputEvent::KeyRelease(key) => {
-                    holder.key_pressed.remove(&key);
+                WindowEvent::MouseInput {
+                    state: ElementState::Released,
+                    button,
+                    ..
+                } => {
+                    holder.button_pressed.remove(button);
                 }
-                InputEvent::MouseButtonPress(button) => {
+                WindowEvent::MouseInput {
+                    state: ElementState::Pressed,
+                    button,
+                    ..
+                } => {
                     holder.button_pressed.insert(button.clone());
                 }
-                InputEvent::MouseButtonRelease(button) => {
-                    holder.button_pressed.remove(&button);
-                }
-                InputEvent::MouseMove(pos) => {
-                    holder.mouse_pos = *pos;
+                WindowEvent::CursorMoved { position, .. } => {
+                    holder.mouse_pos = Vec2::new(position.x as f32, position.y as f32);
                 }
                 _ => {}
             }
@@ -55,7 +81,7 @@ impl InputHolder {
         self.mouse_pos
     }
 
-    pub fn key_pressed(&self, key: KeyCode) -> bool {
+    pub fn key_pressed(&self, key: Key) -> bool {
         self.key_pressed.contains(&key)
     }
 
