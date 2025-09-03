@@ -1,3 +1,6 @@
+use crate::world::asset::DropAllAssetsEvent;
+use crate::world::dictionaries::DictionaryEntry;
+use crate::world::Rotating;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::{AssetID, TypedAsset};
 use dawn_graphics::ecs::{
@@ -10,9 +13,6 @@ use evenio::entity::EntityId;
 use evenio::event::{Despawn, Insert, Receiver, Remove, Sender, Spawn};
 use evenio::fetch::{Fetcher, Single};
 use log::{debug, info, warn};
-use crate::world::asset_swap::DropAllAssetsEvent;
-use crate::world::dictionaries::DictionaryEntry;
-use crate::world::Rotating;
 
 #[derive(Component)]
 struct MapLink {

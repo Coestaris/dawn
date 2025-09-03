@@ -7,12 +7,12 @@ use evenio::world::World;
 use glam::Vec2;
 use std::collections::HashSet;
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
-use winit::keyboard::Key;
+use winit::keyboard::{Key, PhysicalKey};
 
 #[derive(Component)]
 pub struct InputHolder {
     // TODO: Store keys in more efficient way
-    key_pressed: HashSet<Key>,
+    key_pressed: HashSet<PhysicalKey>,
     button_pressed: HashSet<MouseButton>,
     mouse_pos: Vec2,
 }
@@ -24,7 +24,7 @@ impl InputHolder {
                 WindowEvent::KeyboardInput {
                     event:
                         KeyEvent {
-                            logical_key: key,
+                            physical_key: key,
                             state: ElementState::Released,
                             ..
                         },
@@ -35,7 +35,7 @@ impl InputHolder {
                 WindowEvent::KeyboardInput {
                     event:
                         KeyEvent {
-                            logical_key: key,
+                            physical_key: key,
                             state: ElementState::Pressed,
                             ..
                         },
@@ -81,7 +81,7 @@ impl InputHolder {
         self.mouse_pos
     }
 
-    pub fn key_pressed(&self, key: Key) -> bool {
+    pub fn key_pressed(&self, key: PhysicalKey) -> bool {
         self.key_pressed.contains(&key)
     }
 

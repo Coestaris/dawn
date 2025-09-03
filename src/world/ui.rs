@@ -1,7 +1,9 @@
+use crate::world::asset::DropAllAssetsEvent;
 use build_info::semver::Op;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::TypedAsset;
 use dawn_ecs::events::InterSyncEvent;
+use dawn_ecs::world::WorldLoopMonitorEvent;
 use dawn_graphics::gl::font::Font;
 use dawn_graphics::renderer::{InputEvent, RendererMonitorEvent};
 use evenio::component::Component;
@@ -13,8 +15,6 @@ use log::{debug, info};
 use triple_buffer::{triple_buffer, Input, Output};
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::keyboard::{Key, NamedKey};
-use dawn_ecs::world::WorldLoopMonitorEvent;
-use crate::world::asset_swap::DropAllAssetsEvent;
 
 #[derive(Debug, Clone)]
 pub struct Style {
@@ -85,10 +85,12 @@ fn drop_all_assets_handler(r: Receiver<DropAllAssetsEvent>, mut ui: Single<&mut 
 }
 
 fn main_loop_monitoring_handler(r: Receiver<WorldLoopMonitorEvent>, mut ui: Single<&mut UISystem>) {
+    info!("TPS: {:?}", r.event.tps.average());
     ui.main_loop = Some(r.event.clone());
 }
 
 fn renderer_monitoring_handler(r: Receiver<RendererMonitorEvent>, mut ui: Single<&mut UISystem>) {
+    info!("FPS: {:?}", r.event.fps.average());
     ui.renderer = Some(r.event.clone());
 }
 

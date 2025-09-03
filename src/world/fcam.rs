@@ -12,7 +12,7 @@ use evenio::world::World;
 use glam::{FloatExt, Mat4, Vec2, Vec3};
 use std::f32::consts::PI;
 use winit::event::{ElementState, MouseButton, WindowEvent};
-use winit::keyboard::{Key, NamedKey};
+use winit::keyboard::{Key, KeyCode, NamedKey, PhysicalKey};
 
 pub struct CameraData {
     position: Vec3,
@@ -110,7 +110,7 @@ impl FreeCamera {
             dispatcher: Single<&RenderDispatcher>,
             sender: Sender<RenderPassEvent<RenderingEvent>>,
         ) {
-            const MOVE_SPEED: f32 = 25.0;
+            const MOVE_SPEED: f32 = 10.0;
             const ROTATE_SPEED: f32 = 0.001;
             const LERP: f32 = 0.5;
 
@@ -120,22 +120,22 @@ impl FreeCamera {
             let right = direction.cross(Vec3::Y).normalize();
             let up = direction.cross(right).normalize();
 
-            if holder.key_pressed(Key::Character("W".into())) {
+            if holder.key_pressed(PhysicalKey::Code(KeyCode::KeyW)) {
                 cam.instant.position += direction * -delta * MOVE_SPEED;
             }
-            if holder.key_pressed(Key::Character("S".into())) {
+            if holder.key_pressed(PhysicalKey::Code(KeyCode::KeyS)) {
                 cam.instant.position += direction * delta * MOVE_SPEED;
             }
-            if holder.key_pressed(Key::Character("A".into())) {
+            if holder.key_pressed(PhysicalKey::Code(KeyCode::KeyA)) {
                 cam.instant.position += right * delta * MOVE_SPEED;
             }
-            if holder.key_pressed(Key::Character("D".into())) {
+            if holder.key_pressed(PhysicalKey::Code(KeyCode::KeyD)) {
                 cam.instant.position += right * -delta * MOVE_SPEED;
             }
-            if holder.key_pressed(Key::Named(NamedKey::Space)) {
+            if holder.key_pressed(PhysicalKey::Code(KeyCode::Space)) {
                 cam.instant.position += up * -delta * MOVE_SPEED;
             }
-            if holder.key_pressed(Key::Named(NamedKey::Shift)) {
+            if holder.key_pressed(PhysicalKey::Code(KeyCode::ShiftLeft)) {
                 cam.instant.position += up * delta * MOVE_SPEED;
             }
             if holder.button_pressed(MouseButton::Left) {
