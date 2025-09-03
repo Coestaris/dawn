@@ -9,7 +9,6 @@ use crate::logging::setup_logging;
 use crate::maps::setup_maps_system;
 use crate::rendering::setup_rendering_system;
 use crate::ui::setup_ui_system;
-use dawn_ecs::main_loop::{synchronized_loop_with_monitoring, unsynchronized_loop_with_monitoring};
 use dawn_graphics::renderer::{InputEvent, ViewSynchronization};
 use dawn_util::rendezvous::Rendezvous;
 use evenio::event::{Receiver, Sender};
@@ -17,7 +16,6 @@ use evenio::world::World;
 use log::{error, info};
 use std::panic;
 use std::sync::Arc;
-use winit::event::WindowEvent::KeyboardInput;
 use winit::event::{ElementState, KeyEvent, WindowEvent};
 use winit::keyboard::{Key, NamedKey};
 
@@ -81,6 +79,19 @@ fn panic_hook(info: &panic::PanicHookInfo) {
     error!("Panic: {}", info);
 }
 
+fn init_world(world: &mut World) {
+    // Set up the world and standalone components
+    InputHolder::new().attach_to_ecs(world);
+    FreeCamera::new().attach_to_ecs(world);
+
+    // Setup the systems
+    setup_asset_swap_system(world);
+    setup_maps_system(world);
+    world.add_handler(escape_handler);
+    let bindings = setup_assets_system(world);
+    let ui_stream = setup_ui_system(world);
+}
+
 fn main() {
     // Disable colors in the release builds to not consume extra resources.
     // It also makes the log files much more readable.
@@ -89,18 +100,6 @@ fn main() {
 
     #[cfg(debug_assertions)]
     setup_logging(log::LevelFilter::Info, None, true);
-
-    // Set up the world and standalone components
-    let mut world = World::new();
-    InputHolder::new().attach_to_ecs(&mut world);
-    FreeCamera::new().attach_to_ecs(&mut world);
-
-    // Setup the systems
-    setup_asset_swap_system(&mut world);
-    setup_maps_system(&mut world);
-    world.add_handler(escape_handler);
-    let bindings = setup_assets_system(&mut world);
-    let ui_stream = setup_ui_system(&mut world);
 
     // Run the event loop
     match WORLD_SYNC_MODE {

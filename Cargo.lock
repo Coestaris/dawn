@@ -855,10 +855,12 @@ dependencies = [
 name = "dawn-ecs"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "dawn-util",
  "evenio",
  "glam",
  "log",
+ "thiserror 2.0.16",
 ]
 
 [[package]]
