@@ -7,7 +7,6 @@ use crate::rendering::passes::screen_pass::ScreenPass;
 use crate::rendering::passes::ui_pass::UIPass;
 use crate::rendering::pre_pipeline_construct;
 use crate::world::asset::setup_assets_system;
-use crate::world::asset_swap::setup_asset_swap_system;
 use crate::world::exit::escape_handler;
 use crate::world::fcam::FreeCamera;
 use crate::world::input::InputHolder;
@@ -44,13 +43,12 @@ struct MainToEcs {
 
 fn init_world(world: &mut World, to_ecs: MainToEcs) {
     to_ecs.renderer_proxy.attach_to_ecs(world);
-    to_ecs.dispatcher.attach_to_ecs(world);
+    to_ecs.dispatcher.attach_to_ecs(world, WINDOW_SIZE);
 
     InputHolder::new().attach_to_ecs(world);
     FreeCamera::new().attach_to_ecs(world);
 
     setup_assets_system(world, to_ecs.hub);
-    setup_asset_swap_system(world);
     setup_maps_system(world);
     setup_ui_system(world, to_ecs.ui_stream);
     world.add_handler(escape_handler);

@@ -67,10 +67,10 @@ impl RenderPass<RenderingEvent> for UIPass {
 
                 // I know this is ugly, but it works.
                 // Hoping the renderer will not be created more than once
-                let stream = Arc::get_mut(&mut self.stream).unwrap();
-                let stream = stream.output_buffer_mut();
-
-                stream.clear();
+                // let stream = Arc::get_mut(&mut self.stream).unwrap();
+                // let stream = stream.output_buffer_mut();
+                //
+                // stream.clear();
             }
             RenderingEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
@@ -116,14 +116,15 @@ impl RenderPass<RenderingEvent> for UIPass {
             bindings::Disable(bindings::CULL_FACE);
         }
 
-        let stream = Arc::get_mut(&mut self.stream).unwrap();
-        let commands = stream.read();
+        // let stream = Arc::get_mut(&mut self.stream).unwrap();
+        // let commands = stream.read();
+        let commands: Vec<UICommand> = Vec::new();
         let mut result = RenderResult::default();
 
         let mut style = None;
         let mut color = Vec4::new(1.0, 1.0, 1.0, 1.0);
 
-        for command in commands {
+        for command in &commands {
             match command {
                 UICommand::ApplyStyle(new_style) => {
                     style = Some(new_style);
