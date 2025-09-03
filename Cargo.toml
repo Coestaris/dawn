@@ -45,6 +45,7 @@ tinyrand = "0.5.0"
 anyhow = "1.0.99"
 triple_buffer = "8.1.1"
 bitflags = "2.9.2"
+winit = "0.30.12"
 
 [profile.release]
 lto = true

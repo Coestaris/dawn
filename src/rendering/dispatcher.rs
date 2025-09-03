@@ -2,12 +2,14 @@ use crate::rendering::event::{RenderingEvent, RenderingEventMask};
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::AssetID;
 use dawn_graphics::gl::raii::shader_program::ShaderProgram;
-use dawn_graphics::input::{InputEvent, KeyCode};
 use dawn_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
+use dawn_graphics::renderer::InputEvent;
 use evenio::component::Component;
 use evenio::event::Sender;
 use glam::{Mat4, UVec2};
 use log::info;
+use winit::event::{ElementState, KeyEvent, WindowEvent};
+use winit::keyboard::{Key, NamedKey};
 
 struct PassDescriptor {
     id: RenderPassTargetId,
@@ -118,10 +120,12 @@ impl RenderDispatcher {
         event: &InputEvent,
         mut sender: Sender<RenderPassEvent<RenderingEvent>>,
     ) {
-        match event {
-            InputEvent::Resize(size) => {
+        match &event.0 {
+            WindowEvent::Resized(size) => {
                 info!("Viewport resized to {:?}", size);
-                self.recalculate_projection(*size);
+
+                let size = UVec2::new(size.width as u32, size.height as u32);
+                self.recalculate_projection(size);
                 self.dispatch(
                     RenderingEvent::PerspectiveProjectionUpdated(self.perspective_projection),
                     &mut sender,
@@ -130,15 +134,26 @@ impl RenderDispatcher {
                     RenderingEvent::OrthographicProjectionUpdated(self.ortho_projection),
                     &mut sender,
                 );
-                self.dispatch(RenderingEvent::ViewportResized(*size), &mut sender);
+                self.dispatch(RenderingEvent::ViewportResized(size), &mut sender);
             }
 
-            InputEvent::KeyPress(KeyCode::Function(3)) => {
-                self.dispatch(RenderingEvent::ToggleWireframeMode, &mut sender);
-            }
-            InputEvent::KeyPress(KeyCode::Function(4)) => {
-                self.dispatch(RenderingEvent::ToggleBoundingBox, &mut sender);
-            }
+            WindowEvent::KeyboardInput {
+                event:
+                    KeyEvent {
+                        state: ElementState::Pressed,
+                        logical_key: key,
+                        ..
+                    },
+                ..
+            } => match key.as_ref() {
+                Key::Named(NamedKey::F3) => {
+                    self.dispatch(RenderingEvent::ToggleWireframeMode, &mut sender);
+                }
+                Key::Named(NamedKey::F4) => {
+                    self.dispatch(RenderingEvent::ToggleBoundingBox, &mut sender);
+                }
+                _ => {}
+            },
             _ => {}
         }
     }

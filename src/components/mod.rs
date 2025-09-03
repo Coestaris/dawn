@@ -1,11 +1,11 @@
 use crate::components::input::InputHolder;
 use dawn_ecs::events::TickEvent;
 use dawn_graphics::ecs::{ObjectPointLight, ObjectPosition, ObjectRotation};
-use dawn_graphics::input::KeyCode;
 use evenio::component::Component;
 use evenio::event::Receiver;
 use evenio::fetch::{Fetcher, Single};
 use glam::Quat;
+use winit::keyboard::{Key, NamedKey};
 
 pub mod dictionaries;
 pub mod fcam;
@@ -30,22 +30,22 @@ fn move_light_handler(
 ) {
     for (pos, _) in f {
         const SPEED: f32 = 10.0;
-        if holder.key_pressed(KeyCode::Up) {
+        if holder.key_pressed(Key::Named(NamedKey::ArrowUp)) {
             pos.0.y += t.event.delta * SPEED;
         }
-        if holder.key_pressed(KeyCode::Down) {
+        if holder.key_pressed(Key::Named(NamedKey::ArrowDown)) {
             pos.0.y -= t.event.delta * SPEED;
         }
-        if holder.key_pressed(KeyCode::Left) {
+        if holder.key_pressed(Key::Named(NamedKey::ArrowLeft)) {
             pos.0.x -= t.event.delta * SPEED;
         }
-        if holder.key_pressed(KeyCode::Right) {
+        if holder.key_pressed(Key::Named(NamedKey::ArrowRight)) {
             pos.0.x += t.event.delta * SPEED;
         }
-        if holder.key_pressed(KeyCode::PageUp) {
+        if holder.key_pressed(Key::Named(NamedKey::PageUp)) {
             pos.0.z += t.event.delta * SPEED;
         }
-        if holder.key_pressed(KeyCode::PageDown) {
+        if holder.key_pressed(Key::Named(NamedKey::PageDown)) {
             pos.0.z -= t.event.delta * SPEED;
         }
     }

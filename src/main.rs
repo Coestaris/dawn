@@ -1,22 +1,25 @@
 // Do not display a console window on Windows
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use crate::asset::setup_assets_system;
 use crate::asset_swap::{setup_asset_swap_system, AndThen, DropAllAssetsEvent};
 use crate::components::fcam::FreeCamera;
 use crate::components::input::InputHolder;
 use crate::logging::setup_logging;
 use crate::maps::setup_maps_system;
 use crate::rendering::setup_rendering_system;
+use crate::ui::setup_ui_system;
 use dawn_ecs::main_loop::{synchronized_loop_with_monitoring, unsynchronized_loop_with_monitoring};
-use dawn_graphics::input::{InputEvent, KeyCode};
-use dawn_graphics::view::ViewSynchronization;
+use dawn_graphics::renderer::{InputEvent, ViewSynchronization};
 use dawn_util::rendezvous::Rendezvous;
 use evenio::event::{Receiver, Sender};
 use evenio::world::World;
 use log::{error, info};
 use std::panic;
-use crate::asset::setup_assets_system;
-use crate::ui::setup_ui_system;
+use std::sync::Arc;
+use winit::event::WindowEvent::KeyboardInput;
+use winit::event::{ElementState, KeyEvent, WindowEvent};
+use winit::keyboard::{Key, NamedKey};
 
 mod asset;
 mod asset_swap;
@@ -42,13 +45,24 @@ const WORLD_SYNC_MODE: WorldSyncMode = WorldSyncMode::SynchronizedWithMonitor;
 
 fn escape_handler(r: Receiver<InputEvent>, mut s: Sender<DropAllAssetsEvent>) {
     // info!("Input event: {:?}", r.event);
-    match r.event {
-        InputEvent::KeyRelease(KeyCode::Escape) => {
-            s.send(DropAllAssetsEvent(AndThen::StopMainLoop));
-        }
-        InputEvent::KeyRelease(KeyCode::Function(5)) => {
-            s.send(DropAllAssetsEvent(AndThen::ReloadAssets));
-        }
+    match &r.event.0 {
+        WindowEvent::KeyboardInput {
+            event:
+                KeyEvent {
+                    logical_key: key,
+                    state: ElementState::Released,
+                    ..
+                },
+            ..
+        } => match key.as_ref() {
+            Key::Named(NamedKey::Escape) => {
+                s.send(DropAllAssetsEvent(AndThen::StopMainLoop));
+            }
+            Key::Named(NamedKey::F5) => {
+                s.send(DropAllAssetsEvent(AndThen::ReloadAssets));
+            }
+            _ => {}
+        },
         _ => {}
     }
 }
@@ -95,7 +109,7 @@ fn main() {
                 panic_hook(info);
             }));
 
-            setup_rendering_system(&mut world, bindings, None, ui_stream);
+            setup_rendering_system(&mut world, bindings, None, Arc::new(ui_stream));
             unsynchronized_loop_with_monitoring(&mut world, tps as f32);
         }
         WorldSyncMode::SynchronizedWithMonitor => {
@@ -126,7 +140,7 @@ fn main() {
                     before_frame: before_frame.clone(),
                     after_frame: after_frame.clone(),
                 }),
-                ui_stream,
+                Arc::new(ui_stream),
             );
             synchronized_loop_with_monitoring(&mut world, before_frame, after_frame);
         }
