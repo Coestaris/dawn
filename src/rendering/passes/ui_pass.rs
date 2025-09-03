@@ -1,4 +1,3 @@
-use crate::components::imui::UICommand;
 use crate::rendering::event::RenderingEvent;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
@@ -13,6 +12,7 @@ use glam::{Mat4, UVec2, Vec2, Vec3, Vec4};
 use log::warn;
 use std::sync::Arc;
 use triple_buffer::Output;
+use crate::world::ui::UICommand;
 
 struct ShaderContainer {
     shader: TypedAsset<ShaderProgram>,

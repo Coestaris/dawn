@@ -5,7 +5,9 @@ use dawn_graphics::gl::raii::shader_program::ShaderProgram;
 use dawn_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
 use dawn_graphics::renderer::InputEvent;
 use evenio::component::Component;
-use evenio::event::Sender;
+use evenio::event::{Receiver, Sender};
+use evenio::fetch::Single;
+use evenio::prelude::World;
 use glam::{Mat4, UVec2};
 use log::info;
 use winit::event::{ElementState, KeyEvent, WindowEvent};
@@ -156,5 +158,30 @@ impl RenderDispatcher {
             },
             _ => {}
         }
+    }
+
+    pub(crate) fn attach_to_ecs(self, world: &mut World) {
+        fn asset_events_handler(
+            r: Receiver<AssetHubEvent>,
+            hub: Single<&mut AssetHub>,
+            dispatcher: Single<&RenderDispatcher>,
+            sender: Sender<RenderPassEvent<RenderingEvent>>,
+        ) {
+            dispatcher.dispatch_assets(r.event, hub.0, sender);
+        }
+
+        fn input_events_handler(
+            r: Receiver<InputEvent>,
+            mut dispatcher: Single<&mut RenderDispatcher>,
+            sender: Sender<RenderPassEvent<RenderingEvent>>,
+        ) {
+            dispatcher.dispatch_input(r.event, sender);
+        }
+
+        let entity = world.spawn();
+        world.insert(entity, self);
+        
+        world.add_handler(asset_events_handler);
+        world.add_handler(input_events_handler);
     }
 }
