@@ -1,10 +1,7 @@
-use crate::asset_swap::DropAllAssetsEvent;
-use crate::components::imui::{Style, UICommand};
 use build_info::semver::Op;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::TypedAsset;
 use dawn_ecs::events::InterSyncEvent;
-use dawn_ecs::main_loop::MainLoopMonitorEvent;
 use dawn_graphics::gl::font::Font;
 use dawn_graphics::renderer::{InputEvent, RendererMonitorEvent};
 use evenio::component::Component;
@@ -16,12 +13,29 @@ use log::{debug, info};
 use triple_buffer::{triple_buffer, Input, Output};
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::keyboard::{Key, NamedKey};
+use dawn_ecs::world::WorldLoopMonitorEvent;
+use crate::world::asset_swap::DropAllAssetsEvent;
+
+#[derive(Debug, Clone)]
+pub struct Style {
+    pub font: TypedAsset<Font>,
+    pub scale: f32,
+}
+
+#[derive(Debug, Clone)]
+pub enum UICommand {
+    ApplyStyle(Style),
+    ChangeColor(Vec4),
+    StaticText(Vec2, &'static str),
+    Text(Vec2, String),
+    Box(Vec2, Vec2), // position, dimensions
+}
 
 #[derive(Component)]
 struct UISystem {
     input: Input<Vec<UICommand>>,
     font: Option<TypedAsset<Font>>,
-    main_loop: Option<MainLoopMonitorEvent>,
+    main_loop: Option<WorldLoopMonitorEvent>,
     renderer: Option<RendererMonitorEvent>,
     viewport: Option<UVec2>,
     detailed: bool,
@@ -70,7 +84,7 @@ fn drop_all_assets_handler(r: Receiver<DropAllAssetsEvent>, mut ui: Single<&mut 
     ui.input.publish();
 }
 
-fn main_loop_monitoring_handler(r: Receiver<MainLoopMonitorEvent>, mut ui: Single<&mut UISystem>) {
+fn main_loop_monitoring_handler(r: Receiver<WorldLoopMonitorEvent>, mut ui: Single<&mut UISystem>) {
     ui.main_loop = Some(r.event.clone());
 }
 
@@ -273,10 +287,7 @@ fn map_font_handler(
     }
 }
 
-pub fn setup_ui_system(world: &mut World) -> Output<Vec<UICommand>> {
-    let (stream_input, mut stream_output) =
-        triple_buffer::<Vec<UICommand>>(&Vec::with_capacity(128));
-
+pub fn setup_ui_system(world: &mut World, stream_input: Input<Vec<UICommand>>) {
     world.add_handler(drop_all_assets_handler);
     world.add_handler(map_font_handler);
     world.add_handler(toggle_detailed_handler);
@@ -296,6 +307,4 @@ pub fn setup_ui_system(world: &mut World) -> Output<Vec<UICommand>> {
             detailed: false,
         },
     );
-
-    stream_output
 }

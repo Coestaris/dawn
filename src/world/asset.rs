@@ -1,5 +1,6 @@
-use crate::components::dictionaries::DictionaryAssetFactory;
 use crate::logging::format_system_time;
+use crate::world::asset_swap::load_assets;
+use crate::world::dictionaries::DictionaryAssetFactory;
 use dawn_assets::factory::FactoryBinding;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::ir::IRAsset;
@@ -17,7 +18,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 use std::time::Duration;
-use crate::asset_swap::load_assets;
 
 #[derive(Component)]
 struct ReaderHandle {
@@ -142,23 +142,11 @@ fn assets_failed_handler(r: Receiver<AssetHubEvent>, sender: Sender<ExitEvent>) 
     }
 }
 
-pub fn setup_assets_system(world: &mut World) -> FactoryBindings {
-    let mut hub = AssetHub::new();
+pub fn setup_assets_system(world: &mut World, mut hub: AssetHub) {
     let reader = ReaderHandle::new(hub.get_read_binding());
     reader.attach_to_ecs(world);
 
     load_assets(&mut hub);
-
-    // Unlike other factories, shader and texture assets are
-    // managed directly by the renderer, instead of processing assets
-    // in the main loop (via ECS).
-    let bindings = FactoryBindings {
-        shader: hub.get_factory_biding(AssetType::Shader),
-        texture: hub.get_factory_biding(AssetType::Texture),
-        mesh: hub.get_factory_biding(AssetType::Mesh),
-        material: hub.get_factory_biding(AssetType::Material),
-        font: hub.get_factory_biding(AssetType::Font),
-    };
 
     let mut dictionary_factory = DictionaryAssetFactory::new();
     dictionary_factory.bind(hub.get_factory_biding(AssetType::Dictionary));
@@ -166,6 +154,4 @@ pub fn setup_assets_system(world: &mut World) -> FactoryBindings {
 
     hub.attach_to_ecs(world);
     world.add_handler(assets_failed_handler);
-
-    bindings
 }

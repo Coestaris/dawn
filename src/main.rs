@@ -1,31 +1,15 @@
 // Do not display a console window on Windows
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use crate::asset::setup_assets_system;
-use crate::asset_swap::{setup_asset_swap_system, AndThen, DropAllAssetsEvent};
-use crate::components::fcam::FreeCamera;
-use crate::components::input::InputHolder;
 use crate::logging::setup_logging;
-use crate::maps::setup_maps_system;
-use crate::rendering::setup_rendering_system;
-use crate::ui::setup_ui_system;
-use dawn_graphics::renderer::{InputEvent, ViewSynchronization};
-use dawn_util::rendezvous::Rendezvous;
-use evenio::event::{Receiver, Sender};
-use evenio::world::World;
-use log::{error, info};
+use crate::run::run_dawn;
+use log::error;
 use std::panic;
-use std::sync::Arc;
-use winit::event::{ElementState, KeyEvent, WindowEvent};
-use winit::keyboard::{Key, NamedKey};
 
-mod asset;
-mod asset_swap;
-mod components;
-mod logging;
-mod maps;
+pub mod logging;
 pub mod rendering;
-mod ui;
+mod run;
+pub mod world;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
@@ -41,31 +25,7 @@ const WORLD_SYNC_MODE: WorldSyncMode = WorldSyncMode::SynchronizedWithMonitor;
 // #[cfg(not(target_os = "linux"))]
 // const WORLD_SYNC_MODE: WorldSyncMode = WorldSyncMode::SynchronizedWithMonitor;
 
-fn escape_handler(r: Receiver<InputEvent>, mut s: Sender<DropAllAssetsEvent>) {
-    // info!("Input event: {:?}", r.event);
-    match &r.event.0 {
-        WindowEvent::KeyboardInput {
-            event:
-                KeyEvent {
-                    logical_key: key,
-                    state: ElementState::Released,
-                    ..
-                },
-            ..
-        } => match key.as_ref() {
-            Key::Named(NamedKey::Escape) => {
-                s.send(DropAllAssetsEvent(AndThen::StopMainLoop));
-            }
-            Key::Named(NamedKey::F5) => {
-                s.send(DropAllAssetsEvent(AndThen::ReloadAssets));
-            }
-            _ => {}
-        },
-        _ => {}
-    }
-}
-
-fn panic_hook(info: &panic::PanicHookInfo) {
+pub fn panic_hook(info: &panic::PanicHookInfo) {
     // For development, it's more convenient to see the panic messages in the console.
     #[cfg(not(debug_assertions))]
     {
@@ -79,19 +39,6 @@ fn panic_hook(info: &panic::PanicHookInfo) {
     error!("Panic: {}", info);
 }
 
-fn init_world(world: &mut World) {
-    // Set up the world and standalone components
-    InputHolder::new().attach_to_ecs(world);
-    FreeCamera::new().attach_to_ecs(world);
-
-    // Setup the systems
-    setup_asset_swap_system(world);
-    setup_maps_system(world);
-    world.add_handler(escape_handler);
-    let bindings = setup_assets_system(world);
-    let ui_stream = setup_ui_system(world);
-}
-
 fn main() {
     // Disable colors in the release builds to not consume extra resources.
     // It also makes the log files much more readable.
@@ -101,49 +48,5 @@ fn main() {
     #[cfg(debug_assertions)]
     setup_logging(log::LevelFilter::Info, None, true);
 
-    // Run the event loop
-    match WORLD_SYNC_MODE {
-        WorldSyncMode::FixedTickRate(tps) => {
-            panic::set_hook(Box::new(|info| {
-                panic_hook(info);
-            }));
-
-            setup_rendering_system(&mut world, bindings, None, Arc::new(ui_stream));
-            unsynchronized_loop_with_monitoring(&mut world, tps as f32);
-        }
-        WorldSyncMode::SynchronizedWithMonitor => {
-            let before_frame = Rendezvous::new(2);
-            let after_frame = Rendezvous::new(2);
-
-            {
-                // We need to leak the rendezvous points to make sure they
-                // live for the entire duration of the program.
-                let before_frame = Box::leak(Box::new(before_frame.clone()));
-                let after_frame = Box::leak(Box::new(after_frame.clone()));
-
-                panic::set_hook(Box::new(|info| {
-                    panic_hook(info);
-
-                    // TODO: Maybe move this to the library side?
-                    // In case of a panic, we want to make sure that both threads can exit cleanly.
-                    // So we signal both rendezvous points to avoid deadlocks.
-                    before_frame.unlock();
-                    after_frame.unlock();
-                }));
-            }
-
-            setup_rendering_system(
-                &mut world,
-                bindings,
-                Some(ViewSynchronization {
-                    before_frame: before_frame.clone(),
-                    after_frame: after_frame.clone(),
-                }),
-                Arc::new(ui_stream),
-            );
-            synchronized_loop_with_monitoring(&mut world, before_frame, after_frame);
-        }
-    }
-
-    info!("Main loop has exited");
+    run_dawn(WORLD_SYNC_MODE);
 }
