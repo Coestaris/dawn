@@ -1,7 +1,7 @@
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::AssetID;
-use dawn_graphics::gl::raii::shader_program::ShaderProgram;
+use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
 use dawn_graphics::renderer::InputEvent;
 use evenio::component::Component;
@@ -94,7 +94,7 @@ impl RenderDispatcher {
                         .events
                         .contains(RenderingEventMask::UPDATE_SHADER)
                 {
-                    let shader = hub.get_typed::<ShaderProgram>(aid.clone()).unwrap();
+                    let shader = hub.get_typed::<Program>(aid.clone()).unwrap();
                     sender.send(RenderPassEvent::new(
                         descriptor.id,
                         RenderingEvent::UpdateShader(shader),
