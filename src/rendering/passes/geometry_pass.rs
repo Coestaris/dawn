@@ -6,7 +6,7 @@ use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
-use dawn_graphics::gl::raii::shader_program::{ShaderProgram, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::texture::Texture;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
@@ -46,7 +46,7 @@ fn create_missing_texture() -> Texture {
 }
 
 struct ShaderContainer {
-    shader: TypedAsset<ShaderProgram>,
+    shader: TypedAsset<Program>,
     model_location: UniformLocation,
     view_location: UniformLocation,
     proj_location: UniformLocation,
@@ -82,10 +82,10 @@ impl GeometryPass {
         if let Some(shader) = self.shader.as_mut() {
             // Load projection matrix into shader
             let program = shader.shader.cast();
-            ShaderProgram::bind(&program);
+            Program::bind(&program);
             program.set_uniform(shader.proj_location, self.projection);
             program.set_uniform(shader.base_color_texture_location, 0);
-            ShaderProgram::unbind();
+            Program::unbind();
         }
     }
 }
@@ -165,7 +165,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
         if let Some(shader) = self.shader.as_mut() {
             // Load view matrix into shader
             let program = shader.shader.cast();
-            ShaderProgram::bind(&program);
+            Program::bind(&program);
             program.set_uniform(shader.view_location, self.view);
         }
 
@@ -234,7 +234,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
             bindings::PolygonMode(bindings::FRONT_AND_BACK, bindings::FILL);
         }
 
-        ShaderProgram::unbind();
+        Program::unbind();
         Texture::unbind(bindings::TEXTURE_2D, 0);
         Framebuffer::unbind();
         RenderResult::default()

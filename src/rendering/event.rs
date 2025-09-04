@@ -1,13 +1,13 @@
 use bitflags::bitflags;
 use dawn_assets::TypedAsset;
-use dawn_graphics::gl::raii::shader_program::ShaderProgram;
+use dawn_graphics::gl::raii::shader_program::Program;
 use glam::{Mat4, UVec2,};
 
 #[derive(Debug, Clone)]
 pub enum RenderingEvent {
     // Generic events
     DropAllAssets,
-    UpdateShader(TypedAsset<ShaderProgram>),
+    UpdateShader(TypedAsset<Program>),
     ViewUpdated(Mat4),
     PerspectiveProjectionUpdated(Mat4),
     OrthographicProjectionUpdated(Mat4),

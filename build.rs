@@ -49,7 +49,7 @@ fn main() {
 
         // Make compression none in debug mode for faster builds
         let compression_level = if std::env::var("PROFILE").unwrap() == "release" {
-            CompressionLevel::Default
+            CompressionLevel::None
         } else {
             CompressionLevel::None
         };

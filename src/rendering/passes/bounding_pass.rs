@@ -10,7 +10,7 @@ use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementA
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
 };
-use dawn_graphics::gl::raii::shader_program::{ShaderProgram, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
@@ -22,7 +22,7 @@ use log::debug;
 use std::rc::Rc;
 
 struct ShaderContainer {
-    shader: TypedAsset<ShaderProgram>,
+    shader: TypedAsset<Program>,
     model_location: UniformLocation,
     view_location: UniformLocation,
     proj_location: UniformLocation,
@@ -88,9 +88,9 @@ impl BoundingPass {
         if let Some(shader) = self.shader.as_mut() {
             // Load projection matrix into shader
             let program = shader.shader.cast();
-            ShaderProgram::bind(&program);
+            Program::bind(&program);
             program.set_uniform(shader.proj_location, self.projection);
-            ShaderProgram::unbind();
+            Program::unbind();
         }
     }
 }
@@ -180,7 +180,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         // Bind shader
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
-        ShaderProgram::bind(&program);
+        Program::bind(&program);
 
         // Update view
         program.set_uniform(shader.view_location, self.view);
@@ -264,7 +264,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         }
 
         // Unbind shader
-        ShaderProgram::unbind();
+        Program::unbind();
 
         RenderResult::default()
     }

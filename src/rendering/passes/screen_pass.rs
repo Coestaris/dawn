@@ -4,7 +4,7 @@ use crate::rendering::primitive::quad::Quad;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::bindings::TEXTURE_2D;
-use dawn_graphics::gl::raii::shader_program::{ShaderProgram, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::texture::Texture;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
@@ -13,7 +13,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use std::rc::Rc;
 
 struct ShaderContainer {
-    shader: TypedAsset<ShaderProgram>,
+    shader: TypedAsset<Program>,
     color_texture_location: UniformLocation,
 }
 
@@ -62,9 +62,9 @@ impl RenderPass<RenderingEvent> for ScreenPass {
 
                 if let Some(shader) = self.shader.as_mut() {
                     let program = shader.shader.cast();
-                    ShaderProgram::bind(&program);
+                    Program::bind(&program);
                     program.set_uniform(shader.color_texture_location, 0);
-                    ShaderProgram::unbind();
+                    Program::unbind();
                 }
             }
             RenderingEvent::ViewportResized(size) => self.gbuffer.resize(size),
@@ -94,14 +94,14 @@ impl RenderPass<RenderingEvent> for ScreenPass {
         }
 
         let shader = self.shader.as_ref().unwrap();
-        ShaderProgram::bind(&shader.shader.cast());
+        Program::bind(&shader.shader.cast());
         Texture::bind(TEXTURE_2D, &self.gbuffer.color_texture.texture, 0);
         self.quad.draw()
     }
 
     #[inline(always)]
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
-        ShaderProgram::unbind();
+        Program::unbind();
         Texture::unbind(TEXTURE_2D, 0);
         RenderResult::default()
     }

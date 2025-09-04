@@ -162,8 +162,8 @@ pub fn run_dawn(sync: WorldSyncMode) {
     // No rendering will happen until we call `run` on the renderer.
     // The renderer will run on the main thread, while the world loop
     let (renderer, proxy) =
-        Renderer::new_with_monitoring(window_config.clone(), backend_config, move |_| {
-            pre_pipeline_construct();
+        Renderer::new_with_monitoring(window_config.clone(), backend_config, move |r| {
+            pre_pipeline_construct(&r.gl);
 
             let gbuffer = Rc::new(GBuffer::new(WINDOW_SIZE));
             let geometry_pass = GeometryPass::new(geometry_id, gbuffer.clone());
