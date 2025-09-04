@@ -15,8 +15,7 @@ name = "dawn"
 edition = "2021"
 
 [features]
-default = ["gl"]
-gl = ["dawn-graphics/gl"]
+default = []
 no_assets = []
 
 [build-dependencies]
