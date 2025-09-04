@@ -127,12 +127,10 @@ fn drop_all_assets_handler(r: Receiver<DropAllAssetsEvent>, mut ui: Single<&mut 
 }
 
 fn main_loop_monitoring_handler(r: Receiver<WorldLoopMonitorEvent>, mut ui: Single<&mut UISystem>) {
-    info!("TPS: {:?}", r.event.tps.average());
     ui.main_loop = Some(r.event.clone());
 }
 
 fn renderer_monitoring_handler(r: Receiver<RendererMonitorEvent>, mut ui: Single<&mut UISystem>) {
-    info!("FPS: {:?}", r.event.fps.average());
     ui.renderer = Some(r.event.clone());
 }
 
