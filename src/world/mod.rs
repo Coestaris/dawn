@@ -8,6 +8,7 @@ use winit::keyboard::{Key, KeyCode, NamedKey, PhysicalKey};
 use crate::world::input::InputHolder;
 
 pub mod asset;
+pub mod fullscreen;
 pub mod dictionaries;
 pub mod exit;
 pub mod fcam;

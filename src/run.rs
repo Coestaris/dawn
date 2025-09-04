@@ -11,7 +11,7 @@ use crate::world::exit::escape_handler;
 use crate::world::fcam::FreeCamera;
 use crate::world::input::InputHolder;
 use crate::world::maps::setup_maps_system;
-use crate::world::ui::{setup_ui_system, UICommand};
+use crate::world::ui::{setup_ui_system, UICommand, UIReader};
 use crate::{logging, panic_hook, WorldSyncMode, WORLD_SYNC_MODE};
 use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
@@ -31,12 +31,14 @@ use std::panic;
 use std::rc::Rc;
 use std::sync::Arc;
 use triple_buffer::{triple_buffer, Input};
+use winit::window::{Cursor, CursorIcon};
+use crate::world::fullscreen::setup_fullscreen_system;
 
 static WINDOW_SIZE: UVec2 = UVec2::new(1280, 720);
 
 struct MainToEcs {
     hub: AssetHub,
-    ui_stream: Input<Vec<UICommand>>,
+    ui_writer: Input<Vec<UICommand>>,
     renderer_proxy: RendererProxy<RenderingEvent>,
     dispatcher: RenderDispatcher,
 }
@@ -50,7 +52,9 @@ fn init_world(world: &mut World, to_ecs: MainToEcs) {
 
     setup_assets_system(world, to_ecs.hub);
     setup_maps_system(world);
-    setup_ui_system(world, to_ecs.ui_stream);
+    setup_ui_system(world, to_ecs.ui_writer);
+    setup_fullscreen_system(world);
+
     world.add_handler(escape_handler);
 }
 
@@ -61,12 +65,18 @@ pub fn run_dawn(sync: WorldSyncMode) {
     // We forced to do this here, because Bindings must be initialized passed to
     // the renderer that is created below. As well as the UI streamer.
     let mut hub = AssetHub::new();
-    let (ui_input, ui_output) = triple_buffer::<Vec<UICommand>>(&Vec::with_capacity(128));
+    let (ui_writer, ui_reader) = UIReader::bridge();
 
     // Create window configuration
     let bi = logging::dawn_build_info();
     let window_config = WindowConfig {
         title: format!("Dawn v{} - {}", bi.crate_info.version, bi.profile),
+        decorations: true,
+        icon: None,
+        fullscreen: false,
+        cursor: Some(Cursor::Icon(CursorIcon::Crosshair)),
+        dimensions: WINDOW_SIZE,
+        resizable: true,
         synchronization: match sync {
             WorldSyncMode::FixedTickRate(tps) => {
                 // I think there's a better places to put this...
@@ -105,7 +115,6 @@ pub fn run_dawn(sync: WorldSyncMode) {
         },
     };
 
-    let ui_output = Arc::new(ui_output);
     let backend_config = RendererConfig {
         shader_factory_binding: Some(hub.get_factory_biding(AssetType::Shader)),
         texture_factory_binding: Some(hub.get_factory_biding(AssetType::Texture)),
@@ -159,7 +168,7 @@ pub fn run_dawn(sync: WorldSyncMode) {
             let gbuffer = Rc::new(GBuffer::new(WINDOW_SIZE));
             let geometry_pass = GeometryPass::new(geometry_id, gbuffer.clone());
             let bounding_pass = BoundingPass::new(bounding_id, gbuffer.clone());
-            let ui_pass = UIPass::new(ui_id, ui_output.clone());
+            let ui_pass = UIPass::new(ui_id, ui_reader.clone());
             let screen_pass = ScreenPass::new(screen_id, gbuffer.clone());
             Ok(RenderPipeline::new(construct_chain!(
                 geometry_pass,
@@ -175,7 +184,7 @@ pub fn run_dawn(sync: WorldSyncMode) {
     // The main thread will run the renderer loop.
     let to_ecs = MainToEcs {
         hub,
-        ui_stream: ui_input,
+        ui_writer,
         renderer_proxy: proxy,
         dispatcher,
     };
