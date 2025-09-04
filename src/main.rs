@@ -29,11 +29,7 @@ pub fn panic_hook(info: &panic::PanicHookInfo) {
     // For development, it's more convenient to see the panic messages in the console.
     #[cfg(not(debug_assertions))]
     {
-        use dawn_graphics::view::ViewHandle;
-        ViewHandle::error_box(
-            "A fatal error occurred",
-            &format!("The application has encountered a fatal error and needs to close.\n\nError details: {}", info),
-        );
+
     }
 
     error!("Panic: {}", info);

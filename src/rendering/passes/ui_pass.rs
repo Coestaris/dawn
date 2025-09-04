@@ -3,7 +3,7 @@ use crate::world::ui::{UICommand, UIReader};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::font::Font;
-use dawn_graphics::gl::raii::shader_program::{ShaderProgram, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::texture::Texture;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
@@ -15,7 +15,7 @@ use std::sync::Arc;
 use triple_buffer::Output;
 
 struct ShaderContainer {
-    shader: TypedAsset<ShaderProgram>,
+    shader: TypedAsset<Program>,
     model_location: UniformLocation,
     proj_location: UniformLocation,
     color_location: UniformLocation,
@@ -42,10 +42,10 @@ impl UIPass {
     fn set_projection(&mut self) {
         if let Some(shader) = self.shader.as_mut() {
             let program = shader.shader.cast();
-            ShaderProgram::bind(program);
+            Program::bind(program);
             program.set_uniform(shader.proj_location, self.projection);
             program.set_uniform(shader.atlas_location, 0);
-            ShaderProgram::unbind();
+            Program::unbind();
         }
     }
 }
@@ -170,7 +170,7 @@ impl RenderPass<RenderingEvent> for UIPass {
     }
 
     fn end(&mut self, _backend: &mut RendererBackend<RenderingEvent>) -> RenderResult {
-        ShaderProgram::unbind();
+        Program::unbind();
         Texture::unbind(bindings::TEXTURE_2D, 0);
 
         // Re-enable depth testing after UI pass
@@ -204,7 +204,7 @@ impl<'a> StringRender<'a> {
         let atlas = font.atlas.cast::<Texture>();
 
         let program = shader.shader.cast();
-        ShaderProgram::bind(program);
+        Program::bind(program);
         // Assume projection and atlas location is already set
         program.set_uniform(shader.color_location, color);
         Texture::bind(bindings::TEXTURE_2D, atlas, 0);
@@ -256,7 +256,7 @@ impl<'a> StringRender<'a> {
 
 impl Drop for StringRender<'_> {
     fn drop(&mut self) {
-        ShaderProgram::unbind();
+        Program::unbind();
         Texture::unbind(bindings::TEXTURE_2D, 0);
     }
 }

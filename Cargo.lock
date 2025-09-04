@@ -776,6 +776,7 @@ dependencies = [
  "evenio",
  "fern",
  "glam",
+ "glow",
  "libc",
  "log",
  "tinyrand",
