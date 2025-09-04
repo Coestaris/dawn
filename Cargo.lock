@@ -883,7 +883,6 @@ dependencies = [
  "dawn-util",
  "evenio",
  "foldhash",
- "gl_generator",
  "glam",
  "glow",
  "glutin",
