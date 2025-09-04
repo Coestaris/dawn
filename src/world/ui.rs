@@ -12,6 +12,8 @@ use evenio::fetch::Single;
 use evenio::world::World;
 use glam::{UVec2, Vec2, Vec4};
 use log::{debug, info};
+use std::cell::UnsafeCell;
+use std::sync::Arc;
 use triple_buffer::{triple_buffer, Input, Output};
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::keyboard::{Key, NamedKey};
@@ -33,12 +35,52 @@ pub enum UICommand {
 
 #[derive(Component)]
 struct UISystem {
-    input: Input<Vec<UICommand>>,
+    writer: Input<Vec<UICommand>>,
     font: Option<TypedAsset<Font>>,
     main_loop: Option<WorldLoopMonitorEvent>,
     renderer: Option<RendererMonitorEvent>,
     viewport: Option<UVec2>,
     detailed: bool,
+}
+
+pub struct UIReader {
+    // Oh god why. I'll fix this later
+    stream: Arc<UnsafeCell<Output<Vec<UICommand>>>>,
+}
+
+unsafe impl Send for UIReader {}
+unsafe impl Sync for UIReader {}
+
+impl UIReader {
+    pub fn bridge() -> (Input<Vec<UICommand>>, Self) {
+        let (input, output) = triple_buffer::<Vec<UICommand>>(&Vec::with_capacity(128));
+        (
+            input,
+            Self {
+                stream: Arc::new(UnsafeCell::new(output)),
+            },
+        )
+    }
+
+    pub fn get_data_mut<'a>(&self) -> &'a mut Vec<UICommand> {
+        unsafe { self.stream.get().as_mut().unwrap().output_buffer_mut() }
+    }
+
+    pub fn get_data<'a>(&self) -> &'a Vec<UICommand> {
+        unsafe { self.stream.get().as_ref().unwrap().peek_output_buffer() }
+    }
+    
+    pub fn update(&self) {
+        unsafe { self.stream.get().as_mut().unwrap().update() };
+    }
+}
+
+impl Clone for UIReader {
+    fn clone(&self) -> Self {
+        Self {
+            stream: self.stream.clone(),
+        }
+    }
 }
 
 fn toggle_detailed_handler(r: Receiver<InputEvent>, mut ui: Single<&mut UISystem>) {
@@ -73,15 +115,15 @@ fn drop_all_assets_handler(r: Receiver<DropAllAssetsEvent>, mut ui: Single<&mut 
     // Flush the content of the input buffer
     // The triple buffer must be cleared... you guessed it... three times
     // It's ugly, but it works
-    let vec = ui.input.input_buffer_mut();
+    let vec = ui.writer.input_buffer_mut();
     vec.clear();
-    ui.input.publish();
-    let vec = ui.input.input_buffer_mut();
+    ui.writer.publish();
+    let vec = ui.writer.input_buffer_mut();
     vec.clear();
-    ui.input.publish();
-    let vec = ui.input.input_buffer_mut();
+    ui.writer.publish();
+    let vec = ui.writer.input_buffer_mut();
     vec.clear();
-    ui.input.publish();
+    ui.writer.publish();
 }
 
 fn main_loop_monitoring_handler(r: Receiver<WorldLoopMonitorEvent>, mut ui: Single<&mut UISystem>) {
@@ -149,7 +191,7 @@ fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>)
     let viewport = ui.viewport.unwrap_or(UVec2::new(800, 600));
     let detailed = ui.detailed;
 
-    let vec = ui.input.input_buffer_mut();
+    let vec = ui.writer.input_buffer_mut();
     vec.clear();
 
     if let Some(font) = font {
@@ -271,7 +313,7 @@ fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>)
         }
     }
 
-    ui.input.publish();
+    ui.writer.publish();
 }
 
 fn map_font_handler(
@@ -289,7 +331,7 @@ fn map_font_handler(
     }
 }
 
-pub fn setup_ui_system(world: &mut World, stream_input: Input<Vec<UICommand>>) {
+pub fn setup_ui_system(world: &mut World, ui_writer: Input<Vec<UICommand>>) {
     world.add_handler(drop_all_assets_handler);
     world.add_handler(map_font_handler);
     world.add_handler(toggle_detailed_handler);
@@ -301,7 +343,7 @@ pub fn setup_ui_system(world: &mut World, stream_input: Input<Vec<UICommand>>) {
     world.insert(
         entity,
         UISystem {
-            input: stream_input,
+            writer: ui_writer,
             font: None,
             main_loop: None,
             renderer: None,
