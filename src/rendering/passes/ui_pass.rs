@@ -110,10 +110,10 @@ impl<'g> RenderPass<RenderingEvent> for UIPass<'g> {
         // Disable depth testing for UI
         unsafe {
             self.gl.disable(glow::DEPTH_TEST);
+            self.gl.disable(glow::CULL_FACE);
             self.gl.enable(glow::BLEND);
             self.gl
                 .blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
-            self.gl.disable(glow::CULL_FACE);
         }
 
         let commands = self.reader.get_data();
@@ -180,8 +180,7 @@ impl<'g> RenderPass<RenderingEvent> for UIPass<'g> {
         unsafe {
             self.gl.enable(glow::CULL_FACE);
             self.gl.enable(glow::DEPTH_TEST);
-            self.gl.depth_func(glow::LEQUAL);
-            self.gl.depth_func(glow::BLEND);
+            self.gl.disable(glow::BLEND);
         }
 
         RenderResult::ok(0, 0)
