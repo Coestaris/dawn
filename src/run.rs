@@ -9,6 +9,7 @@ use crate::rendering::pre_pipeline_construct;
 use crate::world::asset::setup_assets_system;
 use crate::world::exit::escape_handler;
 use crate::world::fcam::FreeCamera;
+use crate::world::fullscreen::setup_fullscreen_system;
 use crate::world::input::InputHolder;
 use crate::world::maps::setup_maps_system;
 use crate::world::ui::{setup_ui_system, UICommand, UIReader};
@@ -30,7 +31,6 @@ use std::panic;
 use std::rc::Rc;
 use triple_buffer::Input;
 use winit::window::{Cursor, CursorIcon};
-use crate::world::fullscreen::setup_fullscreen_system;
 
 static WINDOW_SIZE: UVec2 = UVec2::new(1280, 720);
 

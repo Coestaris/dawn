@@ -1,3 +1,4 @@
+use crate::world::input::InputHolder;
 use dawn_ecs::events::TickEvent;
 use dawn_graphics::ecs::{ObjectPointLight, ObjectPosition, ObjectRotation};
 use evenio::component::Component;
@@ -5,13 +6,12 @@ use evenio::event::Receiver;
 use evenio::fetch::{Fetcher, Single};
 use glam::Quat;
 use winit::keyboard::{KeyCode, PhysicalKey};
-use crate::world::input::InputHolder;
 
 pub mod asset;
-pub mod fullscreen;
 pub mod dictionaries;
 pub mod exit;
 pub mod fcam;
+pub mod fullscreen;
 pub mod input;
 pub mod maps;
 pub mod ui;

@@ -136,7 +136,7 @@ impl FrustumCulling {
         let ax = model.x_axis.truncate();
         let ay = model.y_axis.truncate();
         let az = model.z_axis.truncate();
-        let t  = model.w_axis.truncate();
+        let t = model.w_axis.truncate();
 
         let c_world = ax * c.x + ay * c.y + az * c.z + t;
         let e_world = ax.abs() * e.x + ay.abs() * e.y + az.abs() * e.z;
