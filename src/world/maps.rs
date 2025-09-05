@@ -1,6 +1,6 @@
 use crate::world::asset::DropAllAssetsEvent;
-use crate::world::dictionaries::DictionaryEntry;
-use crate::world::Rotating;
+use crate::world::dictionaries::{DictionaryEntry, MapUID};
+use crate::world::{move_light_handler, rotate_handler, MovingByArrowKeys, Rotating};
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::{AssetID, TypedAsset};
 use dawn_graphics::ecs::{
@@ -17,7 +17,7 @@ use log::{info, warn};
 #[derive(Component)]
 struct MapLink {
     map_name: String,
-    map_uid: usize,
+    map_uid: MapUID,
 }
 
 type SuperSender<'a> = Sender<
@@ -33,8 +33,10 @@ type SuperSender<'a> = Sender<
         Insert<ObjectSpotLight>,
         Insert<ObjectSunLight>,
         Insert<ObjectAreaLight>,
+
         // User components
         Insert<Rotating>,
+        Insert<MovingByArrowKeys>,
     ),
 >;
 
@@ -52,43 +54,60 @@ impl MapDispatcher {
         }
     }
 
+    fn derive_components(&self, components: &Vec<String>, id: EntityId, sender: &mut SuperSender) {
+        for component in components.iter() {
+            match component.as_str() {
+                "Rotating" => {
+                    sender.insert(id, Rotating);
+                }
+                "MovingByArrowKeys" => {
+                    sender.insert(id, MovingByArrowKeys);
+                }
+                _ => {
+                    warn!("Unknown component: {}", component);
+                }
+            }
+        }
+    }
+
     #[inline(never)]
     fn propagate_map(&self, sender: &mut SuperSender) {
         if let Some(map) = &self.map {
             let map = map.cast().as_map().unwrap();
             for object in map.objects.iter() {
-                let uid = object.uid;
-                let position = object.location;
-                let rotation = object.rotation;
-                let scale = object.scale;
-
                 let id = sender.spawn();
                 sender.insert(
                     id,
                     MapLink {
                         map_name: self.name.clone(),
-                        map_uid: uid,
+                        map_uid: object.uid,
+                    },
+                );
+                sender.insert(id, ObjectPosition(object.location));
+                sender.insert(id, ObjectRotation(object.rotation));
+                sender.insert(id, ObjectScale(object.scale));
+                self.derive_components(&object.components, id, sender);
+            }
+            for point_light in map.point_lights.iter() {
+                let id = sender.spawn();
+                sender.insert(
+                    id,
+                    MapLink {
+                        map_name: self.name.clone(),
+                        map_uid: point_light.uid,
                     },
                 );
 
-                info!(
-                    "Spawning entity {} at position {:?}, rotation {:?}, scale {:?}",
-                    uid, position, rotation, scale
+                sender.insert(id, ObjectPosition(point_light.location));
+                sender.insert(
+                    id,
+                    ObjectPointLight {
+                        color: point_light.color,
+                        intensity: point_light.intensity,
+                        range: point_light.range,
+                    },
                 );
-                sender.insert(id, ObjectPosition(position));
-                sender.insert(id, ObjectRotation(rotation));
-                sender.insert(id, ObjectScale(scale));
-
-                for component in object.components.iter() {
-                    match component.as_str() {
-                        "Rotating" => {
-                            sender.insert(id, Rotating);
-                        }
-                        _ => {
-                            warn!("Unknown component: {}", component);
-                        }
-                    }
-                }
+                self.derive_components(&point_light.components, id, sender);
             }
         }
     }
@@ -181,4 +200,7 @@ pub fn setup_maps_system(world: &mut evenio::world::World) {
 
     world.add_handler(asset_events_handler);
     world.add_handler(drop_all_assets_handler);
+
+    world.add_handler(rotate_handler);
+    world.add_handler(move_light_handler);
 }

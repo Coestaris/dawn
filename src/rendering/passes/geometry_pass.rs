@@ -1,7 +1,7 @@
 use crate::rendering::event::RenderingEvent;
+use crate::rendering::fallback_tex::FallbackTextures;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::gbuffer::GBuffer;
-use dawn_assets::ir::texture::{IRPixelFormat, IRTexture, IRTextureType};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
@@ -16,48 +16,33 @@ use glam::Mat4;
 use glow::HasContext;
 use std::rc::Rc;
 
-fn create_missing_texture(gl: &glow::Context) -> Texture<'_> {
-    // Create a 2x2 checkerboard pattern (magenta and black)
-    let data: [u8; 12] = [
-        255, 0, 255, // Magenta
-        0, 0, 0, // Black
-        0, 0, 0, // Black
-        255, 0, 255, // Magenta
-    ];
-
-    let texture_ir = IRTexture {
-        data: data.to_vec(),
-        texture_type: IRTextureType::Texture2D {
-            width: 2,
-            height: 2,
-        },
-        pixel_format: IRPixelFormat::RGB8,
-        use_mipmaps: false,
-        min_filter: Default::default(),
-        mag_filter: Default::default(),
-        wrap_s: Default::default(),
-        wrap_t: Default::default(),
-        wrap_r: Default::default(),
-    };
-
-    Texture::from_ir::<RenderingEvent>(gl, texture_ir)
-        .expect("Failed to create missing texture")
-        .0
-}
+const ALBEDO_INDEX: i32 = 0;
+const NORMAL_INDEX: i32 = 1;
+const METALLIC_INDEX: i32 = 2;
+const ROUGHNESS_INDEX: i32 = 3;
+const OCCLUSION_INDEX: i32 = 4;
 
 struct ShaderContainer {
     shader: TypedAsset<Program<'static>>,
+
+    // Vertex uniforms
     model_location: UniformLocation,
     view_location: UniformLocation,
     proj_location: UniformLocation,
-    base_color_texture_location: UniformLocation,
+
+    // Fragment uniforms
+    albedo: UniformLocation,
+    normal: UniformLocation,
+    metallic: UniformLocation,
+    roughness: UniformLocation,
+    occlusion: UniformLocation,
 }
 
 pub(crate) struct GeometryPass<'g> {
     gl: &'g glow::Context,
     id: RenderPassTargetId,
     shader: Option<ShaderContainer>,
-    missing_texture: Texture<'g>,
+    fallback_textures: FallbackTextures<'g>,
     projection: Mat4,
     view: Mat4,
     is_wireframe: bool,
@@ -71,7 +56,7 @@ impl<'g> GeometryPass<'g> {
             gl,
             id,
             shader: None,
-            missing_texture: create_missing_texture(gl),
+            fallback_textures: FallbackTextures::new(gl),
             projection: Mat4::IDENTITY,
             view: Mat4::IDENTITY,
             is_wireframe: false,
@@ -86,7 +71,13 @@ impl<'g> GeometryPass<'g> {
             let program = shader.shader.cast();
             Program::bind(self.gl, &program);
             program.set_uniform(shader.proj_location, self.projection);
-            program.set_uniform(shader.base_color_texture_location, 0);
+
+            program.set_uniform(shader.albedo, ALBEDO_INDEX);
+            program.set_uniform(shader.normal, NORMAL_INDEX);
+            program.set_uniform(shader.metallic, METALLIC_INDEX);
+            program.set_uniform(shader.roughness, ROUGHNESS_INDEX);
+            program.set_uniform(shader.occlusion, OCCLUSION_INDEX);
+
             Program::unbind(self.gl);
         }
     }
@@ -109,15 +100,19 @@ impl<'g> RenderPass<RenderingEvent> for GeometryPass<'g> {
             }
             RenderingEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
+                let shader = shader.cast();
                 self.shader = Some(ShaderContainer {
                     shader: clone,
-                    model_location: shader.cast().get_uniform_location("model").unwrap(),
-                    view_location: shader.cast().get_uniform_location("view").unwrap(),
-                    proj_location: shader.cast().get_uniform_location("projection").unwrap(),
-                    base_color_texture_location: shader
-                        .cast()
-                        .get_uniform_location("base_color_texture")
-                        .unwrap(),
+
+                    model_location: shader.get_uniform_location("in_model").unwrap(),
+                    view_location: shader.get_uniform_location("in_view").unwrap(),
+                    proj_location: shader.get_uniform_location("in_projection").unwrap(),
+
+                    albedo: shader.get_uniform_location("in_albedo").unwrap(),
+                    normal: shader.get_uniform_location("in_normal").unwrap(),
+                    metallic: shader.get_uniform_location("in_metallic").unwrap(),
+                    roughness: shader.get_uniform_location("in_roughness").unwrap(),
+                    occlusion: shader.get_uniform_location("in_occlusion").unwrap(),
                 });
                 self.set_projection();
             }
@@ -208,21 +203,53 @@ impl<'g> RenderPass<RenderingEvent> for GeometryPass<'g> {
                     return (true, RenderResult::default());
                 }
 
-                let base_color = if let Some(material) = &submesh.material {
-                    let material = material.cast::<Material>();
-                    if let Some(texture) = &material.base_color_texture {
-                        let texture = texture.cast::<Texture>();
-                        texture
-                    } else {
-                        // Bind a default white texture if no texture is set
-                        &self.missing_texture
-                    }
-                } else {
-                    // Bind a default white texture if no texture is set
-                    &self.missing_texture
-                };
+                let (albedo, normal, metallic, roughness, occlusion) =
+                    if let Some(material) = &submesh.material {
+                        let material = material.cast::<Material>();
 
-                Texture::bind(self.gl, TextureBind::Texture2D, base_color, 0);
+                        let albedo = if let Some(texture) = &material.base_color_texture {
+                            let texture = texture.cast::<Texture>();
+                            texture
+                        } else {
+                            &self.fallback_textures.albedo_texture
+                        };
+
+                        // TODO: Get normal texture from material
+                        let normal = &self.fallback_textures.normal_texture;
+
+                        let metallic = if let Some(texture) = &material.metallic_texture {
+                            let texture = texture.cast::<Texture>();
+                            texture
+                        } else {
+                            &self.fallback_textures.metallic_texture
+                        };
+
+                        let roughness = if let Some(texture) = &material.roughness_texture {
+                            let texture = texture.cast::<Texture>();
+                            texture
+                        } else {
+                            &self.fallback_textures.roughness_texture
+                        };
+
+                        // TODO: Get occlusion texture from material
+                        let occlusion = &self.fallback_textures.occlusion_texture;
+
+                        (albedo, normal, metallic, roughness, occlusion)
+                    } else {
+                        (
+                            &self.fallback_textures.albedo_texture,
+                            &self.fallback_textures.normal_texture,
+                            &self.fallback_textures.metallic_texture,
+                            &self.fallback_textures.roughness_texture,
+                            &self.fallback_textures.occlusion_texture,
+                        )
+                    };
+
+                Texture::bind(self.gl, TextureBind::Texture2D, albedo, ALBEDO_INDEX as u32);
+                Texture::bind(self.gl, TextureBind::Texture2D, normal, NORMAL_INDEX as u32);
+                Texture::bind(self.gl, TextureBind::Texture2D, metallic, METALLIC_INDEX as u32);
+                Texture::bind(self.gl, TextureBind::Texture2D, roughness, ROUGHNESS_INDEX as u32);
+                Texture::bind(self.gl, TextureBind::Texture2D, occlusion, OCCLUSION_INDEX as u32);
 
                 (false, RenderResult::default())
             })
@@ -238,7 +265,11 @@ impl<'g> RenderPass<RenderingEvent> for GeometryPass<'g> {
         }
 
         Program::unbind(self.gl);
-        Texture::unbind(self.gl, TextureBind::Texture2D, 0);
+        Texture::unbind(self.gl, TextureBind::Texture2D, ALBEDO_INDEX as u32);
+        Texture::unbind(self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
+        Texture::unbind(self.gl, TextureBind::Texture2D, METALLIC_INDEX as u32);
+        Texture::unbind(self.gl, TextureBind::Texture2D, ROUGHNESS_INDEX as u32);
+        Texture::unbind(self.gl, TextureBind::Texture2D, OCCLUSION_INDEX as u32);
         Framebuffer::unbind(self.gl);
         RenderResult::default()
     }

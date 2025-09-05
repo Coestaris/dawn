@@ -3,8 +3,8 @@ asset_type = "Shader"
 
 [[properties.Shader.sources]]
 kind = "Vertex"
-origin.External.File = "bins/bounding.vsh"
+origin.External.File = "shaders/bounding.vsh"
 
 [[properties.Shader.sources]]
 kind = "Fragment"
-origin.External.File = "bins/bounding.fsh"
+origin.External.File = "shaders/bounding.fsh"

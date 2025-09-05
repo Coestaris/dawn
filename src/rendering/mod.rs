@@ -6,6 +6,7 @@ pub mod frustum;
 pub mod gbuffer;
 pub mod passes;
 pub mod primitive;
+pub mod fallback_tex;
 
 pub fn pre_pipeline_construct(gl: &glow::Context) {
     // Setup OpenGL state

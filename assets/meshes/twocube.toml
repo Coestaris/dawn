@@ -2,7 +2,7 @@
 asset_type = "Mesh"
 
 [properties.Mesh.source]
-File = "bins/twocube.glb"
+File = "blobs/twocube.glb"
 
 [properties.Mesh]
 gen_material = true
