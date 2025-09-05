@@ -28,9 +28,7 @@ const WORLD_SYNC_MODE: WorldSyncMode = WorldSyncMode::SynchronizedWithMonitor;
 pub fn panic_hook(info: &panic::PanicHookInfo) {
     // For development, it's more convenient to see the panic messages in the console.
     #[cfg(not(debug_assertions))]
-    {
-
-    }
+    {}
 
     error!("Panic: {}", info);
 }
