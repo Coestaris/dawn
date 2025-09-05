@@ -10,9 +10,9 @@ use dawn_graphics::ecs::{
 use dawn_graphics::gl::mesh::Mesh;
 use evenio::component::Component;
 use evenio::entity::EntityId;
-use evenio::event::{Despawn, Insert, Receiver, Remove, Sender, Spawn};
+use evenio::event::{Despawn, Insert, Receiver, Sender, Spawn};
 use evenio::fetch::{Fetcher, Single};
-use log::{debug, info, warn};
+use log::{info, warn};
 
 #[derive(Component)]
 struct MapLink {
@@ -162,7 +162,7 @@ fn drop_all_assets_handler(
     _: Receiver<DropAllAssetsEvent>,
     mut dispatcher: Single<&mut MapDispatcher>,
     fetcher: Fetcher<(EntityId, &MapLink)>,
-    mut sender: Sender<(Despawn)>,
+    mut sender: Sender<Despawn>,
 ) {
     dispatcher.map = None;
 
