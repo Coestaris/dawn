@@ -1,17 +1,12 @@
-use dawn_dac::{ChecksumAlgorithm, CompressionLevel, ReadMode, Version};
-use dawn_dacgen::config::WriteConfig;
-use dawn_dacgen::write_from_directory;
-use dirs::cache_dir;
-use std::path::PathBuf;
-use winresource::VersionInfo;
-
 fn main() {
     let build_info = build_info_build::build_script().build();
 
     // Set up Windows resources (icon, version info) in release builds
-    if std::env::var("CARGO_CFG_TARGET_OS").unwrap() == "windows"
-        && std::env::var("PROFILE").unwrap() == "release"
-    {
+    #[cfg(target_os = "windows")]
+    if std::env::var("PROFILE").unwrap() == "release" {
+        #[cfg(target_os = "windows")]
+        use winresource::VersionInfo;
+
         let mut res = winresource::WindowsResource::new();
         res.set_icon("assets/icon.ico");
 
@@ -36,8 +31,14 @@ fn main() {
         res.compile().unwrap();
     }
 
-    #[cfg(not(feature = "no_assets"))]
+    #[cfg(feature = "build_assets")]
     {
+        use dawn_dac::{ChecksumAlgorithm, CompressionLevel, ReadMode, Version};
+        use dawn_dacgen::config::WriteConfig;
+        use dawn_dacgen::write_from_directory;
+        use dirs::cache_dir;
+        use std::path::PathBuf;
+
         let current_dir = std::env::current_dir().unwrap().join("assets");
         let mut target_dir: PathBuf = std::env::var_os("CARGO_MANIFEST_DIR").unwrap().into();
         target_dir.push("target");
