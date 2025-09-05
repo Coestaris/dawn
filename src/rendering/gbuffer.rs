@@ -96,17 +96,21 @@ impl<'g> GTexture<'g> {
 pub struct GBuffer<'g> {
     pub fbo: Framebuffer<'g>,
     pub depth: GRenderBuffer<'g>,
-    pub position_texture: GTexture<'g>,
+
+    // RGBA8. RGB - albedo, A - metallic
+    pub albedo_metalic: GTexture<'g>,
+    // RG16F. View space, Octa-encoded normal
     pub normal_texture: GTexture<'g>,
-    pub color_texture: GTexture<'g>,
+    // RGBA8. R - roughness, G - occlusion, B - emissive, A - reserved
+    pub pbr: GTexture<'g>, // RGBA8
 }
 
 impl<'g> GBuffer<'g> {
     pub(crate) fn resize(&self, new_size: UVec2) {
         info!("Resizing GBuffer to {:?}", new_size);
-        self.position_texture.resize(new_size);
+        self.albedo_metalic.resize(new_size);
         self.normal_texture.resize(new_size);
-        self.color_texture.resize(new_size);
+        self.pbr.resize(new_size);
         self.depth.resize(new_size);
     }
 
@@ -118,32 +122,24 @@ impl<'g> GBuffer<'g> {
                 RenderBufferStorage::DepthComponent24,
                 FramebufferAttachment::Depth,
             ),
-            position_texture: GTexture::new(
-                gl,
-                IRPixelFormat::RGBA16F,
-                FramebufferAttachment::Color0,
-            ),
-            normal_texture: GTexture::new(
-                gl,
-                IRPixelFormat::RGBA16F,
-                FramebufferAttachment::Color1,
-            ),
-            color_texture: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color2),
+            albedo_metalic: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color0),
+            normal_texture: GTexture::new(gl, IRPixelFormat::RG16F, FramebufferAttachment::Color1),
+            pbr: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color2),
         };
 
         buffer.resize(initial);
 
         // Attach textures to the framebuffer
-        buffer.position_texture.attach(&buffer.fbo);
+        buffer.albedo_metalic.attach(&buffer.fbo);
         buffer.normal_texture.attach(&buffer.fbo);
-        buffer.color_texture.attach(&buffer.fbo);
+        buffer.pbr.attach(&buffer.fbo);
         buffer.depth.attach(&buffer.fbo);
 
         Framebuffer::bind(gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[
-            buffer.position_texture.attachment,
+            buffer.albedo_metalic.attachment,
             buffer.normal_texture.attachment,
-            buffer.color_texture.attachment,
+            buffer.pbr.attachment,
         ]);
         assert_eq!(buffer.fbo.is_complete(), true);
         Framebuffer::unbind(gl);
