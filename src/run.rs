@@ -17,7 +17,6 @@ use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
 use dawn_ecs::world::WorldLoopProxy;
 use dawn_graphics::construct_chain;
-use dawn_graphics::gl::bindings;
 use dawn_graphics::passes::chain::{ChainCons, ChainNil, RenderChain};
 use dawn_graphics::passes::pipeline::RenderPipeline;
 use dawn_graphics::renderer::{
@@ -165,11 +164,11 @@ pub fn run_dawn(sync: WorldSyncMode) {
         Renderer::new_with_monitoring(window_config.clone(), backend_config, move |r| {
             pre_pipeline_construct(&r.gl);
 
-            let gbuffer = Rc::new(GBuffer::new(WINDOW_SIZE));
-            let geometry_pass = GeometryPass::new(geometry_id, gbuffer.clone());
-            let bounding_pass = BoundingPass::new(bounding_id, gbuffer.clone());
-            let ui_pass = UIPass::new(ui_id, ui_reader.clone());
-            let screen_pass = ScreenPass::new(screen_id, gbuffer.clone());
+            let gbuffer = Rc::new(GBuffer::new(&r.gl, WINDOW_SIZE));
+            let geometry_pass = GeometryPass::new(&r.gl, geometry_id, gbuffer.clone());
+            let bounding_pass = BoundingPass::new(&r.gl, bounding_id, gbuffer.clone());
+            let ui_pass = UIPass::new(&r.gl, ui_id, ui_reader.clone());
+            let screen_pass = ScreenPass::new(&r.gl, screen_id, gbuffer.clone());
             Ok(RenderPipeline::new(construct_chain!(
                 geometry_pass,
                 screen_pass,

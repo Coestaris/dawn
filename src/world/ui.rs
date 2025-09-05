@@ -20,7 +20,7 @@ use winit::keyboard::{Key, NamedKey};
 
 #[derive(Debug, Clone)]
 pub struct Style {
-    pub font: TypedAsset<Font>,
+    pub font: TypedAsset<Font<'static>>,
     pub scale: f32,
 }
 
@@ -36,7 +36,7 @@ pub enum UICommand {
 #[derive(Component)]
 struct UISystem {
     writer: Input<Vec<UICommand>>,
-    font: Option<TypedAsset<Font>>,
+    font: Option<TypedAsset<Font<'static>>>,
     main_loop: Option<WorldLoopMonitorEvent>,
     renderer: Option<RendererMonitorEvent>,
     viewport: Option<UVec2>,
@@ -69,7 +69,7 @@ impl UIReader {
     pub fn get_data<'a>(&self) -> &'a Vec<UICommand> {
         unsafe { self.stream.get().as_ref().unwrap().peek_output_buffer() }
     }
-    
+
     pub fn update(&self) {
         unsafe { self.stream.get().as_mut().unwrap().update() };
     }

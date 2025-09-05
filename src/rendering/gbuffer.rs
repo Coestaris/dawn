@@ -1,27 +1,33 @@
 use dawn_assets::ir::texture::IRPixelFormat;
-use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
 use dawn_graphics::gl::raii::renderbuffer::{RenderBufferStorage, Renderbuffer};
-use dawn_graphics::gl::raii::texture::Texture;
+use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use glam::UVec2;
 use log::info;
 
-pub struct GTexture {
-    pub texture: Texture,
+pub struct GTexture<'g> {
+    gl: &'g glow::Context,
+    pub texture: Texture<'g>,
     pub format: IRPixelFormat,
     pub attachment: FramebufferAttachment,
 }
 
-pub struct GRenderBuffer {
-    pub render_buffer: Renderbuffer,
+pub struct GRenderBuffer<'g> {
+    gl: &'g glow::Context,
+    pub render_buffer: Renderbuffer<'g>,
     pub format: RenderBufferStorage,
     pub attachment: FramebufferAttachment,
 }
 
-impl GRenderBuffer {
-    fn new(format: RenderBufferStorage, attachment: FramebufferAttachment) -> Self {
-        let render_buffer = Renderbuffer::new().unwrap();
+impl<'g> GRenderBuffer<'g> {
+    fn new(
+        gl: &'g glow::Context,
+        format: RenderBufferStorage,
+        attachment: FramebufferAttachment,
+    ) -> Self {
+        let render_buffer = Renderbuffer::new(gl).unwrap();
         GRenderBuffer {
+            gl,
             render_buffer,
             format,
             attachment,
@@ -29,27 +35,32 @@ impl GRenderBuffer {
     }
 
     fn resize(&self, new_size: UVec2) {
-        Renderbuffer::bind(&self.render_buffer);
+        Renderbuffer::bind(self.gl, &self.render_buffer);
         self.render_buffer
             .storage(self.format, new_size.x as usize, new_size.y as usize);
-        Renderbuffer::unbind();
+        Renderbuffer::unbind(self.gl);
     }
 
     fn attach(&self, fbo: &Framebuffer) {
-        Framebuffer::bind(fbo);
+        Framebuffer::bind(self.gl, fbo);
         fbo.attach_renderbuffer(self.attachment, &self.render_buffer);
-        Framebuffer::unbind();
+        Framebuffer::unbind(self.gl);
     }
 }
 
-impl GTexture {
-    fn new(format: IRPixelFormat, attachment: FramebufferAttachment) -> Self {
-        let texture = Texture::new2d().unwrap();
-        Texture::bind(bindings::TEXTURE_2D, &texture, 0);
+impl<'g> GTexture<'g> {
+    fn new(
+        gl: &'g glow::Context,
+        format: IRPixelFormat,
+        attachment: FramebufferAttachment,
+    ) -> Self {
+        let texture = Texture::new2d(gl).unwrap();
+        Texture::bind(gl, TextureBind::Texture2D, &texture, 0);
         texture.generate_mipmap();
-        Texture::unbind(bindings::TEXTURE_2D, 0);
+        Texture::unbind(gl, TextureBind::Texture2D, 0);
 
         GTexture {
+            gl,
             texture,
             format,
             attachment,
@@ -57,7 +68,7 @@ impl GTexture {
     }
 
     fn resize(&self, new_size: UVec2) {
-        Texture::bind(bindings::TEXTURE_2D, &self.texture, 0);
+        Texture::bind(self.gl, TextureBind::Texture2D, &self.texture, 0);
         self.texture
             .texture_image_2d(
                 0,
@@ -69,28 +80,28 @@ impl GTexture {
             )
             .unwrap();
         self.texture.generate_mipmap();
-        Texture::unbind(bindings::TEXTURE_2D, 0);
+        Texture::unbind(self.gl, TextureBind::Texture2D, 0);
     }
 
     fn attach(&self, fbo: &Framebuffer) {
-        Framebuffer::bind(fbo);
-        Texture::bind(bindings::TEXTURE_2D, &self.texture, 0);
+        Framebuffer::bind(self.gl, fbo);
+        Texture::bind(self.gl, TextureBind::Texture2D, &self.texture, 0);
         fbo.attach_texture_2d(self.attachment, &self.texture, 0);
         assert_eq!(fbo.is_complete(), true);
-        Texture::unbind(bindings::TEXTURE_2D, 0);
-        Framebuffer::unbind();
+        Texture::unbind(self.gl, TextureBind::Texture2D, 0);
+        Framebuffer::unbind(self.gl);
     }
 }
 
-pub struct GBuffer {
-    pub fbo: Framebuffer,
-    pub depth: GRenderBuffer,
-    pub position_texture: GTexture,
-    pub normal_texture: GTexture,
-    pub color_texture: GTexture,
+pub struct GBuffer<'g> {
+    pub fbo: Framebuffer<'g>,
+    pub depth: GRenderBuffer<'g>,
+    pub position_texture: GTexture<'g>,
+    pub normal_texture: GTexture<'g>,
+    pub color_texture: GTexture<'g>,
 }
 
-impl GBuffer {
+impl<'g> GBuffer<'g> {
     pub(crate) fn resize(&self, new_size: UVec2) {
         info!("Resizing GBuffer to {:?}", new_size);
         self.position_texture.resize(new_size);
@@ -99,16 +110,25 @@ impl GBuffer {
         self.depth.resize(new_size);
     }
 
-    pub fn new(initial: UVec2) -> Self {
+    pub fn new(gl: &'g glow::Context, initial: UVec2) -> Self {
         let buffer = GBuffer {
-            fbo: Framebuffer::new().unwrap(),
+            fbo: Framebuffer::new(gl).unwrap(),
             depth: GRenderBuffer::new(
+                gl,
                 RenderBufferStorage::DepthComponent24,
                 FramebufferAttachment::Depth,
             ),
-            position_texture: GTexture::new(IRPixelFormat::RGBA16F, FramebufferAttachment::Color0),
-            normal_texture: GTexture::new(IRPixelFormat::RGBA16F, FramebufferAttachment::Color1),
-            color_texture: GTexture::new(IRPixelFormat::RGBA8, FramebufferAttachment::Color2),
+            position_texture: GTexture::new(
+                gl,
+                IRPixelFormat::RGBA16F,
+                FramebufferAttachment::Color0,
+            ),
+            normal_texture: GTexture::new(
+                gl,
+                IRPixelFormat::RGBA16F,
+                FramebufferAttachment::Color1,
+            ),
+            color_texture: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color2),
         };
 
         buffer.resize(initial);
@@ -119,14 +139,14 @@ impl GBuffer {
         buffer.color_texture.attach(&buffer.fbo);
         buffer.depth.attach(&buffer.fbo);
 
-        Framebuffer::bind(&buffer.fbo);
+        Framebuffer::bind(gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[
             buffer.position_texture.attachment,
             buffer.normal_texture.attachment,
             buffer.color_texture.attachment,
         ]);
         assert_eq!(buffer.fbo.is_complete(), true);
-        Framebuffer::unbind();
+        Framebuffer::unbind(gl);
 
         buffer
     }

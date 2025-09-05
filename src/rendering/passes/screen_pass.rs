@@ -2,40 +2,41 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::primitive::quad::Quad;
 use dawn_assets::TypedAsset;
-use dawn_graphics::gl::bindings;
-use dawn_graphics::gl::bindings::TEXTURE_2D;
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
-use dawn_graphics::gl::raii::texture::Texture;
+use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
+use glow::HasContext;
 use std::rc::Rc;
 
 struct ShaderContainer {
-    shader: TypedAsset<Program>,
+    shader: TypedAsset<Program<'static>>,
     color_texture_location: UniformLocation,
 }
 
-pub(crate) struct ScreenPass {
+pub(crate) struct ScreenPass<'g> {
+    gl: &'g glow::Context,
     id: RenderPassTargetId,
     shader: Option<ShaderContainer>,
-    quad: Quad,
-    gbuffer: Rc<GBuffer>,
+    quad: Quad<'g>,
+    gbuffer: Rc<GBuffer<'g>>,
 }
 
-impl ScreenPass {
-    pub fn new(id: RenderPassTargetId, gbuffer: Rc<GBuffer>) -> Self {
+impl<'g> ScreenPass<'g> {
+    pub fn new(gl: &'g glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer<'g>>) -> Self {
         ScreenPass {
+            gl,
             id,
             shader: None,
-            quad: Quad::new(),
+            quad: Quad::new(gl),
             gbuffer,
         }
     }
 }
 
-impl RenderPass<RenderingEvent> for ScreenPass {
+impl<'g> RenderPass<RenderingEvent> for ScreenPass<'g> {
     fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
         fn dispatch_screen_pass(ptr: *mut u8, event: RenderingEvent) {
             let pass = unsafe { &mut *(ptr as *mut ScreenPass) };
@@ -62,9 +63,9 @@ impl RenderPass<RenderingEvent> for ScreenPass {
 
                 if let Some(shader) = self.shader.as_mut() {
                     let program = shader.shader.cast();
-                    Program::bind(&program);
+                    Program::bind(self.gl, &program);
                     program.set_uniform(shader.color_texture_location, 0);
-                    Program::unbind();
+                    Program::unbind(self.gl);
                 }
             }
             RenderingEvent::ViewportResized(size) => self.gbuffer.resize(size),
@@ -88,21 +89,26 @@ impl RenderPass<RenderingEvent> for ScreenPass {
         }
 
         unsafe {
-            bindings::Disable(bindings::DEPTH_TEST);
-            bindings::ClearColor(0.1, 0.1, 0.1, 1.0);
-            bindings::Clear(bindings::COLOR_BUFFER_BIT);
+            self.gl.disable(glow::DEPTH_TEST);
+            self.gl.clear_color(0.1, 0.1, 0.1, 1.0);
+            self.gl.clear(glow::COLOR_BUFFER_BIT);
         }
 
         let shader = self.shader.as_ref().unwrap();
-        Program::bind(&shader.shader.cast());
-        Texture::bind(TEXTURE_2D, &self.gbuffer.color_texture.texture, 0);
+        Program::bind(self.gl, &shader.shader.cast());
+        Texture::bind(
+            self.gl,
+            TextureBind::Texture2D,
+            &self.gbuffer.color_texture.texture,
+            0,
+        );
         self.quad.draw()
     }
 
     #[inline(always)]
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
-        Program::unbind();
-        Texture::unbind(TEXTURE_2D, 0);
+        Program::unbind(self.gl);
+        Texture::unbind(self.gl, TextureBind::Texture2D, 0);
         RenderResult::default()
     }
 }
