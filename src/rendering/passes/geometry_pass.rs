@@ -3,20 +3,20 @@ use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::gbuffer::GBuffer;
 use dawn_assets::ir::texture::{IRPixelFormat, IRTexture, IRTextureType};
 use dawn_assets::TypedAsset;
-use dawn_graphics::gl::bindings;
 use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
-use dawn_graphics::gl::raii::texture::Texture;
+use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::Mat4;
+use glow::HasContext;
 use std::rc::Rc;
 
-fn create_missing_texture() -> Texture {
+fn create_missing_texture(gl: &glow::Context) -> Texture {
     // Create a 2x2 checkerboard pattern (magenta and black)
     let data: [u8; 12] = [
         255, 0, 255, // Magenta
@@ -40,36 +40,38 @@ fn create_missing_texture() -> Texture {
         wrap_r: Default::default(),
     };
 
-    Texture::from_ir::<RenderingEvent>(texture_ir)
+    Texture::from_ir::<RenderingEvent>(gl, texture_ir)
         .expect("Failed to create missing texture")
         .0
 }
 
 struct ShaderContainer {
-    shader: TypedAsset<Program>,
+    shader: TypedAsset<Program<'static>>,
     model_location: UniformLocation,
     view_location: UniformLocation,
     proj_location: UniformLocation,
     base_color_texture_location: UniformLocation,
 }
 
-pub(crate) struct GeometryPass {
+pub(crate) struct GeometryPass<'g> {
+    gl: &'g glow::Context,
     id: RenderPassTargetId,
     shader: Option<ShaderContainer>,
-    missing_texture: Texture,
+    missing_texture: Texture<'g>,
     projection: Mat4,
     view: Mat4,
     is_wireframe: bool,
     frustum: FrustumCulling,
-    gbuffer: Rc<GBuffer>,
+    gbuffer: Rc<GBuffer<'g>>,
 }
 
-impl GeometryPass {
-    pub fn new(id: RenderPassTargetId, gbuffer: Rc<GBuffer>) -> Self {
+impl<'g> GeometryPass<'g> {
+    pub fn new(gl: &'g glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer<'g>>) -> Self {
         GeometryPass {
+            gl,
             id,
             shader: None,
-            missing_texture: create_missing_texture(),
+            missing_texture: create_missing_texture(gl),
             projection: Mat4::IDENTITY,
             view: Mat4::IDENTITY,
             is_wireframe: false,
@@ -82,15 +84,15 @@ impl GeometryPass {
         if let Some(shader) = self.shader.as_mut() {
             // Load projection matrix into shader
             let program = shader.shader.cast();
-            Program::bind(&program);
+            Program::bind(self.gl, &program);
             program.set_uniform(shader.proj_location, self.projection);
             program.set_uniform(shader.base_color_texture_location, 0);
-            Program::unbind();
+            Program::unbind(self.gl);
         }
     }
 }
 
-impl RenderPass<RenderingEvent> for GeometryPass {
+impl<'g> RenderPass<RenderingEvent> for GeometryPass<'g> {
     fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
         fn dispatch_geometry_pass(ptr: *mut u8, event: RenderingEvent) {
             let pass = unsafe { &mut *(ptr as *mut GeometryPass) };
@@ -120,8 +122,8 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                 self.set_projection();
             }
             RenderingEvent::ViewportResized(size) => unsafe {
-                bindings::Viewport(0, 0, size.x as i32, size.y as i32);
-                bindings::Scissor(0, 0, size.x as i32, size.y as i32);
+                self.gl.viewport(0, 0, size.x as i32, size.y as i32);
+                self.gl.scissor(0, 0, size.x as i32, size.y as i32);
             },
             RenderingEvent::PerspectiveProjectionUpdated(proj) => {
                 self.projection = proj;
@@ -150,22 +152,23 @@ impl RenderPass<RenderingEvent> for GeometryPass {
         _: &RendererBackend<RenderingEvent>,
         _frame: &DataStreamFrame,
     ) -> RenderResult {
-        Framebuffer::bind(&self.gbuffer.fbo);
+        Framebuffer::bind(self.gl, &self.gbuffer.fbo);
 
         unsafe {
-            bindings::ClearColor(0.1, 0.1, 0.1, 1.0);
-            bindings::ClearDepth(1.0);
-            bindings::Clear(bindings::COLOR_BUFFER_BIT | bindings::DEPTH_BUFFER_BIT);
+            self.gl.clear_color(0.1, 0.1, 0.1, 1.0);
+            self.gl.clear_depth(1.0);
+            self.gl
+                .clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
 
             if self.is_wireframe {
-                bindings::PolygonMode(bindings::FRONT_AND_BACK, bindings::LINE);
+                self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::LINE);
             }
         }
 
         if let Some(shader) = self.shader.as_mut() {
             // Load view matrix into shader
             let program = shader.shader.cast();
-            Program::bind(&program);
+            Program::bind(self.gl, &program);
             program.set_uniform(shader.view_location, self.view);
         }
 
@@ -219,7 +222,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                     &self.missing_texture
                 };
 
-                Texture::bind(bindings::TEXTURE_2D, base_color, 0);
+                Texture::bind(self.gl, TextureBind::Texture2D, base_color, 0);
 
                 (false, RenderResult::default())
             })
@@ -231,12 +234,12 @@ impl RenderPass<RenderingEvent> for GeometryPass {
     #[inline(always)]
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         unsafe {
-            bindings::PolygonMode(bindings::FRONT_AND_BACK, bindings::FILL);
+            self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::FILL);
         }
 
-        Program::unbind();
-        Texture::unbind(bindings::TEXTURE_2D, 0);
-        Framebuffer::unbind();
+        Program::unbind(self.gl);
+        Texture::unbind(self.gl, TextureBind::Texture2D, 0);
+        Framebuffer::unbind(self.gl);
         RenderResult::default()
     }
 }

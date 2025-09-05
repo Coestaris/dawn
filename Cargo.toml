@@ -15,16 +15,22 @@ name = "dawn"
 edition = "2021"
 
 [features]
-default = []
-no_assets = []
+default = ["build_assets"]
+build_assets = [
+    "dep:dawn-dacgen",
+    "dep:dawn-dac",
+    "dep:dirs",
+]
 
 [build-dependencies]
-dawn-dacgen = { path = "lib/crates/dacgen" }
-dawn-dac = { path = "lib/crates/dac" }
 build-info-build = "0.0.41"
+
+dawn-dacgen = { path = "lib/crates/dacgen", optional = true }
+dawn-dac = { path = "lib/crates/dac", optional = true }
+dirs = { version = "6.0.0", optional = true }
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
 winresource = "0.1"
-dirs = "6.0.0"
-log = "0.4.27"
 
 [dependencies]
 dawn-assets = { path = "lib/crates/assets", features = ["hub"] }

@@ -4,14 +4,14 @@ use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementA
 use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::result::RenderResult;
 
-pub struct Quad {
-    vao: VertexArray,
-    vbo: ArrayBuffer,
-    ebo: ElementArrayBuffer,
+pub struct Quad<'g> {
+    vao: VertexArray<'g>,
+    vbo: ArrayBuffer<'g>,
+    ebo: ElementArrayBuffer<'g>,
 }
 
-impl Quad {
-    pub   fn new() -> Self {
+impl<'g> Quad<'g> {
+    pub fn new(gl: &'g glow::Context) -> Self {
         let vertex: [f32; 16] = [
             // positions   // tex coords
             -1.0, 1.0, 0.0, 1.0, // top left
@@ -24,9 +24,9 @@ impl Quad {
             0, 2, 3, // second triangle
         ];
 
-        let vao = VertexArray::new(IRTopology::Triangles, IRIndexType::U16).unwrap();
-        let mut vbo = ArrayBuffer::new().unwrap();
-        let mut ebo = ElementArrayBuffer::new().unwrap();
+        let vao = VertexArray::new(gl, IRTopology::Triangles, IRIndexType::U16).unwrap();
+        let mut vbo = ArrayBuffer::new(gl).unwrap();
+        let mut ebo = ElementArrayBuffer::new(gl).unwrap();
 
         let vao_binding = vao.bind();
         let vbo_binding = vbo.bind();
@@ -63,7 +63,7 @@ impl Quad {
         Quad { vao, vbo, ebo }
     }
 
-    pub     fn draw(&self) -> RenderResult {
+    pub fn draw(&self) -> RenderResult {
         let binding = self.vao.bind();
         binding.draw_elements(6, 0)
     }

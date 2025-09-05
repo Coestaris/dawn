@@ -4,25 +4,24 @@ use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::primitive::cube::Cube;
 use dawn_assets::ir::mesh::{IRIndexType, IRLayout, IRLayoutField, IRLayoutSampleType, IRTopology};
 use dawn_assets::TypedAsset;
-use dawn_graphics::gl::bindings;
-use dawn_graphics::gl::raii::array_buffer::{ArrayBuffer, ArrayBufferUsage};
-use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementArrayBufferUsage};
+use dawn_graphics::gl::raii::array_buffer::ArrayBufferUsage;
+use dawn_graphics::gl::raii::element_array_buffer::ElementArrayBufferUsage;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
 };
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
-use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::{Mat4, UVec2, Vec3, Vec4};
+use glow::HasContext;
 use log::debug;
 use std::rc::Rc;
 
 struct ShaderContainer {
-    shader: TypedAsset<Program>,
+    shader: TypedAsset<Program<'static>>,
     model_location: UniformLocation,
     view_location: UniformLocation,
     proj_location: UniformLocation,
@@ -50,23 +49,25 @@ impl Mode {
     }
 }
 
-pub(crate) struct BoundingPass {
+pub(crate) struct BoundingPass<'g> {
+    gl: &'g glow::Context,
     id: RenderPassTargetId,
-    cube: Cube,
+    cube: Cube<'g>,
     mode: Mode,
     shader: Option<ShaderContainer>,
     projection: Mat4,
     usize: UVec2,
     view: Mat4,
-    gbuffer: Rc<GBuffer>,
+    gbuffer: Rc<GBuffer<'g>>,
 }
 
-impl BoundingPass {
-    pub fn new(id: RenderPassTargetId, gbuffer: Rc<GBuffer>) -> Self {
+impl<'g> BoundingPass<'g> {
+    pub fn new(gl: &'g glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer<'g>>) -> Self {
         BoundingPass {
+            gl,
             id,
             shader: None,
-            cube: Cube::new(),
+            cube: Cube::new(gl),
             projection: Mat4::IDENTITY,
             usize: UVec2::ZERO,
             view: Mat4::IDENTITY,
@@ -88,14 +89,14 @@ impl BoundingPass {
         if let Some(shader) = self.shader.as_mut() {
             // Load projection matrix into shader
             let program = shader.shader.cast();
-            Program::bind(&program);
+            Program::bind(self.gl, &program);
             program.set_uniform(shader.proj_location, self.projection);
-            Program::unbind();
+            Program::unbind(self.gl);
         }
     }
 }
 
-impl RenderPass<RenderingEvent> for BoundingPass {
+impl<'g> RenderPass<RenderingEvent> for BoundingPass<'g> {
     fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
         fn dispatch_bounding_pass(ptr: *mut u8, event: RenderingEvent) {
             let pass = unsafe { &mut *(ptr as *mut BoundingPass) };
@@ -162,6 +163,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
             Mode::AABBRespectDepthBuffer | Mode::OBBRespectDepthBuffer => {
                 // Blit the depth buffer to the default framebuffer
                 Framebuffer::blit_to_default(
+                    self.gl,
                     &self.gbuffer.fbo,
                     self.usize,
                     BlitFramebufferMask::Depth,
@@ -170,8 +172,8 @@ impl RenderPass<RenderingEvent> for BoundingPass {
 
                 // Enable depth test
                 unsafe {
-                    bindings::Enable(bindings::DEPTH_TEST);
-                    bindings::DepthFunc(bindings::LEQUAL);
+                    self.gl.enable(glow::DEPTH_TEST);
+                    self.gl.depth_func(glow::LEQUAL);
                 }
             }
             _ => {}
@@ -180,7 +182,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         // Bind shader
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
-        Program::bind(&program);
+        Program::bind(self.gl, &program);
 
         // Update view
         program.set_uniform(shader.view_location, self.view);
@@ -264,7 +266,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         }
 
         // Unbind shader
-        Program::unbind();
+        Program::unbind(self.gl);
 
         RenderResult::default()
     }
