@@ -7,7 +7,7 @@ use evenio::world::World;
 use glam::Vec2;
 use std::collections::HashSet;
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
-use winit::keyboard::{Key, PhysicalKey};
+use winit::keyboard::PhysicalKey;
 
 #[derive(Component)]
 pub struct InputHolder {

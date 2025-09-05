@@ -4,7 +4,7 @@ use evenio::component::Component;
 use evenio::event::Receiver;
 use evenio::fetch::{Fetcher, Single};
 use glam::Quat;
-use winit::keyboard::{Key, KeyCode, NamedKey, PhysicalKey};
+use winit::keyboard::{KeyCode, PhysicalKey};
 use crate::world::input::InputHolder;
 
 pub mod asset;

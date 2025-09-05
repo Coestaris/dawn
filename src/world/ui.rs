@@ -1,5 +1,4 @@
 use crate::world::asset::DropAllAssetsEvent;
-use build_info::semver::Op;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::TypedAsset;
 use dawn_ecs::events::InterSyncEvent;
@@ -11,11 +10,11 @@ use evenio::event::Receiver;
 use evenio::fetch::Single;
 use evenio::world::World;
 use glam::{UVec2, Vec2, Vec4};
-use log::{debug, info};
+use log::debug;
 use std::cell::UnsafeCell;
 use std::sync::Arc;
 use triple_buffer::{triple_buffer, Input, Output};
-use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
+use winit::event::{ElementState, KeyEvent, WindowEvent};
 use winit::keyboard::{Key, NamedKey};
 
 #[derive(Debug, Clone)]

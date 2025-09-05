@@ -165,7 +165,7 @@ impl DictionaryAssetFactory {
     pub fn attach_to_ecs(self, world: &mut World) {
         fn process_events_handler(
             _: Receiver<TickEvent>,
-            mut factory: Single<&mut DictionaryAssetFactory>,
+            factory: Single<&mut DictionaryAssetFactory>,
         ) {
             factory.0.basic_factory.process_events(
                 |msg| {

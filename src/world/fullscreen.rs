@@ -15,7 +15,7 @@ struct CurrentFullscreenState {
 pub fn fullscreen_handler(
     r: Receiver<InputEvent>,
     mut state: Single<&mut CurrentFullscreenState>,
-    mut s: Sender<(OutputEvent)>,
+    mut s: Sender<OutputEvent>,
 ) {
     // info!("Input event: {:?}", r.event);
     match &r.event.0 {

@@ -2,10 +2,7 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::primitive::cube::Cube;
-use dawn_assets::ir::mesh::{IRIndexType, IRLayout, IRLayoutField, IRLayoutSampleType, IRTopology};
 use dawn_assets::TypedAsset;
-use dawn_graphics::gl::raii::array_buffer::ArrayBufferUsage;
-use dawn_graphics::gl::raii::element_array_buffer::ElementArrayBufferUsage;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
 };
