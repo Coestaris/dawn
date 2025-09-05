@@ -16,7 +16,7 @@ use glam::Mat4;
 use glow::HasContext;
 use std::rc::Rc;
 
-fn create_missing_texture(gl: &glow::Context) -> Texture {
+fn create_missing_texture(gl: &glow::Context) -> Texture<'_> {
     // Create a 2x2 checkerboard pattern (magenta and black)
     let data: [u8; 12] = [
         255, 0, 255, // Magenta
