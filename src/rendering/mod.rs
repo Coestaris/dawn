@@ -13,7 +13,6 @@ pub fn pre_pipeline_construct(gl: &glow::Context) {
         gl.enable(glow::DEPTH_TEST);
         gl.depth_func(glow::LEQUAL);
         gl.enable(glow::MULTISAMPLE);
-        gl.enable(glow::BLEND);
         gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
         // gl.enable(glow::CULL_FACE);
         // gl.cull_face(glow::BACK);
