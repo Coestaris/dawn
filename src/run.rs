@@ -12,12 +12,12 @@ use crate::world::fcam::FreeCamera;
 use crate::world::input::InputHolder;
 use crate::world::maps::setup_maps_system;
 use crate::world::ui::{setup_ui_system, UICommand, UIReader};
-use crate::{logging, panic_hook, WorldSyncMode, WORLD_SYNC_MODE};
+use crate::{logging, panic_hook, WorldSyncMode};
 use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
 use dawn_ecs::world::WorldLoopProxy;
 use dawn_graphics::construct_chain;
-use dawn_graphics::passes::chain::{ChainCons, ChainNil, RenderChain};
+use dawn_graphics::passes::chain::{ChainCons, ChainNil};
 use dawn_graphics::passes::pipeline::RenderPipeline;
 use dawn_graphics::renderer::{
     Renderer, RendererConfig, RendererProxy, RendererSynchronization, WindowConfig,
@@ -28,8 +28,7 @@ use glam::UVec2;
 use log::info;
 use std::panic;
 use std::rc::Rc;
-use std::sync::Arc;
-use triple_buffer::{triple_buffer, Input};
+use triple_buffer::Input;
 use winit::window::{Cursor, CursorIcon};
 use crate::world::fullscreen::setup_fullscreen_system;
 

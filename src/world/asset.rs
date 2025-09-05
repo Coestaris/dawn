@@ -2,7 +2,6 @@ use crate::logging::format_system_time;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
 use crate::world::dictionaries::DictionaryAssetFactory;
-use dawn_assets::factory::FactoryBinding;
 use dawn_assets::hub::{AssetHub, AssetHubEvent, AssetInfoState};
 use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::{BasicReader, ReaderBinding};
