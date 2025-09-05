@@ -99,7 +99,7 @@ impl<'g> RenderPass<RenderingEvent> for ScreenPass<'g> {
         Texture::bind(
             self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.color_texture.texture,
+            &self.gbuffer.albedo_metalic.texture,
             0,
         );
         self.quad.draw()

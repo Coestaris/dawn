@@ -779,7 +779,6 @@ dependencies = [
  "glow",
  "libc",
  "log",
- "tinyrand",
  "triple_buffer",
  "winit",
  "winresource",

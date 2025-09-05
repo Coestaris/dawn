@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use dawn_assets::factory::{BasicFactory, FactoryBinding};
 use dawn_assets::ir::dictionary::IRDictionary;
 use dawn_assets::ir::IRAsset;
@@ -11,8 +12,25 @@ use glam::{Quat, Vec3};
 use log::warn;
 use std::time::Duration;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MapUID(usize);
+
+impl Display for MapUID {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MapUID({})", self.0)
+    }
+}
+
+impl MapUID {
+    pub fn new() -> Self {
+        static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
+        let uid = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        Self(uid)
+    }
+}
+
 pub struct MapObject {
-    pub uid: usize,
+    pub uid: MapUID,
     pub location: Vec3,
     pub rotation: Quat,
     pub scale: Vec3,
@@ -22,10 +40,8 @@ pub struct MapObject {
 
 impl MapObject {
     fn new() -> Self {
-        static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1);
-        let uid = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         Self {
-            uid,
+            uid: MapUID::new(),
             location: Vec3::ZERO,
             rotation: Quat::IDENTITY,
             scale: Vec3::ONE,
@@ -36,10 +52,25 @@ impl MapObject {
 }
 
 pub struct MapPointLight {
-    location: Vec3,
-    color: Vec3,
-    intensity: f32,
-    range: f32,
+    pub uid: MapUID,
+    pub location: Vec3,
+    pub color: Vec3,
+    pub intensity: f32,
+    pub range: f32,
+    pub components: Vec<String>,
+}
+
+impl MapPointLight {
+    fn new() -> Self {
+        Self {
+            uid: MapUID::new(),
+            location: Vec3::ZERO,
+            color: Vec3::ONE,
+            intensity: 1.0,
+            range: 100.0,
+            components: Vec::new(),
+        }
+    }
 }
 
 pub struct Map {
@@ -118,12 +149,7 @@ fn process_dictionary(ir: IRDictionary) -> anyhow::Result<(DictionaryEntry, Asse
         let lights = lights.as_array().unwrap();
         for light in lights {
             let light_map = light.as_map().unwrap();
-            let mut point_light = MapPointLight {
-                location: Vec3::ZERO,
-                color: Vec3::ONE,
-                intensity: 1.0,
-                range: 10.0,
-            };
+            let mut point_light = MapPointLight::new();
             for (key, value) in light_map {
                 match key.as_str() {
                     "Location" => {
@@ -137,6 +163,14 @@ fn process_dictionary(ir: IRDictionary) -> anyhow::Result<(DictionaryEntry, Asse
                     }
                     "Range" => {
                         point_light.range = value.as_f32().unwrap();
+                    }
+                    "Components" => {
+                        let comps = value.as_array().unwrap();
+                        for comp in comps {
+                            point_light
+                                .components
+                                .push(comp.as_string().unwrap().to_string());
+                        }
                     }
                     _ => {
                         warn!("Unknown point light key in dictionary: {}", key);

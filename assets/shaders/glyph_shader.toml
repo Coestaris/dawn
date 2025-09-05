@@ -3,8 +3,8 @@ asset_type = "Shader"
 
 [[properties.Shader.sources]]
 kind = "Vertex"
-origin.External.File = "bins/glyph.vsh"
+origin.External.File = "shaders/glyph.vsh"
 
 [[properties.Shader.sources]]
 kind = "Fragment"
-origin.External.File = "bins/glyph.fsh"
+origin.External.File = "shaders/glyph.fsh"

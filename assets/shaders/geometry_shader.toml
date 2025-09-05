@@ -3,8 +3,9 @@ asset_type = "Shader"
 
 [[properties.Shader.sources]]
 kind = "Vertex"
-origin.External.File = "bins/geometry.vsh"
+origin.External.File = "shaders/geometry.vsh"
 
 [[properties.Shader.sources]]
 kind = "Fragment"
-origin.External.File = "bins/geometry.fsh"
+origin.External.File = "shaders/geometry.fsh"
+post_include = [{ External.File = "shaders/gbuffer.glsl" }]

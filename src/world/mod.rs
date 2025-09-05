@@ -18,6 +18,8 @@ pub mod ui;
 
 #[derive(Component)]
 pub struct Rotating;
+#[derive(Component)]
+struct MovingByArrowKeys;
 
 fn rotate_handler(t: Receiver<TickEvent>, f: Fetcher<(&mut ObjectRotation, &Rotating)>) {
     for (rot, _) in f {
@@ -30,7 +32,7 @@ fn rotate_handler(t: Receiver<TickEvent>, f: Fetcher<(&mut ObjectRotation, &Rota
 fn move_light_handler(
     t: Receiver<TickEvent>,
     holder: Single<&mut InputHolder>,
-    f: Fetcher<(&mut ObjectPosition, &ObjectPointLight)>,
+    f: Fetcher<(&mut ObjectPosition, &MovingByArrowKeys)>,
 ) {
     for (pos, _) in f {
         const SPEED: f32 = 10.0;
