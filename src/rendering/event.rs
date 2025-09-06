@@ -7,15 +7,11 @@ use glam::{Mat4, UVec2};
 pub enum RenderingEvent {
     // Generic events
     DropAllAssets,
-    UpdateShader(TypedAsset<Program<'static>>),
+    UpdateShader(TypedAsset<Program>),
     ViewUpdated(Mat4),
     PerspectiveProjectionUpdated(Mat4),
     OrthographicProjectionUpdated(Mat4),
     ViewportResized(UVec2),
-
-    // Specific events
-    ToggleWireframeMode,
-    ToggleBoundingBox,
 }
 
 bitflags! {
@@ -27,8 +23,5 @@ bitflags! {
         const PERSP_PROJECTION_UPDATED = 1 << 3;
         const ORTHO_PROJECTION_UPDATED = 1 << 4;
         const VIEWPORT_RESIZED = 1 << 5;
-
-        const TOGGLE_WIREFRAME_MODE = 1 << 20;
-        const TOGGLE_BOUNDING = 1 << 21;
     }
 }

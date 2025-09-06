@@ -15,6 +15,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::Mat4;
 use glow::HasContext;
 use std::rc::Rc;
+use crate::rendering::ui::RenderingConfig;
 
 const ALBEDO_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
@@ -23,7 +24,7 @@ const ROUGHNESS_INDEX: i32 = 3;
 const OCCLUSION_INDEX: i32 = 4;
 
 struct ShaderContainer {
-    shader: TypedAsset<Program<'static>>,
+    shader: TypedAsset<Program>,
 
     // Vertex uniforms
     model_location: UniformLocation,
@@ -38,23 +39,26 @@ struct ShaderContainer {
     occlusion: UniformLocation,
 }
 
-pub(crate) struct GeometryPass<'g> {
-    gl: &'g glow::Context,
+pub(crate) struct GeometryPass {
+    gl: &'static glow::Context,
     id: RenderPassTargetId,
+    config: RenderingConfig,
+    
     shader: Option<ShaderContainer>,
-    fallback_textures: FallbackTextures<'g>,
+    fallback_textures: FallbackTextures,
     projection: Mat4,
     view: Mat4,
     is_wireframe: bool,
     frustum: FrustumCulling,
-    gbuffer: Rc<GBuffer<'g>>,
+    gbuffer: Rc<GBuffer>,
 }
 
-impl<'g> GeometryPass<'g> {
-    pub fn new(gl: &'g glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer<'g>>) -> Self {
+impl GeometryPass {
+    pub fn new(gl: &'static glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer>, config: RenderingConfig) -> Self {
         GeometryPass {
             gl,
             id,
+            config,
             shader: None,
             fallback_textures: FallbackTextures::new(gl),
             projection: Mat4::IDENTITY,
@@ -83,7 +87,7 @@ impl<'g> GeometryPass<'g> {
     }
 }
 
-impl<'g> RenderPass<RenderingEvent> for GeometryPass<'g> {
+impl RenderPass<RenderingEvent> for GeometryPass {
     fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
         fn dispatch_geometry_pass(ptr: *mut u8, event: RenderingEvent) {
             let pass = unsafe { &mut *(ptr as *mut GeometryPass) };
@@ -130,9 +134,6 @@ impl<'g> RenderPass<RenderingEvent> for GeometryPass<'g> {
                 self.frustum = FrustumCulling::new(self.projection, self.view);
             }
 
-            RenderingEvent::ToggleWireframeMode => {
-                self.is_wireframe = !self.is_wireframe;
-            }
             _ => {}
         }
     }
@@ -152,8 +153,12 @@ impl<'g> RenderPass<RenderingEvent> for GeometryPass<'g> {
         unsafe {
             self.gl.clear_color(0.1, 0.1, 0.1, 1.0);
             self.gl.clear_depth(1.0);
-            self.gl
-                .clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
+            self.gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
+            self.gl.enable(glow::DEPTH_TEST);
+            self.gl.enable(glow::CULL_FACE);
+            self.gl.cull_face(glow::BACK);
+            self.gl.depth_func(glow::LESS);
+            self.gl.disable(glow::BLEND);
 
             if self.is_wireframe {
                 self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::LINE);
