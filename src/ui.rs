@@ -1,14 +1,19 @@
 use crossbeam_channel::{Receiver, Sender};
 use evenio::component::Component;
+use dawn_assets::hub::AssetInfo;
 use dawn_ecs::world::WorldLoopMonitorEvent;
 use dawn_graphics::renderer::RendererMonitorEvent;
+use crate::world::ui::WorldStatistics;
 
 pub enum UIToRendererMessage {
-    WorldMonitor(WorldLoopMonitorEvent),
+    WorldMonitor(WorldLoopMonitorEvent, WorldStatistics),
     RendererMonitor(RendererMonitorEvent),
+    AssetsEnumerated(Vec<AssetInfo>),
 }
 
-pub enum UIToWorldMessage {}
+pub enum UIToWorldMessage {
+    EnumerateAssets,
+}
 
 pub struct UIRendererConnection {
     pub sender: Sender<UIToWorldMessage>,

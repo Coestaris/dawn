@@ -2,6 +2,7 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::fallback_tex::FallbackTextures;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::gbuffer::GBuffer;
+use crate::rendering::ui::RenderingConfig;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
@@ -15,7 +16,6 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::Mat4;
 use glow::HasContext;
 use std::rc::Rc;
-use crate::rendering::ui::RenderingConfig;
 
 const ALBEDO_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
@@ -43,18 +43,22 @@ pub(crate) struct GeometryPass {
     gl: &'static glow::Context,
     id: RenderPassTargetId,
     config: RenderingConfig,
-    
+
     shader: Option<ShaderContainer>,
     fallback_textures: FallbackTextures,
     projection: Mat4,
     view: Mat4,
-    is_wireframe: bool,
     frustum: FrustumCulling,
     gbuffer: Rc<GBuffer>,
 }
 
 impl GeometryPass {
-    pub fn new(gl: &'static glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer>, config: RenderingConfig) -> Self {
+    pub fn new(
+        gl: &'static glow::Context,
+        id: RenderPassTargetId,
+        gbuffer: Rc<GBuffer>,
+        config: RenderingConfig,
+    ) -> Self {
         GeometryPass {
             gl,
             id,
@@ -63,7 +67,6 @@ impl GeometryPass {
             fallback_textures: FallbackTextures::new(gl),
             projection: Mat4::IDENTITY,
             view: Mat4::IDENTITY,
-            is_wireframe: false,
             frustum: FrustumCulling::new(Mat4::IDENTITY, Mat4::IDENTITY),
             gbuffer,
         }
@@ -153,14 +156,15 @@ impl RenderPass<RenderingEvent> for GeometryPass {
         unsafe {
             self.gl.clear_color(0.1, 0.1, 0.1, 1.0);
             self.gl.clear_depth(1.0);
-            self.gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
+            self.gl
+                .clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
             self.gl.enable(glow::DEPTH_TEST);
             self.gl.enable(glow::CULL_FACE);
             self.gl.cull_face(glow::BACK);
             self.gl.depth_func(glow::LESS);
             self.gl.disable(glow::BLEND);
 
-            if self.is_wireframe {
+            if self.config.borrow().wireframe {
                 self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::LINE);
             }
         }
