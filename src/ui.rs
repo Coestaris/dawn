@@ -9,6 +9,7 @@ pub enum UIToRendererMessage {
     WorldMonitor(WorldLoopMonitorEvent, WorldStatistics),
     RendererMonitor(RendererMonitorEvent),
     AssetsEnumerated(Vec<AssetInfo>),
+    SetUIFont(Vec<u8>)
 }
 
 pub enum UIToWorldMessage {

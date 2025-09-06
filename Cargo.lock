@@ -778,6 +778,7 @@ dependencies = [
  "fern",
  "glam",
  "glow",
+ "ico",
  "imgui",
  "imgui-glow-renderer",
  "imgui-winit-support",
@@ -1643,6 +1644,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f31827a206f56af32e590ba56d5d2d085f558508192593743f16b2306495269f"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "ico"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc50b891e4acf8fe0e71ef88ec43ad82ee07b3810ad09de10f1d01f072ed4b98"
+dependencies = [
+ "byteorder",
+ "png",
 ]
 
 [[package]]

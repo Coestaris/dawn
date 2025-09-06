@@ -4,6 +4,7 @@ use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
 use crate::rendering::passes::screen_pass::ScreenPass;
+use crate::rendering::ui::RenderingConfig;
 use crate::run::WINDOW_SIZE;
 use crate::ui::UIRendererConnection;
 use dawn_graphics::passes::chain::RenderChain;
@@ -19,7 +20,6 @@ use std::rc::Rc;
 use std::time::Instant;
 use winit::event::{Event, WindowEvent};
 use winit::window::Window;
-use crate::rendering::ui::RenderingConfig;
 
 pub mod dispatcher;
 pub mod event;
@@ -78,9 +78,20 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         pre_pipeline_construct(&r.gl);
 
         let gbuffer = Rc::new(GBuffer::new(&r.gl, WINDOW_SIZE));
-        let geometry_pass = GeometryPass::new(&r.gl, self.geometry_id, gbuffer.clone(), self.config.clone());
-        let bounding_pass = BoundingPass::new(&r.gl, self.bounding_id, gbuffer.clone(), self.config.clone());
-        let screen_pass = ScreenPass::new(&r.gl, self.screen_id, gbuffer.clone(), self.config.clone());
+        let geometry_pass = GeometryPass::new(
+            &r.gl,
+            self.geometry_id,
+            gbuffer.clone(),
+            self.config.clone(),
+        );
+        let bounding_pass = BoundingPass::new(
+            &r.gl,
+            self.bounding_id,
+            gbuffer.clone(),
+            self.config.clone(),
+        );
+        let screen_pass =
+            ScreenPass::new(&r.gl, self.screen_id, gbuffer.clone(), self.config.clone());
 
         Ok(construct_chain!(geometry_pass, screen_pass, bounding_pass,))
     }
@@ -116,9 +127,15 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
     }
 
     fn after_render(&mut self, window: &Window, _backend: &RendererBackend<RenderingEvent>) {
+        // Render UI here if needed
+        let mut imgui = self.imgui.borrow_mut();
+        if self.ui.before_frame(imgui.deref_mut(), window) {
+            // User requested to recreate the renderer (e.g. changed font size)
+            let ig_context = _backend.new_context().unwrap();
+            self.ig_render = Some(AutoRenderer::new(ig_context, imgui.deref_mut()).unwrap());
+        }
+
         if let Some(renderer) = &mut self.ig_render {
-            // Render UI here if needed
-            let mut imgui = self.imgui.borrow_mut();
             let ui = imgui.frame();
             self.imgui_winit.prepare_render(ui, &window);
 
