@@ -207,32 +207,11 @@ impl<'g> RenderPass<RenderingEvent> for GeometryPass<'g> {
                     if let Some(material) = &submesh.material {
                         let material = material.cast::<Material>();
 
-                        let albedo = if let Some(texture) = &material.base_color_texture {
-                            let texture = texture.cast::<Texture>();
-                            texture
-                        } else {
-                            &self.fallback_textures.albedo_texture
-                        };
-
-                        // TODO: Get normal texture from material
-                        let normal = &self.fallback_textures.normal_texture;
-
-                        let metallic = if let Some(texture) = &material.metallic_texture {
-                            let texture = texture.cast::<Texture>();
-                            texture
-                        } else {
-                            &self.fallback_textures.metallic_texture
-                        };
-
-                        let roughness = if let Some(texture) = &material.roughness_texture {
-                            let texture = texture.cast::<Texture>();
-                            texture
-                        } else {
-                            &self.fallback_textures.roughness_texture
-                        };
-
-                        // TODO: Get occlusion texture from material
-                        let occlusion = &self.fallback_textures.occlusion_texture;
+                        let albedo = material.albedo.cast();
+                        let normal = material.normal.cast();
+                        let metallic = material.metallic.cast();
+                        let roughness = material.roughness.cast();
+                        let occlusion = material.occlusion.cast();
 
                         (albedo, normal, metallic, roughness, occlusion)
                     } else {
@@ -247,9 +226,24 @@ impl<'g> RenderPass<RenderingEvent> for GeometryPass<'g> {
 
                 Texture::bind(self.gl, TextureBind::Texture2D, albedo, ALBEDO_INDEX as u32);
                 Texture::bind(self.gl, TextureBind::Texture2D, normal, NORMAL_INDEX as u32);
-                Texture::bind(self.gl, TextureBind::Texture2D, metallic, METALLIC_INDEX as u32);
-                Texture::bind(self.gl, TextureBind::Texture2D, roughness, ROUGHNESS_INDEX as u32);
-                Texture::bind(self.gl, TextureBind::Texture2D, occlusion, OCCLUSION_INDEX as u32);
+                Texture::bind(
+                    self.gl,
+                    TextureBind::Texture2D,
+                    metallic,
+                    METALLIC_INDEX as u32,
+                );
+                Texture::bind(
+                    self.gl,
+                    TextureBind::Texture2D,
+                    roughness,
+                    ROUGHNESS_INDEX as u32,
+                );
+                Texture::bind(
+                    self.gl,
+                    TextureBind::Texture2D,
+                    occlusion,
+                    OCCLUSION_INDEX as u32,
+                );
 
                 (false, RenderResult::default())
             })

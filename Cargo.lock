@@ -848,6 +848,7 @@ dependencies = [
  "image",
  "log",
  "md5",
+ "once_cell",
  "rayon",
  "reqwest",
  "rusttype",
