@@ -1,15 +1,20 @@
 use crate::ui::{UIToRendererMessage, UIToWorldMessage, UIWorldConnection};
-use dawn_assets::hub::AssetHub;
+use crate::world::dictionaries::Blob;
+use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_ecs::events::TickEvent;
 use dawn_ecs::world::WorldLoopMonitorEvent;
 use dawn_graphics::ecs::{
     ObjectAreaLight, ObjectMesh, ObjectPointLight, ObjectSpotLight, ObjectSunLight,
 };
-use dawn_graphics::renderer::RendererMonitorEvent;
+use dawn_graphics::renderer::{OutputEvent, RendererMonitorEvent};
 use evenio::entity::EntityId;
+use evenio::event::Sender;
 use evenio::fetch::{Fetcher, Single};
 use evenio::prelude::Receiver;
 use evenio::world::World;
+use std::process::Output;
+use log::info;
+use winit::window::Icon;
 
 pub struct WorldStatistics {
     pub entities: usize,
@@ -69,6 +74,39 @@ fn recv_messages_from_renderer_handler(
     }
 }
 
+const UI_FONT_BLOB_ID: &str = "ui_font_blob";
+const APPLICATION_ICON_BLOB_ID: &str = "icon_blob";
+
+fn ui_font_handler(
+    r: Receiver<AssetHubEvent>,
+    hub: Single<&mut AssetHub>,
+    mut ui: Single<&mut UIWorldConnection>,
+    mut sender: Sender<OutputEvent>,
+) {
+    match r.event {
+        AssetHubEvent::AssetLoaded(id) if id.as_str() == UI_FONT_BLOB_ID => {
+            info!("UI font blob loaded");
+            let blob = hub.get_typed::<Blob>(UI_FONT_BLOB_ID.into()).unwrap();
+            let _ = ui
+                .sender
+                .send(UIToRendererMessage::SetUIFont(blob.cast().data.clone()));
+        }
+        AssetHubEvent::AssetLoaded(id) if id.as_str() == APPLICATION_ICON_BLOB_ID => {
+            info!("Application icon blob loaded");
+            let blob = hub
+                .get_typed::<Blob>(APPLICATION_ICON_BLOB_ID.into())
+                .unwrap();
+            let reader = std::io::Cursor::new(&blob.cast().data);
+            let icon_dir = ico::IconDir::read(reader).unwrap();
+            let icon = icon_dir.entries()[0].decode().unwrap();
+            let _ = sender.send(OutputEvent::ChangeIcon(Some(
+                Icon::from_rgba(icon.rgba_data().to_vec(), icon.width(), icon.height()).unwrap(),
+            )));
+        }
+        _ => {}
+    }
+}
+
 pub fn setup_ui_system(world: &mut World, connection: UIWorldConnection) {
     let id = world.spawn();
     world.insert(id, connection);
@@ -76,4 +114,5 @@ pub fn setup_ui_system(world: &mut World, connection: UIWorldConnection) {
     world.add_handler(world_monitoring_handler);
     world.add_handler(renderer_monitoring_handler);
     world.add_handler(recv_messages_from_renderer_handler);
+    world.add_handler(ui_font_handler);
 }
