@@ -2,6 +2,7 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::primitive::cube::Cube;
+use crate::rendering::ui::{BoundingBoxMode, RenderingConfig};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
@@ -14,7 +15,6 @@ use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::{Mat4, UVec2, Vec3, Vec4};
 use glow::HasContext;
-use log::debug;
 use std::rc::Rc;
 
 struct ShaderContainer {
@@ -25,41 +25,25 @@ struct ShaderContainer {
     color_location: UniformLocation,
 }
 
-#[derive(Debug)]
-enum Mode {
-    Disabled,
-    AABBRespectDepthBuffer,
-    OBBRespectDepthBuffer,
-    OBBIgnoreDepthBuffer,
-    AABBIgnoreDepthBuffer,
-}
-
-impl Mode {
-    fn cycle(&mut self) {
-        *self = match self {
-            Mode::Disabled => Mode::AABBRespectDepthBuffer,
-            Mode::AABBRespectDepthBuffer => Mode::OBBRespectDepthBuffer,
-            Mode::OBBRespectDepthBuffer => Mode::OBBIgnoreDepthBuffer,
-            Mode::OBBIgnoreDepthBuffer => Mode::AABBIgnoreDepthBuffer,
-            Mode::AABBIgnoreDepthBuffer => Mode::Disabled,
-        }
-    }
-}
-
 pub(crate) struct BoundingPass {
     gl: &'static glow::Context,
     id: RenderPassTargetId,
     cube: Cube,
-    mode: Mode,
     shader: Option<ShaderContainer>,
     projection: Mat4,
     usize: UVec2,
     view: Mat4,
     gbuffer: Rc<GBuffer>,
+    config: RenderingConfig,
 }
 
 impl BoundingPass {
-    pub fn new(gl: &'static glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer>) -> Self {
+    pub fn new(
+        gl: &'static glow::Context,
+        id: RenderPassTargetId,
+        gbuffer: Rc<GBuffer>,
+        config: RenderingConfig,
+    ) -> Self {
         BoundingPass {
             gl,
             id,
@@ -68,8 +52,8 @@ impl BoundingPass {
             projection: Mat4::IDENTITY,
             usize: UVec2::ZERO,
             view: Mat4::IDENTITY,
-            mode: Mode::Disabled,
             gbuffer,
+            config,
         }
     }
 
@@ -148,11 +132,12 @@ impl RenderPass<RenderingEvent> for BoundingPass {
             return RenderResult::default();
         }
 
-        match self.mode {
-            Mode::Disabled => {
+        let config = self.config.borrow();
+        match config.bounding_box_mode {
+            BoundingBoxMode::Disabled => {
                 return RenderResult::default();
             }
-            Mode::AABBRespectDepthBuffer | Mode::OBBRespectDepthBuffer => {
+            BoundingBoxMode::AABBHonorDepth | BoundingBoxMode::OBBHonorDepth => {
                 // Blit the depth buffer to the default framebuffer
                 Framebuffer::blit_to_default(
                     self.gl,
@@ -191,7 +176,11 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         if self.shader.is_none() {
             return RenderResult::default();
         }
-        if matches!(self.mode, Mode::Disabled) {
+
+        if matches!(
+            self.config.borrow().bounding_box_mode,
+            BoundingBoxMode::Disabled
+        ) {
             return RenderResult::default();
         }
 
@@ -211,28 +200,28 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         ) -> RenderResult {
             let shader = pass.shader.as_ref().unwrap();
             let program = shader.shader.cast();
+            let mode = pass.config.borrow().bounding_box_mode;
 
-            if matches!(
-                pass.mode,
-                Mode::OBBIgnoreDepthBuffer | Mode::OBBRespectDepthBuffer
-            ) {
-                pass.cube.draw(
+            match mode {
+                BoundingBoxMode::OBB | BoundingBoxMode::OBBHonorDepth => pass.cube.draw(
                     |model| {
                         let obb = renderable_model * model;
                         program.set_uniform(shader.model_location, obb);
                     },
                     min,
                     max,
-                )
-            } else {
-                let (min, max) = FrustumCulling::obb_to_aabb(min, max, renderable_model);
-                pass.cube.draw(
-                    |model| {
-                        program.set_uniform(shader.model_location, model);
-                    },
-                    min,
-                    max,
-                )
+                ),
+                BoundingBoxMode::AABB | BoundingBoxMode::AABBHonorDepth => {
+                    let (min, max) = FrustumCulling::obb_to_aabb(min, max, renderable_model);
+                    pass.cube.draw(
+                        |model| {
+                            program.set_uniform(shader.model_location, model);
+                        },
+                        min,
+                        max,
+                    )
+                }
+                _ => unreachable!(),
             }
         }
 
@@ -253,7 +242,10 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         if self.shader.is_none() {
             return RenderResult::default();
         }
-        if matches!(self.mode, Mode::Disabled) {
+        if matches!(
+            self.config.borrow().bounding_box_mode,
+            BoundingBoxMode::Disabled
+        ) {
             return RenderResult::default();
         }
 
