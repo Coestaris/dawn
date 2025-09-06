@@ -79,7 +79,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
 
         let gbuffer = Rc::new(GBuffer::new(&r.gl, WINDOW_SIZE));
         let geometry_pass = GeometryPass::new(&r.gl, self.geometry_id, gbuffer.clone(), self.config.clone());
-        let bounding_pass = BoundingPass::new(&r.gl, self.bounding_id, gbuffer.clone());
+        let bounding_pass = BoundingPass::new(&r.gl, self.bounding_id, gbuffer.clone(), self.config.clone());
         let screen_pass = ScreenPass::new(&r.gl, self.screen_id, gbuffer.clone(), self.config.clone());
 
         Ok(construct_chain!(geometry_pass, screen_pass, bounding_pass,))
@@ -161,7 +161,7 @@ pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer)
     );
 
     let config = RenderingConfig::new();
-    let mut imgui = imgui::Context::create();
+    let mut imgui = ui::UI::create_context();
     let renderer = Renderer {
         geometry_id,
         bounding_id,

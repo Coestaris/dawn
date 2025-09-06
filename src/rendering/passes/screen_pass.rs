@@ -1,7 +1,7 @@
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::primitive::quad::Quad;
-use crate::rendering::ui::RenderingConfig;
+use crate::rendering::ui::{OutputTexture, RenderingConfig};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
@@ -28,7 +28,12 @@ pub(crate) struct ScreenPass {
 }
 
 impl ScreenPass {
-    pub fn new(gl: &'static glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer>, config: RenderingConfig) -> Self {
+    pub fn new(
+        gl: &'static glow::Context,
+        id: RenderPassTargetId,
+        gbuffer: Rc<GBuffer>,
+        config: RenderingConfig,
+    ) -> Self {
         ScreenPass {
             gl,
             id,
@@ -103,7 +108,12 @@ impl RenderPass<RenderingEvent> for ScreenPass {
         Texture::bind(
             self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.albedo_metalic.texture,
+            match self.config.borrow().output_texture {
+                OutputTexture::Final => &self.gbuffer.albedo_metalic.texture,
+                OutputTexture::AlbedoMetallic => &self.gbuffer.albedo_metalic.texture,
+                OutputTexture::Normal => &self.gbuffer.normal.texture,
+                OutputTexture::PBR => &self.gbuffer.pbr.texture,
+            },
             0,
         );
         self.quad.draw()

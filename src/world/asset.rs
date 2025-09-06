@@ -224,36 +224,11 @@ fn timer_handler(
     }
 }
 
-fn print_assets(hub: &AssetHub) {
-    let mut sorted = hub.asset_infos();
-    sorted.sort_by(|a, b| a.id.as_str().cmp(&b.id.as_str()));
-    for (i, info) in sorted.iter().enumerate() {
-        let state = match &info.state {
-            AssetInfoState::Empty => "Empty".to_string(),
-            AssetInfoState::IR(ram) => format!("IR ({} ram)", ram),
-            AssetInfoState::Loaded { usage, rc } => {
-                format!(
-                    "Loaded ({} refs, {} ram, {} vram)",
-                    rc, usage.ram, usage.vram
-                )
-            }
-        };
-        info!(
-            "[{:<3}] [{:<8}] {:<45} | {}",
-            i,
-            info.header.asset_type.to_string(),
-            info.id.as_str(),
-            state
-        );
-    }
-}
-
 fn free_assets_handler(
     r: Receiver<AllAssetsDroppedEvent>,
     mut hub: Single<&mut AssetHub>,
     mut sender: Sender<(Spawn, Insert<FreeAllAssetsRequest>)>,
 ) {
-    print_assets(*hub);
     let request = sender.spawn();
     sender.insert(
         request,

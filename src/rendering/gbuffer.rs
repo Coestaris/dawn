@@ -100,7 +100,7 @@ pub struct GBuffer {
     // RGBA8. RGB - albedo, A - metallic
     pub albedo_metalic: GTexture,
     // RG16F. View space, Octa-encoded normal
-    pub normal_texture: GTexture,
+    pub normal: GTexture,
     // RGBA8. R - roughness, G - occlusion, B - emissive, A - reserved
     pub pbr: GTexture, // RGBA8
 }
@@ -109,7 +109,7 @@ impl GBuffer {
     pub(crate) fn resize(&self, new_size: UVec2) {
         info!("Resizing GBuffer to {:?}", new_size);
         self.albedo_metalic.resize(new_size);
-        self.normal_texture.resize(new_size);
+        self.normal.resize(new_size);
         self.pbr.resize(new_size);
         self.depth.resize(new_size);
     }
@@ -123,7 +123,7 @@ impl GBuffer {
                 FramebufferAttachment::Depth,
             ),
             albedo_metalic: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color0),
-            normal_texture: GTexture::new(gl, IRPixelFormat::RG16F, FramebufferAttachment::Color1),
+            normal: GTexture::new(gl, IRPixelFormat::RG16F, FramebufferAttachment::Color1),
             pbr: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color2),
         };
 
@@ -131,14 +131,14 @@ impl GBuffer {
 
         // Attach textures to the framebuffer
         buffer.albedo_metalic.attach(&buffer.fbo);
-        buffer.normal_texture.attach(&buffer.fbo);
+        buffer.normal.attach(&buffer.fbo);
         buffer.pbr.attach(&buffer.fbo);
         buffer.depth.attach(&buffer.fbo);
 
         Framebuffer::bind(gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[
             buffer.albedo_metalic.attachment,
-            buffer.normal_texture.attachment,
+            buffer.normal.attachment,
             buffer.pbr.attachment,
         ]);
         assert_eq!(buffer.fbo.is_complete(), true);
