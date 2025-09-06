@@ -1,8 +1,0 @@
-[header]
-asset_type = "Mesh"
-
-[properties.Mesh.source]
-File = "blobs/Cottage_FREE.glb"
-
-[properties.Mesh]
-gen_material = true
