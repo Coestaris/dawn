@@ -1,7 +1,7 @@
 use crate::logging::format_system_time;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
-use crate::world::dictionaries::DictionaryAssetFactory;
+use crate::world::dictionaries::{BlobAssetFactory, DictionaryAssetFactory};
 use dawn_assets::hub::{AssetHub, AssetHubEvent, AssetInfoState};
 use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::{BasicReader, ReaderBinding};
@@ -311,6 +311,9 @@ pub fn setup_assets_system(world: &mut World, mut hub: AssetHub) {
     let mut dictionary_factory = DictionaryAssetFactory::new();
     dictionary_factory.bind(hub.get_factory_biding(AssetType::Dictionary));
     dictionary_factory.attach_to_ecs(world);
+    let mut blob_factory = BlobAssetFactory::new();
+    blob_factory.bind(hub.get_factory_biding(AssetType::Blob));
+    blob_factory.attach_to_ecs(world);
 
     // Move the AssetHub into the ECS
     hub.attach_to_ecs(world);

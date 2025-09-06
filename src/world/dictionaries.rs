@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use dawn_assets::factory::{BasicFactory, FactoryBinding};
 use dawn_assets::ir::dictionary::IRDictionary;
 use dawn_assets::ir::IRAsset;
@@ -10,6 +9,7 @@ use evenio::fetch::Single;
 use evenio::world::World;
 use glam::{Quat, Vec3};
 use log::warn;
+use std::fmt::Display;
 use std::time::Duration;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -99,6 +99,17 @@ impl AssetCastable for DictionaryEntry {}
 pub struct DictionaryAssetFactory {
     basic_factory: BasicFactory<DictionaryEntry>,
 }
+
+pub struct Blob {
+    pub data: Vec<u8>,
+}
+
+#[derive(Component)]
+pub struct BlobAssetFactory {
+    basic_factory: BasicFactory<Blob>,
+}
+
+impl AssetCastable for Blob {}
 
 fn process_dictionary(ir: IRDictionary) -> anyhow::Result<(DictionaryEntry, AssetMemoryUsage)> {
     // Assume only map dictionaries for now
@@ -207,6 +218,43 @@ impl DictionaryAssetFactory {
                         process_dictionary(dictionary)
                     } else {
                         Err(anyhow::anyhow!("Expected Dictionary asset"))
+                    }
+                },
+                |_| {},
+                Duration::ZERO,
+            );
+        }
+
+        world.add_handler(process_events_handler);
+
+        let entity = world.spawn();
+        world.insert(entity, self);
+    }
+}
+
+impl BlobAssetFactory {
+    pub fn new() -> Self {
+        Self {
+            basic_factory: BasicFactory::new(),
+        }
+    }
+
+    pub fn bind(&mut self, binding: FactoryBinding) {
+        self.basic_factory.bind(binding);
+    }
+
+    pub fn attach_to_ecs(self, world: &mut World) {
+        fn process_events_handler(_: Receiver<TickEvent>, factory: Single<&mut BlobAssetFactory>) {
+            factory.0.basic_factory.process_events(
+                |msg| {
+                    if let IRAsset::Blob(data) = msg.ir {
+                        let len = data.data.len();
+                        Ok((
+                            Blob { data: data.data },
+                            AssetMemoryUsage::new(len, 0)
+                        ))
+                    } else {
+                        Err(anyhow::anyhow!("Expected Blob asset"))
                     }
                 },
                 |_| {},

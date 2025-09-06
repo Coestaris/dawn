@@ -160,7 +160,7 @@ impl UI {
 
         // Make default font a bit larger
         // TODO: Load a better font
-        let font_size = 16.0;
+        let font_size = 15.0;
         imgui
             .fonts()
             .add_font(&[imgui::FontSource::DefaultFontData {
@@ -188,7 +188,11 @@ impl UI {
         }
     }
 
-    pub fn render(&mut self, ui: &mut Ui) {
+    pub fn before_frame(
+        &mut self,
+        imgui: &mut imgui::Context,
+        _window: &winit::window::Window,
+    ) -> bool {
         if let Ok(message) = self.connection.receiver.try_recv() {
             match message {
                 UIToRendererMessage::RendererMonitor(event) => {
@@ -201,9 +205,25 @@ impl UI {
                 UIToRendererMessage::AssetsEnumerated(assets) => {
                     self.assets_info = Some(assets);
                 }
+                UIToRendererMessage::SetUIFont(raw_ttf) => {
+                    let font_size = 15.0;
+                    imgui.fonts().clear();
+                    imgui.fonts().add_font(&[imgui::FontSource::TtfData {
+                        data: &raw_ttf,
+                        size_pixels: font_size,
+                        config: None,
+                    }]);
+                    imgui.io_mut().font_global_scale = 1.0;
+
+                    return true;
+                }
             }
         }
 
+        false
+    }
+
+    pub fn render(&mut self, ui: &mut Ui) {
         let dock = ui.dockspace_over_main_viewport();
 
         const CONTROLS_NAME: &str = "Controls";
@@ -318,6 +338,7 @@ impl UI {
                                         AssetType::Mesh => [0.8, 0.5, 0.2, 1.0],
                                         AssetType::Font => [0.5, 0.2, 0.8, 1.0],
                                         AssetType::Dictionary => [0.2, 0.5, 0.8, 1.0],
+                                        AssetType::Blob => [0.8, 0.2, 0.5, 1.0],
                                     }
                                 }
 
@@ -359,9 +380,9 @@ impl UI {
                                         imgui::sys::igTableSetColumnIndex(3);
                                         ui.text(&format!("{}", rc));
                                         imgui::sys::igTableSetColumnIndex(4);
-                                        ui.text(&format!("{:.2} MB", pretty_size(usage.ram)));
+                                        ui.text(&format!("{}", pretty_size(usage.ram)));
                                         imgui::sys::igTableSetColumnIndex(5);
-                                        ui.text(&format!("{:.2} MB", pretty_size(usage.vram)));
+                                        ui.text(&format!("{}", pretty_size(usage.vram)));
                                     }
                                     _ => {
                                         imgui::sys::igTableSetColumnIndex(3);
