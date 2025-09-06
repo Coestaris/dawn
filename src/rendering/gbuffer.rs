@@ -5,23 +5,23 @@ use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use glam::UVec2;
 use log::info;
 
-pub struct GTexture<'g> {
-    gl: &'g glow::Context,
-    pub texture: Texture<'g>,
+pub struct GTexture {
+    gl: &'static glow::Context,
+    pub texture: Texture,
     pub format: IRPixelFormat,
     pub attachment: FramebufferAttachment,
 }
 
-pub struct GRenderBuffer<'g> {
-    gl: &'g glow::Context,
-    pub render_buffer: Renderbuffer<'g>,
+pub struct GRenderBuffer {
+    gl: &'static glow::Context,
+    pub render_buffer: Renderbuffer,
     pub format: RenderBufferStorage,
     pub attachment: FramebufferAttachment,
 }
 
-impl<'g> GRenderBuffer<'g> {
+impl GRenderBuffer {
     fn new(
-        gl: &'g glow::Context,
+        gl: &'static glow::Context,
         format: RenderBufferStorage,
         attachment: FramebufferAttachment,
     ) -> Self {
@@ -48,9 +48,9 @@ impl<'g> GRenderBuffer<'g> {
     }
 }
 
-impl<'g> GTexture<'g> {
+impl GTexture {
     fn new(
-        gl: &'g glow::Context,
+        gl: &'static glow::Context,
         format: IRPixelFormat,
         attachment: FramebufferAttachment,
     ) -> Self {
@@ -93,19 +93,19 @@ impl<'g> GTexture<'g> {
     }
 }
 
-pub struct GBuffer<'g> {
-    pub fbo: Framebuffer<'g>,
-    pub depth: GRenderBuffer<'g>,
+pub struct GBuffer {
+    pub fbo: Framebuffer,
+    pub depth: GRenderBuffer,
 
     // RGBA8. RGB - albedo, A - metallic
-    pub albedo_metalic: GTexture<'g>,
+    pub albedo_metalic: GTexture,
     // RG16F. View space, Octa-encoded normal
-    pub normal_texture: GTexture<'g>,
+    pub normal_texture: GTexture,
     // RGBA8. R - roughness, G - occlusion, B - emissive, A - reserved
-    pub pbr: GTexture<'g>, // RGBA8
+    pub pbr: GTexture, // RGBA8
 }
 
-impl<'g> GBuffer<'g> {
+impl GBuffer {
     pub(crate) fn resize(&self, new_size: UVec2) {
         info!("Resizing GBuffer to {:?}", new_size);
         self.albedo_metalic.resize(new_size);
@@ -114,7 +114,7 @@ impl<'g> GBuffer<'g> {
         self.depth.resize(new_size);
     }
 
-    pub fn new(gl: &'g glow::Context, initial: UVec2) -> Self {
+    pub fn new(gl: &'static glow::Context, initial: UVec2) -> Self {
         let buffer = GBuffer {
             fbo: Framebuffer::new(gl).unwrap(),
             depth: GRenderBuffer::new(

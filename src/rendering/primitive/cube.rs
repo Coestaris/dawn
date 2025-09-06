@@ -5,15 +5,15 @@ use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::result::RenderResult;
 use glam::{Mat4, Vec3};
 
-pub struct Cube<'g> {
-    pub vao: VertexArray<'g>,
-    pub vbo: ArrayBuffer<'g>,
-    pub ebo: ElementArrayBuffer<'g>,
+pub struct Cube {
+    pub vao: VertexArray,
+    pub vbo: ArrayBuffer,
+    pub ebo: ElementArrayBuffer,
     pub indices_count: usize,
 }
 
-impl<'g> Cube<'g> {
-    pub fn new(gl: &'g glow::Context) -> Self {
+impl Cube {
+    pub fn new(gl: &'static glow::Context) -> Self {
         let vertex = [
             // Top face
             1.0f32, 1.0, 1.0, // 0

@@ -4,14 +4,14 @@ use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementA
 use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::result::RenderResult;
 
-pub struct Quad<'g> {
-    vao: VertexArray<'g>,
-    vbo: ArrayBuffer<'g>,
-    ebo: ElementArrayBuffer<'g>,
+pub struct Quad {
+    vao: VertexArray,
+    vbo: ArrayBuffer,
+    ebo: ElementArrayBuffer,
 }
 
-impl<'g> Quad<'g> {
-    pub fn new(gl: &'g glow::Context) -> Self {
+impl Quad {
+    pub fn new(gl: &'static glow::Context) -> Self {
         let vertex: [f32; 16] = [
             // positions   // tex coords
             -1.0, 1.0, 0.0, 1.0, // top left

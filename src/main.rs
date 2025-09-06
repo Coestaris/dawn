@@ -10,6 +10,7 @@ pub mod logging;
 pub mod rendering;
 mod run;
 pub mod world;
+pub mod ui;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]

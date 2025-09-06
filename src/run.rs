@@ -4,22 +4,20 @@ use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
 use crate::rendering::passes::screen_pass::ScreenPass;
-use crate::rendering::passes::ui_pass::UIPass;
-use crate::rendering::pre_pipeline_construct;
+use crate::rendering::{pre_pipeline_construct, setup_rendering};
+use crate::ui::{ui_bridge, UIWorldConnection};
 use crate::world::asset::setup_assets_system;
 use crate::world::exit::escape_handler;
 use crate::world::fcam::FreeCamera;
 use crate::world::fullscreen::setup_fullscreen_system;
 use crate::world::input::InputHolder;
 use crate::world::maps::setup_maps_system;
-use crate::world::ui::{setup_ui_system, UICommand, UIReader};
 use crate::{logging, panic_hook, WorldSyncMode};
 use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
 use dawn_ecs::world::WorldLoopProxy;
 use dawn_graphics::construct_chain;
 use dawn_graphics::passes::chain::{ChainCons, ChainNil};
-use dawn_graphics::passes::pipeline::RenderPipeline;
 use dawn_graphics::renderer::{
     Renderer, RendererConfig, RendererProxy, RendererSynchronization, WindowConfig,
 };
@@ -31,13 +29,14 @@ use std::panic;
 use std::rc::Rc;
 use triple_buffer::Input;
 use winit::window::{Cursor, CursorIcon};
+use crate::world::ui::setup_ui_system;
 
-static WINDOW_SIZE: UVec2 = UVec2::new(1280, 720);
+pub(crate) static WINDOW_SIZE: UVec2 = UVec2::new(1280, 720);
 
 struct MainToEcs {
     hub: AssetHub,
-    ui_writer: Input<Vec<UICommand>>,
     renderer_proxy: RendererProxy<RenderingEvent>,
+    ui_connection: UIWorldConnection,
     dispatcher: RenderDispatcher,
 }
 
@@ -50,8 +49,8 @@ fn init_world(world: &mut World, to_ecs: MainToEcs) {
 
     setup_assets_system(world, to_ecs.hub);
     setup_maps_system(world);
-    setup_ui_system(world, to_ecs.ui_writer);
     setup_fullscreen_system(world);
+    setup_ui_system(world, to_ecs.ui_connection);
 
     world.add_handler(escape_handler);
 }
@@ -63,7 +62,6 @@ pub fn run_dawn(sync: WorldSyncMode) {
     // We forced to do this here, because Bindings must be initialized passed to
     // the renderer that is created below. As well as the UI streamer.
     let mut hub = AssetHub::new();
-    let (ui_writer, ui_reader) = UIReader::bridge();
 
     // Create window configuration
     let bi = logging::dawn_build_info();
@@ -113,6 +111,7 @@ pub fn run_dawn(sync: WorldSyncMode) {
         },
     };
 
+    let (renderer_ui, world_ui) = ui_bridge();
     let backend_config = RendererConfig {
         shader_factory_binding: Some(hub.get_factory_biding(AssetType::Shader)),
         texture_factory_binding: Some(hub.get_factory_biding(AssetType::Texture)),
@@ -121,69 +120,21 @@ pub fn run_dawn(sync: WorldSyncMode) {
         font_factory_binding: Some(hub.get_factory_biding(AssetType::Font)),
     };
 
-    // Allocate the render pass IDs and select the events they will respond to.
-    // This must be done before creating the renderer, because the passes
-    // will need the IDs during their construction.
-    let mut dispatcher = RenderDispatcher::new();
-    let geometry_id = dispatcher.pass(
-        RenderingEventMask::DROP_ALL_ASSETS
-            | RenderingEventMask::UPDATE_SHADER
-            | RenderingEventMask::VIEW_UPDATED
-            | RenderingEventMask::VIEWPORT_RESIZED
-            | RenderingEventMask::PERSP_PROJECTION_UPDATED
-            | RenderingEventMask::TOGGLE_WIREFRAME_MODE,
-        "geometry_shader",
-    );
-    let bounding_id = dispatcher.pass(
-        RenderingEventMask::DROP_ALL_ASSETS
-            | RenderingEventMask::UPDATE_SHADER
-            | RenderingEventMask::VIEW_UPDATED
-            | RenderingEventMask::VIEWPORT_RESIZED
-            | RenderingEventMask::PERSP_PROJECTION_UPDATED
-            | RenderingEventMask::TOGGLE_BOUNDING,
-        "bounding_shader",
-    );
-    let ui_id = dispatcher.pass(
-        RenderingEventMask::DROP_ALL_ASSETS
-            | RenderingEventMask::UPDATE_SHADER
-            | RenderingEventMask::ORTHO_PROJECTION_UPDATED,
-        "glyph_shader",
-    );
-    let screen_id = dispatcher.pass(
-        RenderingEventMask::DROP_ALL_ASSETS
-            | RenderingEventMask::UPDATE_SHADER
-            | RenderingEventMask::VIEWPORT_RESIZED,
-        "screen_shader",
-    );
-
     // Construct the renderer
     // No rendering will happen until we call `run` on the renderer.
     // The renderer will run on the main thread, while the world loop
+    let (dispatcher, custom_renderer) = setup_rendering(renderer_ui);
     let (renderer, proxy) =
-        Renderer::new_with_monitoring(window_config.clone(), backend_config, move |r| {
-            pre_pipeline_construct(&r.gl);
-
-            let gbuffer = Rc::new(GBuffer::new(&r.gl, WINDOW_SIZE));
-            let geometry_pass = GeometryPass::new(&r.gl, geometry_id, gbuffer.clone());
-            let bounding_pass = BoundingPass::new(&r.gl, bounding_id, gbuffer.clone());
-            let ui_pass = UIPass::new(&r.gl, ui_id, ui_reader.clone());
-            let screen_pass = ScreenPass::new(&r.gl, screen_id, gbuffer.clone());
-            Ok(RenderPipeline::new(construct_chain!(
-                geometry_pass,
-                screen_pass,
-                bounding_pass,
-                ui_pass,
-            )))
-        })
-        .unwrap();
+        Renderer::new_with_monitoring(window_config.clone(), backend_config, custom_renderer)
+            .unwrap();
 
     // Run the world loop
     // This will spawn a new thread that runs the world loop.
     // The main thread will run the renderer loop.
     let to_ecs = MainToEcs {
         hub,
-        ui_writer,
         renderer_proxy: proxy,
+        ui_connection: world_ui,
         dispatcher,
     };
     let _world_loop = match sync {

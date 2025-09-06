@@ -51,6 +51,11 @@ anyhow = "1.0.99"
 triple_buffer = "8.1.1"
 bitflags = "2.9.2"
 winit = "0.30.12"
+crossbeam-channel = "0.5.15"
+
+imgui = { version = "0.12.0", git = "https://github.com/imgui-rs/imgui-rs" }
+imgui-winit-support = { version = "0.13.0", git = "https://github.com/imgui-rs/imgui-winit-support" }
+imgui-glow-renderer = { version = "0.13.0", git = "https://github.com/dhyces/imgui-glow-renderer" }
 
 [profile.release]
 lto = true

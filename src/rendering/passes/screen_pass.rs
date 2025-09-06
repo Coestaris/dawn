@@ -1,6 +1,7 @@
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::primitive::quad::Quad;
+use crate::rendering::ui::RenderingConfig;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
@@ -12,23 +13,26 @@ use glow::HasContext;
 use std::rc::Rc;
 
 struct ShaderContainer {
-    shader: TypedAsset<Program<'static>>,
+    shader: TypedAsset<Program>,
     color_texture_location: UniformLocation,
 }
 
-pub(crate) struct ScreenPass<'g> {
-    gl: &'g glow::Context,
+pub(crate) struct ScreenPass {
+    gl: &'static glow::Context,
     id: RenderPassTargetId,
+    config: RenderingConfig,
+
     shader: Option<ShaderContainer>,
-    quad: Quad<'g>,
-    gbuffer: Rc<GBuffer<'g>>,
+    quad: Quad,
+    gbuffer: Rc<GBuffer>,
 }
 
-impl<'g> ScreenPass<'g> {
-    pub fn new(gl: &'g glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer<'g>>) -> Self {
+impl ScreenPass {
+    pub fn new(gl: &'static glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer>, config: RenderingConfig) -> Self {
         ScreenPass {
             gl,
             id,
+            config,
             shader: None,
             quad: Quad::new(gl),
             gbuffer,
@@ -36,7 +40,7 @@ impl<'g> ScreenPass<'g> {
     }
 }
 
-impl<'g> RenderPass<RenderingEvent> for ScreenPass<'g> {
+impl RenderPass<RenderingEvent> for ScreenPass {
     fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
         fn dispatch_screen_pass(ptr: *mut u8, event: RenderingEvent) {
             let pass = unsafe { &mut *(ptr as *mut ScreenPass) };
