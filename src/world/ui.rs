@@ -10,7 +10,7 @@ use evenio::event::Receiver;
 use evenio::fetch::Single;
 use evenio::world::World;
 use glam::{UVec2, Vec2, Vec4};
-use log::debug;
+use log::{debug, info};
 use std::cell::UnsafeCell;
 use std::sync::Arc;
 use triple_buffer::{triple_buffer, Input, Output};
@@ -39,6 +39,7 @@ struct UISystem {
     main_loop: Option<WorldLoopMonitorEvent>,
     renderer: Option<RendererMonitorEvent>,
     viewport: Option<UVec2>,
+    scale: f32,
     detailed: bool,
 }
 
@@ -84,6 +85,10 @@ impl Clone for UIReader {
 
 fn toggle_detailed_handler(r: Receiver<InputEvent>, mut ui: Single<&mut UISystem>) {
     match &r.event.0 {
+        WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+            info!("UI scale factor changed: {}", ui.scale);
+            ui.scale = *scale_factor as f32;
+        }
         WindowEvent::Resized(size) => {
             ui.viewport = Some(UVec2::new(size.width, size.height));
         }
@@ -186,6 +191,7 @@ fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>)
     let main_loop = ui.main_loop.as_ref().map(|f| f.clone());
     let renderer = ui.renderer.as_ref().map(|f| f.clone());
     let viewport = ui.viewport.unwrap_or(UVec2::new(800, 600));
+    let scale = ui.scale;
     let detailed = ui.detailed;
 
     let vec = ui.writer.input_buffer_mut();
@@ -194,7 +200,7 @@ fn stream_ui_handler(_: Receiver<InterSyncEvent>, mut ui: Single<&mut UISystem>)
     if let Some(font) = font {
         let style = Style {
             font: font.clone(),
-            scale: 0.5,
+            scale: 0.5 * scale,
         };
         vec.push(UICommand::ApplyStyle(style.clone()));
 
@@ -345,6 +351,7 @@ pub fn setup_ui_system(world: &mut World, ui_writer: Input<Vec<UICommand>>) {
             main_loop: None,
             renderer: None,
             viewport: None,
+            scale: 1.0,
             detailed: false,
         },
     );

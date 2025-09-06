@@ -6,7 +6,7 @@ asset_type = "Dictionary"
 Map.Location.Vec3f = [0.0, 0.0, 0.0]
 Map.Rotation.Vec3f = [0.0, 0.0, 0.0]
 Map.Scale.Vec3f = [1.0, 1.0, 1.0]
-Map.Mesh.String = "cottage"
+Map.Mesh.String = "sponza"
 
 [[properties.Dictionary.entries.Map.Objects.Array]]
 Map.Location.Vec3f = [0.0, 0.0, -10.0]
