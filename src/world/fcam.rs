@@ -94,7 +94,7 @@ impl FreeCamera {
             match &r.event.0 {
                 WindowEvent::MouseInput {
                     state: ElementState::Pressed,
-                    button: MouseButton::Left,
+                    button: MouseButton::Right,
                     ..
                 } => {
                     cam.click_pos = holder.mouse_pos();
@@ -138,7 +138,7 @@ impl FreeCamera {
             if holder.key_pressed(PhysicalKey::Code(KeyCode::ShiftLeft)) {
                 cam.instant.position += up * delta * MOVE_SPEED;
             }
-            if holder.button_pressed(MouseButton::Left) {
+            if holder.button_pressed(MouseButton::Right) {
                 let pos_delta = holder.mouse_pos() - cam.click_pos;
                 cam.click_pos = holder.mouse_pos();
 

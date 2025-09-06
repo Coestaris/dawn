@@ -69,8 +69,6 @@ impl RenderDispatcher {
                 RenderingEventMask::ORTHO_PROJECTION_UPDATED
             }
             RenderingEvent::ViewportResized(_) => RenderingEventMask::VIEWPORT_RESIZED,
-            RenderingEvent::ToggleWireframeMode => RenderingEventMask::TOGGLE_WIREFRAME_MODE,
-            RenderingEvent::ToggleBoundingBox => RenderingEventMask::TOGGLE_BOUNDING,
         };
 
         for descriptor in self.descriptors.iter() {
@@ -138,24 +136,6 @@ impl RenderDispatcher {
                 );
                 self.dispatch(RenderingEvent::ViewportResized(size), &mut sender);
             }
-
-            WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        state: ElementState::Pressed,
-                        logical_key: key,
-                        ..
-                    },
-                ..
-            } => match key.as_ref() {
-                Key::Named(NamedKey::F3) => {
-                    self.dispatch(RenderingEvent::ToggleWireframeMode, &mut sender);
-                }
-                Key::Named(NamedKey::F4) => {
-                    self.dispatch(RenderingEvent::ToggleBoundingBox, &mut sender);
-                }
-                _ => {}
-            },
             _ => {}
         }
     }

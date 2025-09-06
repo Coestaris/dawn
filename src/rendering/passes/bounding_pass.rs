@@ -18,7 +18,7 @@ use log::debug;
 use std::rc::Rc;
 
 struct ShaderContainer {
-    shader: TypedAsset<Program<'static>>,
+    shader: TypedAsset<Program>,
     model_location: UniformLocation,
     view_location: UniformLocation,
     proj_location: UniformLocation,
@@ -46,20 +46,20 @@ impl Mode {
     }
 }
 
-pub(crate) struct BoundingPass<'g> {
-    gl: &'g glow::Context,
+pub(crate) struct BoundingPass {
+    gl: &'static glow::Context,
     id: RenderPassTargetId,
-    cube: Cube<'g>,
+    cube: Cube,
     mode: Mode,
     shader: Option<ShaderContainer>,
     projection: Mat4,
     usize: UVec2,
     view: Mat4,
-    gbuffer: Rc<GBuffer<'g>>,
+    gbuffer: Rc<GBuffer>,
 }
 
-impl<'g> BoundingPass<'g> {
-    pub fn new(gl: &'g glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer<'g>>) -> Self {
+impl BoundingPass {
+    pub fn new(gl: &'static glow::Context, id: RenderPassTargetId, gbuffer: Rc<GBuffer>) -> Self {
         BoundingPass {
             gl,
             id,
@@ -93,7 +93,7 @@ impl<'g> BoundingPass<'g> {
     }
 }
 
-impl<'g> RenderPass<RenderingEvent> for BoundingPass<'g> {
+impl RenderPass<RenderingEvent> for BoundingPass {
     fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
         fn dispatch_bounding_pass(ptr: *mut u8, event: RenderingEvent) {
             let pass = unsafe { &mut *(ptr as *mut BoundingPass) };
@@ -129,11 +129,6 @@ impl<'g> RenderPass<RenderingEvent> for BoundingPass<'g> {
             }
             RenderingEvent::ViewUpdated(view) => {
                 self.view = view;
-            }
-
-            RenderingEvent::ToggleBoundingBox => {
-                self.mode.cycle();
-                debug!("Bounding Box mode: {:?}", self.mode);
             }
 
             _ => {}
