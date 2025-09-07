@@ -57,15 +57,6 @@ impl BoundingPass {
         }
     }
 
-    fn calculate_projection(&mut self, win_size: UVec2) {
-        self.projection = Mat4::perspective_rh(
-            45.0f32.to_radians(),
-            win_size.x as f32 / win_size.y as f32,
-            0.1,
-            100.0,
-        );
-    }
-
     fn set_projection(&mut self) {
         if let Some(shader) = self.shader.as_mut() {
             // Load projection matrix into shader
@@ -120,7 +111,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
     }
 
     fn name(&self) -> &str {
-        "BoundingBox"
+        "BoundingPass"
     }
 
     fn begin(

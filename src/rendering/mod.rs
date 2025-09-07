@@ -3,6 +3,7 @@ use crate::rendering::event::{RenderingEvent, RenderingEventMask};
 use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
+use crate::rendering::passes::gizmos_pass::GizmosPass;
 use crate::rendering::passes::screen_pass::ScreenPass;
 use crate::rendering::ui::RenderingConfig;
 use crate::run::WINDOW_SIZE;
@@ -47,6 +48,7 @@ pub struct Renderer {
     // Pass IDs
     geometry_id: RenderPassTargetId,
     bounding_id: RenderPassTargetId,
+    gizmos_id: RenderPassTargetId,
     screen_id: RenderPassTargetId,
 
     last_frame: Instant,
@@ -57,7 +59,8 @@ pub struct Renderer {
     config: RenderingConfig,
 }
 
-type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, ScreenPass, BoundingPass);
+type ChainType =
+    construct_chain_type!(RenderingEvent; GeometryPass, ScreenPass, BoundingPass, GizmosPass);
 
 impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
     fn spawn_chain(
@@ -90,10 +93,17 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             gbuffer.clone(),
             self.config.clone(),
         );
+        let gizmo_pass =
+            GizmosPass::new(&r.gl, self.gizmos_id, gbuffer.clone(), self.config.clone());
         let screen_pass =
             ScreenPass::new(&r.gl, self.screen_id, gbuffer.clone(), self.config.clone());
 
-        Ok(construct_chain!(geometry_pass, screen_pass, bounding_pass,))
+        Ok(construct_chain!(
+            geometry_pass,
+            screen_pass,
+            bounding_pass,
+            gizmo_pass
+        ))
     }
 
     fn on_window_event(
@@ -168,7 +178,16 @@ pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer)
             | RenderingEventMask::VIEW_UPDATED
             | RenderingEventMask::VIEWPORT_RESIZED
             | RenderingEventMask::PERSP_PROJECTION_UPDATED,
-        "bounding_shader",
+        "line_shader",
+    );
+    let gizmos_id = dispatcher.pass(
+        RenderingEventMask::DROP_ALL_ASSETS
+            | RenderingEventMask::UPDATE_SHADER
+            | RenderingEventMask::VIEW_UPDATED
+            | RenderingEventMask::PERSP_PROJECTION_UPDATED
+            | RenderingEventMask::VIEWPORT_RESIZED
+            | RenderingEventMask::SET_LIGHT_TEXTURE,
+        "billboard_shader",
     );
     let screen_id = dispatcher.pass(
         RenderingEventMask::DROP_ALL_ASSETS
@@ -182,6 +201,7 @@ pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer)
     let renderer = Renderer {
         geometry_id,
         bounding_id,
+        gizmos_id,
         screen_id,
 
         imgui_winit: WinitPlatform::new(&mut imgui),
