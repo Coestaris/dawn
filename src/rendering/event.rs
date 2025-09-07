@@ -2,6 +2,7 @@ use bitflags::bitflags;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::shader_program::Program;
 use glam::{Mat4, UVec2};
+use dawn_graphics::gl::raii::texture::Texture;
 
 #[derive(Debug, Clone)]
 pub enum RenderingEvent {
@@ -12,6 +13,9 @@ pub enum RenderingEvent {
     PerspectiveProjectionUpdated(Mat4),
     OrthographicProjectionUpdated(Mat4),
     ViewportResized(UVec2),
+
+    // Specific events can be added here
+    SetLightTexture(TypedAsset<Texture>),
 }
 
 bitflags! {
@@ -23,5 +27,7 @@ bitflags! {
         const PERSP_PROJECTION_UPDATED = 1 << 3;
         const ORTHO_PROJECTION_UPDATED = 1 << 4;
         const VIEWPORT_RESIZED = 1 << 5;
+
+        const SET_LIGHT_TEXTURE = 1 << 10;
     }
 }

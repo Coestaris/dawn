@@ -1,0 +1,8 @@
+[header]
+asset_type = "Texture"
+
+[[properties.Texture.sources]]
+File = "blobs/light.png"
+
+[properties.Texture]
+pixel_format = "RGBA8"
