@@ -1,3 +1,5 @@
+use crate::rendering::dispatcher::RenderDispatcher;
+use crate::rendering::event::RenderingEvent;
 use crate::ui::{UIToRendererMessage, UIToWorldMessage, UIWorldConnection};
 use crate::world::dictionaries::Blob;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
@@ -6,14 +8,16 @@ use dawn_ecs::world::WorldLoopMonitorEvent;
 use dawn_graphics::ecs::{
     ObjectAreaLight, ObjectMesh, ObjectPointLight, ObjectSpotLight, ObjectSunLight,
 };
+use dawn_graphics::gl::raii::texture::Texture;
+use dawn_graphics::passes::events::RenderPassEvent;
 use dawn_graphics::renderer::{OutputEvent, RendererMonitorEvent};
 use evenio::entity::EntityId;
 use evenio::event::Sender;
 use evenio::fetch::{Fetcher, Single};
 use evenio::prelude::Receiver;
 use evenio::world::World;
-use std::process::Output;
 use log::info;
+use std::process::Output;
 use winit::window::Icon;
 
 pub struct WorldStatistics {
@@ -75,7 +79,25 @@ fn recv_messages_from_renderer_handler(
 }
 
 const UI_FONT_BLOB_ID: &str = "ui_font_blob";
+const LIGHT_TEXTURE: &str = "light_texture";
 const APPLICATION_ICON_BLOB_ID: &str = "icon_blob";
+
+fn gizmos_assets_handler(
+    r: Receiver<AssetHubEvent>,
+    hub: Single<&mut AssetHub>,
+    dispatcher: Single<&mut RenderDispatcher>,
+    mut sender: Sender<RenderPassEvent<RenderingEvent>>,
+) {
+    match r.event {
+        AssetHubEvent::AssetLoaded(id) if id.as_str() == LIGHT_TEXTURE => {
+            info!("Light texture loaded");
+            let texture = hub.get_typed::<Texture>(LIGHT_TEXTURE.into()).unwrap();
+            dispatcher.dispatch(RenderingEvent::SetLightTexture(texture), &mut sender);
+        }
+
+        _ => {}
+    }
+}
 
 fn ui_font_handler(
     r: Receiver<AssetHubEvent>,
@@ -114,5 +136,7 @@ pub fn setup_ui_system(world: &mut World, connection: UIWorldConnection) {
     world.add_handler(world_monitoring_handler);
     world.add_handler(renderer_monitoring_handler);
     world.add_handler(recv_messages_from_renderer_handler);
+
     world.add_handler(ui_font_handler);
+    world.add_handler(gizmos_assets_handler);
 }
