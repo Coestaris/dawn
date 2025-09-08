@@ -21,6 +21,8 @@ use std::rc::Rc;
 use std::time::Instant;
 use winit::event::{Event, WindowEvent};
 use winit::window::Window;
+use crate::rendering::ubo::camera::CameraUBO;
+use crate::rendering::ubo::CAMERA_UBO_BINDING;
 
 pub mod dispatcher;
 pub mod event;
@@ -30,6 +32,7 @@ pub mod gbuffer;
 pub mod passes;
 pub mod primitive;
 mod ui;
+mod ubo;
 
 pub fn pre_pipeline_construct(gl: &glow::Context) {
     // Setup OpenGL state
@@ -81,10 +84,12 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         pre_pipeline_construct(&r.gl);
 
         let gbuffer = Rc::new(GBuffer::new(&r.gl, WINDOW_SIZE));
+        let camera_ubo = CameraUBO::new(&r.gl, CAMERA_UBO_BINDING);
         let geometry_pass = GeometryPass::new(
             &r.gl,
             self.geometry_id,
             gbuffer.clone(),
+            camera_ubo,
             self.config.clone(),
         );
         let bounding_pass = BoundingPass::new(

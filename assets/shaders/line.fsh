@@ -1,10 +1,10 @@
-#version 330 core
+// Version is specified in the prelude
 
 out vec4 FragColor;
 
-uniform vec4 color;
+uniform vec4 in_color;
 
 void main()
 {
-    FragColor = color;
+    FragColor = in_color;
 }
