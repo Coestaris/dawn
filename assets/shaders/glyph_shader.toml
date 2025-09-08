@@ -1,5 +1,7 @@
 [header]
 asset_type = "Shader"
+author = "Kurylko Maxim <vk_vm@ukr.net>"
+license = "MIT"
 
 [[properties.Shader.sources]]
 kind = "Vertex"
