@@ -160,12 +160,6 @@ impl RenderDispatcher {
             dispatcher.dispatch_input(r.event, sender);
         }
 
-        // Well, I'll deal with this later...
-        world.send(InputEvent(WindowEvent::Resized(winit::dpi::PhysicalSize {
-            width: win_size.x as u32,
-            height: win_size.y as u32,
-        })));
-
         let entity = world.spawn();
         world.insert(entity, self);
 
