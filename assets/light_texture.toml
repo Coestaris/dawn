@@ -1,5 +1,7 @@
 [header]
 asset_type = "Texture"
+author = "kudakurage"
+license = "OFL License"
 
 [[properties.Texture.sources]]
 File = "blobs/light.png"
