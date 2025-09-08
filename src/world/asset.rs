@@ -271,9 +271,6 @@ fn load_assets(hub: &mut AssetHub) {
         AssetType::Shader,
     )));
     hub.request(AssetRequest::Load(AssetRequestQuery::ByType(
-        AssetType::Font,
-    )));
-    hub.request(AssetRequest::Load(AssetRequestQuery::ByType(
         AssetType::Dictionary,
     )));
     hub.request(AssetRequest::Load(AssetRequestQuery::All));
