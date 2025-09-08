@@ -1,4 +1,4 @@
-use crate::world::asset::DropAllAssetsEvent;
+use crate::world::asset::{DropAllAssetsEvent, CURRENT_MAP};
 use crate::world::dictionaries::{DictionaryEntry, MapUID};
 use crate::world::{move_light_handler, rotate_handler, MovingByArrowKeys, Rotating};
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
@@ -193,8 +193,6 @@ fn drop_all_assets_handler(
 }
 
 pub fn setup_maps_system(world: &mut evenio::world::World) {
-    static CURRENT_MAP: &str = "map1";
-
     let id = world.spawn();
     world.insert(id, MapDispatcher::new(CURRENT_MAP));
 

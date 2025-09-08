@@ -1,6 +1,7 @@
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
 use crate::ui::{UIToRendererMessage, UIToWorldMessage, UIWorldConnection};
+use crate::world::asset::{LIGHT_TEXTURE, UI_FONT_BLOB_ID};
 use crate::world::dictionaries::Blob;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_ecs::events::TickEvent;
@@ -10,15 +11,13 @@ use dawn_graphics::ecs::{
 };
 use dawn_graphics::gl::raii::texture::Texture;
 use dawn_graphics::passes::events::RenderPassEvent;
-use dawn_graphics::renderer::{OutputEvent, RendererMonitorEvent};
+use dawn_graphics::renderer::RendererMonitorEvent;
 use evenio::entity::EntityId;
 use evenio::event::Sender;
 use evenio::fetch::{Fetcher, Single};
 use evenio::prelude::Receiver;
 use evenio::world::World;
 use log::info;
-use std::process::Output;
-use winit::window::Icon;
 
 pub struct WorldStatistics {
     pub entities: usize,
@@ -37,7 +36,7 @@ fn world_monitoring_handler(
     spot_lights: Fetcher<&ObjectSpotLight>,
     sun_lights: Fetcher<&ObjectSunLight>,
     area_lights: Fetcher<&ObjectAreaLight>,
-    mut ui: Single<&mut UIWorldConnection>,
+    ui: Single<&mut UIWorldConnection>,
 ) {
     let stats = WorldStatistics {
         entities: entities.iter().count(),
@@ -54,7 +53,7 @@ fn world_monitoring_handler(
 
 fn renderer_monitoring_handler(
     r: Receiver<RendererMonitorEvent>,
-    mut ui: Single<&mut UIWorldConnection>,
+    ui: Single<&mut UIWorldConnection>,
 ) {
     let _ = ui
         .sender
@@ -64,7 +63,7 @@ fn renderer_monitoring_handler(
 fn recv_messages_from_renderer_handler(
     _: Receiver<TickEvent>,
     hub: Single<&mut AssetHub>,
-    mut ui: Single<&mut UIWorldConnection>,
+    ui: Single<&mut UIWorldConnection>,
 ) {
     while let Ok(msg) = ui.receiver.try_recv() {
         match msg {
@@ -77,10 +76,6 @@ fn recv_messages_from_renderer_handler(
         }
     }
 }
-
-const UI_FONT_BLOB_ID: &str = "ui_font_blob";
-const LIGHT_TEXTURE: &str = "light_texture";
-const APPLICATION_ICON_BLOB_ID: &str = "icon_blob";
 
 fn gizmos_assets_handler(
     r: Receiver<AssetHubEvent>,
@@ -102,8 +97,7 @@ fn gizmos_assets_handler(
 fn ui_font_handler(
     r: Receiver<AssetHubEvent>,
     hub: Single<&mut AssetHub>,
-    mut ui: Single<&mut UIWorldConnection>,
-    mut sender: Sender<OutputEvent>,
+    ui: Single<&mut UIWorldConnection>,
 ) {
     match r.event {
         AssetHubEvent::AssetLoaded(id) if id.as_str() == UI_FONT_BLOB_ID => {
@@ -112,18 +106,6 @@ fn ui_font_handler(
             let _ = ui
                 .sender
                 .send(UIToRendererMessage::SetUIFont(blob.cast().data.clone()));
-        }
-        AssetHubEvent::AssetLoaded(id) if id.as_str() == APPLICATION_ICON_BLOB_ID => {
-            info!("Application icon blob loaded");
-            let blob = hub
-                .get_typed::<Blob>(APPLICATION_ICON_BLOB_ID.into())
-                .unwrap();
-            let reader = std::io::Cursor::new(&blob.cast().data);
-            let icon_dir = ico::IconDir::read(reader).unwrap();
-            let icon = icon_dir.entries()[0].decode().unwrap();
-            let _ = sender.send(OutputEvent::ChangeIcon(Some(
-                Icon::from_rgba(icon.rgba_data().to_vec(), icon.width(), icon.height()).unwrap(),
-            )));
         }
         _ => {}
     }

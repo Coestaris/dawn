@@ -267,7 +267,7 @@ impl UI {
                     ui.separator();
 
                     // Build a table with 3 columns: Name, Type, State, Space Used ram, Space used vram
-                    if let Some(assets) = &self.assets_info {
+                    if let Some(assets) = &mut self.assets_info {
                         unsafe {
                             let cstr = std::ffi::CString::new(ASSETS_BROWSER_NAME).unwrap();
                             imgui::sys::igBeginTable(
@@ -275,6 +275,7 @@ impl UI {
                                 6,
                                 (imgui::sys::ImGuiTableFlags_SizingFixedFit
                                     | imgui::sys::ImGuiTableFlags_RowBg
+                                    | imgui::sys::ImGuiTableFlags_Sortable
                                     | imgui::sys::ImGuiTableFlags_BordersInnerV
                                     | imgui::sys::ImGuiTableFlags_Resizable
                                     | imgui::sys::ImGuiTableFlags_ScrollY)
@@ -328,6 +329,121 @@ impl UI {
                             );
 
                             imgui::sys::igTableHeadersRow();
+
+                            let sort_specs = imgui::sys::igTableGetSortSpecs();
+                            if !sort_specs.is_null() && (*sort_specs).SpecsDirty {
+                                for i in 0..(*sort_specs).SpecsCount {
+                                    let sort_spec = *(*sort_specs).Specs.add(i as usize);
+                                    let column_index = sort_spec.ColumnIndex;
+                                    let sort_direction = sort_spec.SortDirection;
+                                    if column_index == 0 {
+                                        if sort_direction
+                                            == imgui::sys::ImGuiSortDirection_Ascending
+                                        {
+                                            // Sort ascending by ID
+                                            assets.sort_by(|a, b| a.header.id.cmp(&b.header.id));
+                                        } else {
+                                            // Sort descending by ID
+                                            assets.sort_by(|a, b| b.header.id.cmp(&a.header.id));
+                                        }
+                                    }
+                                    if column_index == 1 {
+                                        if sort_direction
+                                            == imgui::sys::ImGuiSortDirection_Ascending
+                                        {
+                                            // Sort ascending by ID
+                                            assets.sort_by(|a, b| {
+                                                a.header
+                                                    .asset_type
+                                                    .as_str()
+                                                    .cmp(&b.header.asset_type.as_str())
+                                            });
+                                        } else {
+                                            // Sort descending by ID
+                                            assets.sort_by(|a, b| {
+                                                b.header
+                                                    .asset_type
+                                                    .as_str()
+                                                    .cmp(&a.header.asset_type.as_str())
+                                            });
+                                        }
+                                    }
+                                    if column_index == 2 {
+                                        if sort_direction
+                                            == imgui::sys::ImGuiSortDirection_Ascending
+                                        {
+                                            // Sort ascending by ID
+                                            assets.sort_by(|a, b| {
+                                                a.state.as_str().cmp(&b.state.as_str())
+                                            });
+                                        } else {
+                                            // Sort descending by ID
+                                            assets.sort_by(|a, b| {
+                                                b.state.as_str().cmp(&a.state.as_str())
+                                            });
+                                        }
+                                    }
+                                    if column_index == 3 {
+                                        if sort_direction
+                                            == imgui::sys::ImGuiSortDirection_Ascending
+                                        {
+                                            // Sort ascending by ID
+                                            assets.sort_by(|a, b| {
+                                                a.state.as_ref_count().cmp(&b.state.as_ref_count())
+                                            });
+                                        } else {
+                                            // Sort descending by ID
+                                            assets.sort_by(|a, b| {
+                                                b.state.as_ref_count().cmp(&a.state.as_ref_count())
+                                            });
+                                        }
+                                    }
+                                    if column_index == 4 {
+                                        if sort_direction
+                                            == imgui::sys::ImGuiSortDirection_Ascending
+                                        {
+                                            // Sort ascending by ID
+                                            assets.sort_by(|a, b| {
+                                                a.state
+                                                    .as_ram_usage()
+                                                    .unwrap_or(usize::MAX)
+                                                    .cmp(&b.state.as_ram_usage().unwrap_or(usize::MAX))
+                                            });
+                                        } else {
+                                            // Sort descending by ID
+                                            assets.sort_by(|a, b| {
+                                                b.state
+                                                    .as_ram_usage()
+                                                    .unwrap_or(usize::MAX)
+                                                    .cmp(&a.state.as_ram_usage().unwrap_or(usize::MAX))
+                                            });
+                                        }
+                                    }
+                                    if column_index == 5 {
+                                        if sort_direction
+                                            == imgui::sys::ImGuiSortDirection_Ascending
+                                        {
+                                            // Sort ascending by ID
+                                            assets.sort_by(|a, b| {
+                                                a.state
+                                                    .as_vram_usage()
+                                                    .unwrap_or(usize::MAX)
+                                                    .cmp(&b.state.as_vram_usage().unwrap_or(usize::MAX))
+                                            });
+                                        } else {
+                                            // Sort descending by ID
+                                            assets.sort_by(|a, b| {
+                                                b.state
+                                                    .as_vram_usage()
+                                                    .unwrap_or(usize::MAX)
+                                                    .cmp(&a.state.as_vram_usage().unwrap_or(usize::MAX))
+                                            });
+                                        }
+                                    }
+                                }
+                                (*sort_specs).SpecsDirty = false;
+                            }
+
                             for asset in assets {
                                 imgui::sys::igTableNextRow(
                                     imgui::sys::ImGuiTableRowFlags_None as ImGuiTableRowFlags,
@@ -385,6 +501,14 @@ impl UI {
                                 }
 
                                 match &asset.state {
+                                    AssetInfoState::IR(ram) => {
+                                        imgui::sys::igTableSetColumnIndex(3);
+                                        ui.text("-");
+                                        imgui::sys::igTableSetColumnIndex(4);
+                                        ui.text(&format!("{}", pretty_size(*ram)));
+                                        imgui::sys::igTableSetColumnIndex(5);
+                                        ui.text("-");
+                                    }
                                     AssetInfoState::Loaded { usage, rc } => {
                                         imgui::sys::igTableSetColumnIndex(3);
                                         ui.text(&format!("{}", rc));

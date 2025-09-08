@@ -6,18 +6,18 @@ use crate::rendering::passes::geometry_pass::GeometryPass;
 use crate::rendering::passes::screen_pass::ScreenPass;
 use crate::rendering::{pre_pipeline_construct, setup_rendering};
 use crate::ui::{ui_bridge, UIWorldConnection};
+use crate::world::app_icon::map_app_icon_handler;
 use crate::world::asset::setup_assets_system;
 use crate::world::exit::escape_handler;
 use crate::world::fcam::FreeCamera;
 use crate::world::fullscreen::setup_fullscreen_system;
 use crate::world::input::InputHolder;
 use crate::world::maps::setup_maps_system;
+use crate::world::ui::setup_ui_system;
 use crate::{logging, panic_hook, WorldSyncMode};
 use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
 use dawn_ecs::world::WorldLoopProxy;
-use dawn_graphics::construct_chain;
-use dawn_graphics::passes::chain::{ChainCons, ChainNil};
 use dawn_graphics::renderer::{
     Renderer, RendererConfig, RendererProxy, RendererSynchronization, WindowConfig,
 };
@@ -26,10 +26,7 @@ use evenio::prelude::World;
 use glam::UVec2;
 use log::info;
 use std::panic;
-use std::rc::Rc;
-use triple_buffer::Input;
 use winit::window::{Cursor, CursorIcon};
-use crate::world::ui::setup_ui_system;
 
 pub(crate) static WINDOW_SIZE: UVec2 = UVec2::new(1280, 720);
 
@@ -53,6 +50,7 @@ fn init_world(world: &mut World, to_ecs: MainToEcs) {
     setup_ui_system(world, to_ecs.ui_connection);
 
     world.add_handler(escape_handler);
+    world.add_handler(map_app_icon_handler);
 }
 
 // 'Make Zaebis' function

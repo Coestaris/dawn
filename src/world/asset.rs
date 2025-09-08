@@ -24,6 +24,18 @@ use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 use std::time::Duration;
 
+pub const CURRENT_MAP: &str = "map1";
+
+pub const APPLICATION_ICON_BLOB_ID: &str = "icon_blob";
+pub const UI_FONT_BLOB_ID: &str = "ui_font_blob";
+pub const LIGHT_TEXTURE: &str = "light_texture";
+
+pub const GEOMETRY_SHADER: &str = "geometry_shader";
+pub const LINE_SHADER: &str = "line_shader";
+pub const BILLBOARD_SHADER: &str = "billboard_shader";
+pub const SCREEN_SHADER: &str = "screen_shader";
+
+
 #[derive(Component)]
 struct ReaderHandle {
     handle: Option<JoinHandle<()>>,
@@ -268,9 +280,12 @@ fn request_finished(
 fn load_assets(hub: &mut AssetHub) {
     hub.request(AssetRequest::Enumerate);
     hub.request(AssetRequest::Load(AssetRequestQuery::ByType(
-        AssetType::Shader,
+        AssetType::Blob,
     )));
     hub.request(AssetRequest::Load(AssetRequestQuery::ByType(
+        AssetType::Shader,
+    )));
+    hub.request(AssetRequest::LoadNoDeps(AssetRequestQuery::ByType(
         AssetType::Dictionary,
     )));
     hub.request(AssetRequest::Load(AssetRequestQuery::All));
