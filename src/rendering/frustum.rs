@@ -27,6 +27,8 @@ const POINT_COUNT: usize = 8;
 pub struct FrustumCulling {
     planes: [Vec4; PLANE_COUNT],
     points: [Vec3A; POINT_COUNT],
+    perspective: Mat4,
+    view: Mat4,
 }
 
 fn vec4_to_vec3a(v: Vec4) -> Vec3A {
@@ -34,9 +36,24 @@ fn vec4_to_vec3a(v: Vec4) -> Vec3A {
 }
 
 impl FrustumCulling {
-    pub fn new(perspective_matrix: Mat4, view_matrix: Mat4) -> Self {
+    pub fn new() -> Self {
+        let mut frustum = FrustumCulling::default();
+        frustum.update_state();
+        frustum
+    }
+
+    pub fn set_perspective(&mut self, perspective: Mat4) {
+        self.perspective = perspective;
+        self.update_state();
+    }
+
+    pub fn set_view(&mut self, view: Mat4) {
+        self.view = view;
+    }
+
+    fn update_state(&mut self) {
         //compute transposed view-projection matrix
-        let mat = (perspective_matrix * view_matrix).transpose();
+        let mat = (self.perspective * self.view).transpose();
 
         // compute planes
         let mut planes = [Vec4::default(); PLANE_COUNT];
@@ -125,7 +142,8 @@ impl FrustumCulling {
             >(&planes, &crosses),
         ];
 
-        Self { planes, points }
+        self.planes = planes;
+        self.points = points;
     }
 
     #[inline]

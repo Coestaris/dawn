@@ -2,12 +2,13 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::primitive::cube::Cube;
+use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::rendering::ui::{BoundingBoxMode, RenderingConfig};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
 };
-use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformBlockLocation, UniformLocation};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -19,9 +20,8 @@ use std::rc::Rc;
 
 struct ShaderContainer {
     shader: TypedAsset<Program>,
+    ubo_camera_location: UniformBlockLocation,
     model_location: UniformLocation,
-    view_location: UniformLocation,
-    proj_location: UniformLocation,
     color_location: UniformLocation,
 }
 
@@ -30,9 +30,7 @@ pub(crate) struct BoundingPass {
     id: RenderPassTargetId,
     cube: Cube,
     shader: Option<ShaderContainer>,
-    projection: Mat4,
-    usize: UVec2,
-    view: Mat4,
+    viewport_size: UVec2,
     gbuffer: Rc<GBuffer>,
     config: RenderingConfig,
 }
@@ -49,20 +47,18 @@ impl BoundingPass {
             id,
             shader: None,
             cube: Cube::new(gl),
-            projection: Mat4::IDENTITY,
-            usize: UVec2::ZERO,
-            view: Mat4::IDENTITY,
+            viewport_size: UVec2::ZERO,
             gbuffer,
             config,
         }
     }
 
-    fn set_projection(&mut self) {
+    fn update_shader_state(&mut self) {
         if let Some(shader) = self.shader.as_mut() {
             // Load projection matrix into shader
             let program = shader.shader.cast();
             Program::bind(self.gl, &program);
-            program.set_uniform(shader.proj_location, self.projection);
+            program.set_uniform_block_binding(shader.ubo_camera_location, CAMERA_UBO_BINDING as u32);
             Program::unbind(self.gl);
         }
     }
@@ -88,22 +84,14 @@ impl RenderPass<RenderingEvent> for BoundingPass {
                 let casted = shader.cast();
                 self.shader = Some(ShaderContainer {
                     shader: clone,
-                    model_location: casted.get_uniform_location("model").unwrap(),
-                    view_location: casted.get_uniform_location("view").unwrap(),
-                    proj_location: casted.get_uniform_location("projection").unwrap(),
-                    color_location: casted.get_uniform_location("color").unwrap(),
+                    ubo_camera_location: casted.get_uniform_block_location("ubo_camera").unwrap(),
+                    model_location: casted.get_uniform_location("in_model").unwrap(),
+                    color_location: casted.get_uniform_location("in_color").unwrap(),
                 });
-                self.set_projection();
+                self.update_shader_state();
             }
             RenderingEvent::ViewportResized(size) => {
-                self.usize = size;
-            }
-            RenderingEvent::PerspectiveProjectionUpdated(proj) => {
-                self.projection = proj;
-                self.set_projection();
-            }
-            RenderingEvent::ViewUpdated(view) => {
-                self.view = view;
+                self.viewport_size = size;
             }
 
             _ => {}
@@ -133,7 +121,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
                 Framebuffer::blit_to_default(
                     self.gl,
                     &self.gbuffer.fbo,
-                    self.usize,
+                    self.viewport_size,
                     BlitFramebufferMask::Depth,
                     BlitFramebufferFilter::Nearest,
                 );
@@ -151,9 +139,6 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
         Program::bind(self.gl, &program);
-
-        // Update view
-        program.set_uniform(shader.view_location, self.view);
 
         RenderResult::default()
     }

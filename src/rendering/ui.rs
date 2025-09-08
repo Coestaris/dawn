@@ -58,40 +58,49 @@ impl From<usize> for BoundingBoxMode {
 
 #[repr(usize)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OutputTexture {
-    Final,
-    AlbedoMetallic,
-    Normal,
-    PBR,
+pub enum OutputMode {
+    Default,
+    AlbedoOnly,
+    MetallicOnly,
+    NormalOnly,
+    RoughnessOnly,
+    OcclusionOnly,
 }
 
-impl OutputTexture {
-    pub fn items() -> [&'static str; 4] {
+impl OutputMode {
+    pub fn items() -> [&'static str; 6] {
         [
-            OutputTexture::Final.as_str(),
-            OutputTexture::AlbedoMetallic.as_str(),
-            OutputTexture::Normal.as_str(),
-            OutputTexture::PBR.as_str(),
+            OutputMode::Default.as_str(),
+            OutputMode::AlbedoOnly.as_str(),
+            OutputMode::MetallicOnly.as_str(),
+            OutputMode::NormalOnly.as_str(),
+            OutputMode::RoughnessOnly.as_str(),
+            OutputMode::OcclusionOnly.as_str(),
         ]
     }
 
     pub fn as_str(&self) -> &'static str {
         match self {
-            OutputTexture::Final => "Final",
-            OutputTexture::AlbedoMetallic => "Albedo + Metallic",
-            OutputTexture::Normal => "Normal",
-            OutputTexture::PBR => "PBR",
+            OutputMode::Default => "Default",
+            OutputMode::AlbedoOnly => "Albedo Only",
+            OutputMode::MetallicOnly => "Metallic Only",
+            OutputMode::NormalOnly => "Normal Only",
+            OutputMode::RoughnessOnly => "Roughness Only",
+            OutputMode::OcclusionOnly => "Occlusion Only",
         }
     }
 }
 
-impl From<usize> for OutputTexture {
+impl From<usize> for OutputMode {
     fn from(value: usize) -> Self {
         match value {
-            0 => OutputTexture::Final,
-            1 => OutputTexture::AlbedoMetallic,
-            2 => OutputTexture::Normal,
-            3 => OutputTexture::PBR,
+            0 => OutputMode::Default,
+            1 => OutputMode::AlbedoOnly,
+            2 => OutputMode::MetallicOnly,
+            3 => OutputMode::NormalOnly,
+            4 => OutputMode::RoughnessOnly,
+            5 => OutputMode::OcclusionOnly,
+
             _ => {
                 panic!("Unknown output texture index {}", value);
             }
@@ -101,7 +110,7 @@ impl From<usize> for OutputTexture {
 
 pub struct RenderingConfigInner {
     pub wireframe: bool,
-    pub output_texture: OutputTexture,
+    pub output_mode: OutputMode,
     pub bounding_box_mode: BoundingBoxMode,
     pub show_gizmos: bool,
 }
@@ -118,7 +127,7 @@ impl RenderingConfig {
     pub fn new() -> Self {
         Self(Rc::new(RefCell::new(RenderingConfigInner {
             wireframe: false,
-            output_texture: OutputTexture::Final,
+            output_mode: OutputMode::Default,
             bounding_box_mode: BoundingBoxMode::Disabled,
             show_gizmos: false,
         })))
@@ -565,9 +574,9 @@ impl UI {
                 ui.checkbox("Show Gizmos", &mut config.show_gizmos);
                 ui.separator();
 
-                let items = OutputTexture::items();
-                let mut selected = config.output_texture.as_str();
-                let mut selected_index = config.output_texture as usize;
+                let items = OutputMode::items();
+                let mut selected = config.output_mode.as_str();
+                let mut selected_index = config.output_mode as usize;
                 if let Some(cb) = ui.begin_combo("Output", selected) {
                     for (i, &cur) in items.iter().enumerate() {
                         if selected == cur {
@@ -583,7 +592,7 @@ impl UI {
                         }
                     }
                 }
-                config.output_texture = OutputTexture::from(selected_index);
+                config.output_mode = OutputMode::from(selected_index);
 
                 let items = BoundingBoxMode::items();
                 let mut selected = config.bounding_box_mode.as_str();

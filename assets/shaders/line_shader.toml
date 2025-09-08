@@ -4,7 +4,14 @@ asset_type = "Shader"
 [[properties.Shader.sources]]
 kind = "Vertex"
 origin.External.File = "shaders/line.vsh"
+pre_include = [
+    { External.File = "shaders/inc/ubo_camera.glsl" },
+    { External.File = "shaders/inc/prelude.glsl" },
+]
 
 [[properties.Shader.sources]]
 kind = "Fragment"
 origin.External.File = "shaders/line.fsh"
+pre_include = [
+    { External.File = "shaders/inc/prelude.glsl" },
+]

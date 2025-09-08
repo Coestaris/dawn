@@ -57,6 +57,7 @@ crossbeam-channel = "0.5.15"
 imgui = { version = "0.12.0", git = "https://github.com/imgui-rs/imgui-rs", features = ["docking"] }
 imgui-winit-support = { version = "0.13.0", git = "https://github.com/imgui-rs/imgui-winit-support" }
 imgui-glow-renderer = { version = "0.13.0", git = "https://github.com/dhyces/imgui-glow-renderer" }
+bytemuck = "1.23.2"
 
 [profile.release]
 lto = true

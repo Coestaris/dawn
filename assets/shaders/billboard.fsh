@@ -1,4 +1,4 @@
-#version 330 core
+// Version is specified in the prelude
 
 out vec4 FragColor;
 

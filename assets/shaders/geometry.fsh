@@ -1,4 +1,4 @@
-#version 330 core
+// Version is specified in the prelude
 
 // RGBA8. RGB - albedo, A - metallic
 layout (location = 0) out vec4 out_albedo_metalic;

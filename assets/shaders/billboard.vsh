@@ -1,12 +1,10 @@
-#version 330 core
+// Version is specified in the prelude
 
 layout (location = 0) in vec2 in_box;
 layout (location = 1) in vec2 in_tex_coord;
 
 out vec2 tex_coord;
 
-uniform mat4 in_projection;
-uniform mat4 in_view;
 uniform vec2 in_size;
 uniform vec3 in_position;
 

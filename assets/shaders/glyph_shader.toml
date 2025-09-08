@@ -4,7 +4,13 @@ asset_type = "Shader"
 [[properties.Shader.sources]]
 kind = "Vertex"
 origin.External.File = "shaders/glyph.vsh"
+pre_include = [
+    { External.File = "shaders/inc/prelude.glsl" },
+]
 
 [[properties.Shader.sources]]
 kind = "Fragment"
 origin.External.File = "shaders/glyph.fsh"
+pre_include = [
+    { External.File = "shaders/inc/prelude.glsl" },
+]

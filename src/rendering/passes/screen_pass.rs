@@ -1,7 +1,7 @@
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::primitive::quad::Quad;
-use crate::rendering::ui::{OutputTexture, RenderingConfig};
+use crate::rendering::ui::{OutputMode, RenderingConfig};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
@@ -14,7 +14,12 @@ use std::rc::Rc;
 
 struct ShaderContainer {
     shader: TypedAsset<Program>,
-    color_texture_location: UniformLocation,
+
+    debug_mode: UniformLocation,
+
+    albedo_metallic_texture: UniformLocation,
+    normal_texture: UniformLocation,
+    pbr_texture: UniformLocation,
 }
 
 pub(crate) struct ScreenPass {
@@ -64,16 +69,27 @@ impl RenderPass<RenderingEvent> for ScreenPass {
                 let clone = shader.clone();
                 self.shader = Some(ShaderContainer {
                     shader: clone,
-                    color_texture_location: shader
+                    debug_mode: shader.cast().get_uniform_location("in_debug_mode").unwrap(),
+                    albedo_metallic_texture: shader
                         .cast()
-                        .get_uniform_location("color_texture")
+                        .get_uniform_location("in_albedo_metallic_texture")
+                        .unwrap(),
+                    normal_texture: shader
+                        .cast()
+                        .get_uniform_location("in_normal_texture")
+                        .unwrap(),
+                    pbr_texture: shader
+                        .cast()
+                        .get_uniform_location("in_pbr_texture")
                         .unwrap(),
                 });
 
                 if let Some(shader) = self.shader.as_mut() {
                     let program = shader.shader.cast();
                     Program::bind(self.gl, &program);
-                    program.set_uniform(shader.color_texture_location, 0);
+                    program.set_uniform(shader.albedo_metallic_texture, 0);
+                    program.set_uniform(shader.normal_texture, 1);
+                    program.set_uniform(shader.pbr_texture, 2);
                     Program::unbind(self.gl);
                 }
             }
@@ -104,17 +120,26 @@ impl RenderPass<RenderingEvent> for ScreenPass {
         }
 
         let shader = self.shader.as_ref().unwrap();
-        Program::bind(self.gl, &shader.shader.cast());
+        let program = shader.shader.cast();
+        Program::bind(self.gl, program);
+        program.set_uniform(shader.debug_mode, self.config.borrow().output_mode as i32);
         Texture::bind(
             self.gl,
             TextureBind::Texture2D,
-            match self.config.borrow().output_texture {
-                OutputTexture::Final => &self.gbuffer.albedo_metalic.texture,
-                OutputTexture::AlbedoMetallic => &self.gbuffer.albedo_metalic.texture,
-                OutputTexture::Normal => &self.gbuffer.normal.texture,
-                OutputTexture::PBR => &self.gbuffer.pbr.texture,
-            },
+            &self.gbuffer.albedo_metalic.texture,
             0,
+        );
+        Texture::bind(
+            self.gl,
+            TextureBind::Texture2D,
+            &self.gbuffer.normal.texture,
+            1,
+        );
+        Texture::bind(
+            self.gl,
+            TextureBind::Texture2D,
+            &self.gbuffer.pbr.texture,
+            2,
         );
         self.quad.draw()
     }
