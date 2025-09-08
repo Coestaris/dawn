@@ -5,10 +5,12 @@ use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
 use crate::rendering::passes::gizmos_pass::GizmosPass;
 use crate::rendering::passes::screen_pass::ScreenPass;
+use crate::rendering::ubo::camera::CameraUBO;
+use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::rendering::ui::RenderingConfig;
 use crate::run::WINDOW_SIZE;
 use crate::ui::UIRendererConnection;
-use dawn_graphics::passes::chain::RenderChain;
+use crate::world::asset::{BILLBOARD_SHADER, GEOMETRY_SHADER, LINE_SHADER, SCREEN_SHADER};
 use dawn_graphics::passes::events::RenderPassTargetId;
 use dawn_graphics::renderer::{CustomRenderer, RendererBackend};
 use dawn_graphics::{construct_chain, construct_chain_type};
@@ -21,8 +23,6 @@ use std::rc::Rc;
 use std::time::Instant;
 use winit::event::{Event, WindowEvent};
 use winit::window::Window;
-use crate::rendering::ubo::camera::CameraUBO;
-use crate::rendering::ubo::CAMERA_UBO_BINDING;
 
 pub mod dispatcher;
 pub mod event;
@@ -31,8 +31,8 @@ pub mod frustum;
 pub mod gbuffer;
 pub mod passes;
 pub mod primitive;
-mod ui;
 mod ubo;
+mod ui;
 
 pub fn pre_pipeline_construct(gl: &glow::Context) {
     // Setup OpenGL state
@@ -175,30 +175,26 @@ pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer)
             | RenderingEventMask::VIEW_UPDATED
             | RenderingEventMask::VIEWPORT_RESIZED
             | RenderingEventMask::PERSP_PROJECTION_UPDATED,
-        "geometry_shader",
+        GEOMETRY_SHADER,
     );
     let bounding_id = dispatcher.pass(
         RenderingEventMask::DROP_ALL_ASSETS
             | RenderingEventMask::UPDATE_SHADER
-            | RenderingEventMask::VIEW_UPDATED
-            | RenderingEventMask::VIEWPORT_RESIZED
-            | RenderingEventMask::PERSP_PROJECTION_UPDATED,
-        "line_shader",
+            | RenderingEventMask::VIEWPORT_RESIZED,
+        LINE_SHADER,
     );
     let gizmos_id = dispatcher.pass(
         RenderingEventMask::DROP_ALL_ASSETS
             | RenderingEventMask::UPDATE_SHADER
-            | RenderingEventMask::VIEW_UPDATED
-            | RenderingEventMask::PERSP_PROJECTION_UPDATED
             | RenderingEventMask::VIEWPORT_RESIZED
             | RenderingEventMask::SET_LIGHT_TEXTURE,
-        "billboard_shader",
+        BILLBOARD_SHADER,
     );
     let screen_id = dispatcher.pass(
         RenderingEventMask::DROP_ALL_ASSETS
             | RenderingEventMask::UPDATE_SHADER
             | RenderingEventMask::VIEWPORT_RESIZED,
-        "screen_shader",
+        SCREEN_SHADER,
     );
 
     let config = RenderingConfig::new();
