@@ -1,25 +1,26 @@
-use std::rc::Rc;
 use crate::rendering::event::RenderingEvent;
+use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::primitive::quad::Quad;
+use crate::rendering::ubo::camera::CameraUBO;
+use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::rendering::ui::{BoundingBoxMode, RenderingConfig};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
 };
-use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformBlockLocation, UniformLocation};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
-use glam::{Mat4, UVec2, Vec2, Vec3, Vec4};
+use glam::{Mat4, UVec2, Vec2};
 use glow::HasContext;
-use crate::rendering::gbuffer::GBuffer;
+use std::rc::Rc;
 
 struct ShaderContainer {
     shader: TypedAsset<Program>,
-    view_location: UniformLocation,
-    proj_location: UniformLocation,
+    ubo_camera_location: UniformBlockLocation,
     texture_location: UniformLocation,
     size_location: UniformLocation,
     position_location: UniformLocation,
@@ -30,9 +31,7 @@ pub(crate) struct GizmosPass {
     id: RenderPassTargetId,
     shader: Option<ShaderContainer>,
 
-    projection: Mat4,
     viewport_size: UVec2,
-    view: Mat4,
     quad: Quad,
     light_texture: Option<TypedAsset<Texture>>,
 
@@ -51,9 +50,7 @@ impl GizmosPass {
             gl,
             id,
             shader: None,
-            projection: Mat4::IDENTITY,
             viewport_size: Default::default(),
-            view: Mat4::IDENTITY,
             quad: Quad::new(gl),
             light_texture: None,
             gbuffer,
@@ -61,12 +58,11 @@ impl GizmosPass {
         }
     }
 
-    fn set_projection(&mut self) {
+    fn update_shader_state(&mut self) {
         if let Some(shader) = self.shader.as_mut() {
-            // Load projection matrix into shader
             let program = shader.shader.cast();
             Program::bind(self.gl, &program);
-            program.set_uniform(shader.proj_location, self.projection);
+            program.set_uniform_block_binding(shader.ubo_camera_location, CAMERA_UBO_BINDING as u32);
             program.set_uniform(shader.texture_location, 0);
             program.set_uniform(shader.size_location, Vec2::new(0.7, 0.7));
             Program::unbind(self.gl);
@@ -98,20 +94,12 @@ impl RenderPass<RenderingEvent> for GizmosPass {
                 let casted = shader.cast();
                 self.shader = Some(ShaderContainer {
                     shader: clone,
-                    view_location: casted.get_uniform_location("in_view").unwrap(),
-                    proj_location: casted.get_uniform_location("in_projection").unwrap(),
+                    ubo_camera_location: casted.get_uniform_block_location("ubo_camera").unwrap(),
                     texture_location: casted.get_uniform_location("in_sprite").unwrap(),
                     size_location: casted.get_uniform_location("in_size").unwrap(),
                     position_location: casted.get_uniform_location("in_position").unwrap(),
                 });
-                self.set_projection();
-            }
-            RenderingEvent::PerspectiveProjectionUpdated(proj) => {
-                self.projection = proj;
-                self.set_projection();
-            }
-            RenderingEvent::ViewUpdated(view) => {
-                self.view = view;
+                self.update_shader_state();
             }
             RenderingEvent::SetLightTexture(texture) => {
                 self.light_texture = Some(texture);
@@ -151,14 +139,14 @@ impl RenderPass<RenderingEvent> for GizmosPass {
         unsafe {
             // Enable blending for transparency
             self.gl.enable(glow::BLEND);
-            self.gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
+            self.gl
+                .blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
             self.gl.enable(glow::DEPTH_TEST);
         }
 
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
         Program::bind(self.gl, &program);
-        program.set_uniform(shader.view_location, self.view);
 
         let light_texture = self.light_texture.as_ref().unwrap().cast();
         Texture::bind(self.gl, TextureBind::Texture2D, light_texture, 0);

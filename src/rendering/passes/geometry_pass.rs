@@ -2,20 +2,22 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::fallback_tex::FallbackTextures;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::gbuffer::GBuffer;
+use crate::rendering::ubo::camera::CameraUBO;
+use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::rendering::ui::RenderingConfig;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
-use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformBlockLocation, UniformLocation};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
-use glam::Mat4;
 use glow::HasContext;
 use std::rc::Rc;
+use log::info;
 
 const ALBEDO_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
@@ -27,9 +29,8 @@ struct ShaderContainer {
     shader: TypedAsset<Program>,
 
     // Vertex uniforms
+    ubo_camera_location: UniformBlockLocation,
     model_location: UniformLocation,
-    view_location: UniformLocation,
-    proj_location: UniformLocation,
 
     // Fragment uniforms
     albedo: UniformLocation,
@@ -46,10 +47,11 @@ pub(crate) struct GeometryPass {
 
     shader: Option<ShaderContainer>,
     fallback_textures: FallbackTextures,
-    projection: Mat4,
-    view: Mat4,
+
     frustum: FrustumCulling,
+
     gbuffer: Rc<GBuffer>,
+    camera_ubo: CameraUBO,
 }
 
 impl GeometryPass {
@@ -57,6 +59,7 @@ impl GeometryPass {
         gl: &'static glow::Context,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
+        camera_ubo: CameraUBO,
         config: RenderingConfig,
     ) -> Self {
         GeometryPass {
@@ -65,26 +68,23 @@ impl GeometryPass {
             config,
             shader: None,
             fallback_textures: FallbackTextures::new(gl),
-            projection: Mat4::IDENTITY,
-            view: Mat4::IDENTITY,
-            frustum: FrustumCulling::new(Mat4::IDENTITY, Mat4::IDENTITY),
+            frustum: FrustumCulling::new(),
             gbuffer,
+            camera_ubo,
         }
     }
 
-    fn set_projection(&mut self) {
+    fn update_shader_state(&mut self) {
         if let Some(shader) = self.shader.as_mut() {
-            // Load projection matrix into shader
             let program = shader.shader.cast();
             Program::bind(self.gl, &program);
-            program.set_uniform(shader.proj_location, self.projection);
-
+            program
+                .set_uniform_block_binding(shader.ubo_camera_location, CAMERA_UBO_BINDING as u32);
             program.set_uniform(shader.albedo, ALBEDO_INDEX);
             program.set_uniform(shader.normal, NORMAL_INDEX);
             program.set_uniform(shader.metallic, METALLIC_INDEX);
             program.set_uniform(shader.roughness, ROUGHNESS_INDEX);
             program.set_uniform(shader.occlusion, OCCLUSION_INDEX);
-
             Program::unbind(self.gl);
         }
     }
@@ -110,31 +110,31 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                 let shader = shader.cast();
                 self.shader = Some(ShaderContainer {
                     shader: clone,
-
+                    ubo_camera_location: shader.get_uniform_block_location("ubo_camera").unwrap(),
                     model_location: shader.get_uniform_location("in_model").unwrap(),
-                    view_location: shader.get_uniform_location("in_view").unwrap(),
-                    proj_location: shader.get_uniform_location("in_projection").unwrap(),
-
                     albedo: shader.get_uniform_location("in_albedo").unwrap(),
                     normal: shader.get_uniform_location("in_normal").unwrap(),
                     metallic: shader.get_uniform_location("in_metallic").unwrap(),
                     roughness: shader.get_uniform_location("in_roughness").unwrap(),
                     occlusion: shader.get_uniform_location("in_occlusion").unwrap(),
                 });
-                self.set_projection();
+                self.update_shader_state();
             }
             RenderingEvent::ViewportResized(size) => unsafe {
                 self.gl.viewport(0, 0, size.x as i32, size.y as i32);
                 self.gl.scissor(0, 0, size.x as i32, size.y as i32);
+                self.camera_ubo.set_viewport(size.x as f32, size.y as f32);
+                self.camera_ubo.upload();
             },
             RenderingEvent::PerspectiveProjectionUpdated(proj) => {
-                self.projection = proj;
-                self.frustum = FrustumCulling::new(self.projection, self.view);
-                self.set_projection();
+                self.frustum.set_perspective(proj);
+                self.camera_ubo.set_perspective(proj);
+                self.camera_ubo.upload();
             }
             RenderingEvent::ViewUpdated(view) => {
-                self.view = view;
-                self.frustum = FrustumCulling::new(self.projection, self.view);
+                self.frustum.set_view(view);
+                self.camera_ubo.set_view(view);
+                self.camera_ubo.upload();
             }
 
             _ => {}
@@ -173,7 +173,6 @@ impl RenderPass<RenderingEvent> for GeometryPass {
             // Load view matrix into shader
             let program = shader.shader.cast();
             Program::bind(self.gl, &program);
-            program.set_uniform(shader.view_location, self.view);
         }
 
         RenderResult::default()

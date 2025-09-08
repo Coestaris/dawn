@@ -765,6 +765,7 @@ dependencies = [
  "bitflags 2.9.4",
  "build-info",
  "build-info-build",
+ "bytemuck",
  "crossbeam-channel",
  "dawn-assets",
  "dawn-audio",

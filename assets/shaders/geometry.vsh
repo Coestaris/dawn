@@ -1,5 +1,4 @@
-#version 330 core
-#extension GL_ARB_explicit_attrib_location : enable
+// Version is specified in the prelude
 
 layout (location = 0) in vec3 in_position;
 layout (location = 1) in vec3 in_normal;
@@ -11,8 +10,6 @@ out vec2 tex_coord;
 out vec3 normal;
 
 uniform mat4 in_model;
-uniform mat4 in_view;
-uniform mat4 in_projection;
 
 void main()
 {
