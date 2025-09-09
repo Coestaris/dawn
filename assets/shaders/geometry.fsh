@@ -6,12 +6,11 @@ layout (location = 0) out vec4 out_albedo_metalic;
 layout (location = 1) out vec2 out_normal_texture;
 // RGBA8. R - roughness, G - occlusion, BA - reserved
 layout (location = 2) out vec4 out_pbr;
-// RGB16F. View space position
-layout (location = 3) out vec3 out_position;
 
 in vec2 tex_coord;
 in vec3 normal;
-in vec3 view_position;
+in vec3 tangent;
+in vec3 bitangent;
 
 uniform mat4 in_model;
 uniform sampler2D in_albedo;
@@ -39,16 +38,11 @@ void main()
 
     vec3 n_model_geo = normalize(normal);
     vec3 n_tangent = texture(in_normal, tex_coord).rgb * 2.0 - 1.0;
-    vec3 n_model;
-#ifdef HAS_TANGENT
     vec3 T = normalize(tangent);
     vec3 B = normalize(bitangent);
     vec3 N = normalize(n_model_geo);
     mat3 TBN = mat3(T, B, N);
-    n_model = normalize(TBN * n_tangent);
-#else
-    n_model = n_model_geo + n_tangent * vec3(0.0001); // to avoid n_model being exactly zero
-#endif
+    vec3 n_model = normalize(TBN * n_tangent);
 
     mat3 N_model = transpose(inverse(mat3(in_model)));
     vec3 n_world_or_modelfixed = normalize(N_model * n_model);
@@ -58,5 +52,4 @@ void main()
     out_albedo_metalic = vec4(albedo, metallic);
     out_normal_texture = oct_normal;
     out_pbr = vec4(roughness, occlusion, 0.0, 0.0);
-    out_position = view_position;
 }
