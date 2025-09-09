@@ -1,9 +1,8 @@
 use crate::rendering::event::RenderingEvent;
-use crate::rendering::gbuffer::GBuffer;
+use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::primitive::quad::Quad;
-use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
-use crate::rendering::ui::{BoundingBoxMode, RenderingConfig};
+use crate::rendering::ui::RenderingConfig;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
@@ -14,7 +13,7 @@ use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
-use glam::{Mat4, UVec2, Vec2};
+use glam::{UVec2, Vec2};
 use glow::HasContext;
 use std::rc::Rc;
 
@@ -57,17 +56,6 @@ impl GizmosPass {
             config,
         }
     }
-
-    fn update_shader_state(&mut self) {
-        if let Some(shader) = self.shader.as_mut() {
-            let program = shader.shader.cast();
-            Program::bind(self.gl, &program);
-            program.set_uniform_block_binding(shader.ubo_camera_location, CAMERA_UBO_BINDING as u32);
-            program.set_uniform(shader.texture_location, 0);
-            program.set_uniform(shader.size_location, Vec2::new(0.7, 0.7));
-            Program::unbind(self.gl);
-        }
-    }
 }
 
 impl RenderPass<RenderingEvent> for GizmosPass {
@@ -99,7 +87,18 @@ impl RenderPass<RenderingEvent> for GizmosPass {
                     size_location: casted.get_uniform_location("in_size").unwrap(),
                     position_location: casted.get_uniform_location("in_position").unwrap(),
                 });
-                self.update_shader_state();
+
+                if let Some(shader) = self.shader.as_mut() {
+                    let program = shader.shader.cast();
+                    Program::bind(self.gl, &program);
+                    program.set_uniform_block_binding(
+                        shader.ubo_camera_location,
+                        CAMERA_UBO_BINDING as u32,
+                    );
+                    program.set_uniform(shader.texture_location, 0);
+                    program.set_uniform(shader.size_location, Vec2::new(0.7, 0.7));
+                    Program::unbind(self.gl);
+                }
             }
             RenderingEvent::SetLightTexture(texture) => {
                 self.light_texture = Some(texture);

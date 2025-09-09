@@ -1,6 +1,6 @@
 use crate::rendering::event::RenderingEvent;
+use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
-use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::primitive::cube::Cube;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::rendering::ui::{BoundingBoxMode, RenderingConfig};
@@ -52,16 +52,6 @@ impl BoundingPass {
             config,
         }
     }
-
-    fn update_shader_state(&mut self) {
-        if let Some(shader) = self.shader.as_mut() {
-            // Load projection matrix into shader
-            let program = shader.shader.cast();
-            Program::bind(self.gl, &program);
-            program.set_uniform_block_binding(shader.ubo_camera_location, CAMERA_UBO_BINDING as u32);
-            Program::unbind(self.gl);
-        }
-    }
 }
 
 impl RenderPass<RenderingEvent> for BoundingPass {
@@ -88,7 +78,16 @@ impl RenderPass<RenderingEvent> for BoundingPass {
                     model_location: casted.get_uniform_location("in_model").unwrap(),
                     color_location: casted.get_uniform_location("in_color").unwrap(),
                 });
-                self.update_shader_state();
+
+                if let Some(shader) = self.shader.as_mut() {
+                    let program = shader.shader.cast();
+                    Program::bind(self.gl, &program);
+                    program.set_uniform_block_binding(
+                        shader.ubo_camera_location,
+                        CAMERA_UBO_BINDING as u32,
+                    );
+                    Program::unbind(self.gl);
+                }
             }
             RenderingEvent::ViewportResized(size) => {
                 self.viewport_size = size;
