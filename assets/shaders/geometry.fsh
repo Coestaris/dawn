@@ -7,11 +7,10 @@ layout (location = 1) out vec2 out_normal_texture;
 // RGBA8. R - roughness, G - occlusion, BA - reserved
 layout (location = 2) out vec4 out_pbr;
 
-in mat4 model;
-in mat4 view;
 in vec2 tex_coord;
 in vec3 normal;
 
+uniform mat4 in_model;
 uniform sampler2D in_albedo;
 uniform sampler2D in_normal;
 uniform sampler2D in_metallic;
@@ -19,16 +18,13 @@ uniform sampler2D in_roughness;
 uniform sampler2D in_occlusion;
 
 // Encode a normal into an octahedral encoded vector
-vec2 encode_octahedron(vec3 n) {
-    return n.z < 0.0 ?
-    (n.xy / (abs(n.x) + abs(n.y)) * (1.0 - abs(n.z)) + 1.0) * 0.5 :
-    n.xy * 0.5 + 0.5;
-}
-
-// Transform a normal from model space to view space
-vec3 to_view_space(vec3 n, mat4 model, mat4 view) {
-    mat3 normal_matrix = transpose(inverse(mat3(model)));
-    return normalize(view * vec4(normal_matrix * n, 0.0)).xyz;
+vec2 encode_oct(vec3 n) {
+    n /= (abs(n.x) + abs(n.y) + abs(n.z));
+    vec2 enc = n.xy;
+    if (n.z < 0.0) {
+        enc = (1.0 - vec2(abs(enc.y), abs(enc.x))) * vec2(sign(enc.x), sign(enc.y));
+    }
+    return enc * 0.5 + 0.5;
 }
 
 void main()
@@ -38,15 +34,23 @@ void main()
     float roughness = texture(in_roughness, tex_coord).r;
     float occlusion = texture(in_occlusion, tex_coord).r;
 
-    vec3 tex_normal = texture(in_normal, tex_coord).rgb;
-    // Join two normal maps
-    tex_normal = normalize(tex_normal * 2.0 - 1.0);
-    vec3 normal = normalize(normal + tex_normal);
+    vec3 n_model_geo = normalize(normal);
+    vec3 n_tangent = texture(in_normal, tex_coord).rgb * 2.0 - 1.0;
+    vec3 n_model;
+#ifdef HAS_TANGENT
+    vec3 T = normalize(tangent);
+    vec3 B = normalize(bitangent);
+    vec3 N = normalize(n_model_geo);
+    mat3 TBN = mat3(T, B, N);
+    n_model = normalize(TBN * n_tangent);
+#else
+    n_model = n_model_geo + n_tangent * vec3(0.0001); // to avoid n_model being exactly zero
+#endif
 
-    // Transform normal from tangent to view space
-    vec3 view_normal = to_view_space(normal, model, view);
-    // Encode normal to octahedron
-    vec2 oct_normal = encode_octahedron(view_normal);
+    mat3 N_model = transpose(inverse(mat3(in_model)));
+    vec3 n_world_or_modelfixed = normalize(N_model * n_model);
+    vec3 n_view = normalize(mat3(in_view) * n_world_or_modelfixed);
+    vec2 oct_normal = encode_oct(n_view);
 
     out_albedo_metalic = vec4(albedo, metallic);
     out_normal_texture = oct_normal;

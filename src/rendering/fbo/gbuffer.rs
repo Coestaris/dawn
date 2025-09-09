@@ -8,7 +8,8 @@ use log::info;
 
 pub struct GBuffer {
     pub fbo: Framebuffer,
-    pub depth: GRenderBuffer,
+    // Depth buffer
+    pub depth: GTexture,
 
     // RGBA8. RGB - albedo, A - metallic
     pub albedo_metalic: GTexture,
@@ -30,11 +31,7 @@ impl GBuffer {
     pub fn new(gl: &'static glow::Context, initial: UVec2) -> Self {
         let buffer = GBuffer {
             fbo: Framebuffer::new(gl).unwrap(),
-            depth: GRenderBuffer::new(
-                gl,
-                RenderBufferStorage::DepthComponent24,
-                FramebufferAttachment::Depth,
-            ),
+            depth: GTexture::new(gl, IRPixelFormat::DEPTH24, FramebufferAttachment::Depth),
             albedo_metalic: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color0),
             normal: GTexture::new(gl, IRPixelFormat::RG16F, FramebufferAttachment::Color1),
             pbr: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color2),

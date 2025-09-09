@@ -15,5 +15,6 @@ pre_include = [
 kind = "Fragment"
 origin.External.File = "shaders/geometry.fsh"
 pre_include = [
+    { External.File = "shaders/inc/ubo_camera.glsl" },
     { External.File = "shaders/inc/prelude.glsl" },
 ]

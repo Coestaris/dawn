@@ -65,10 +65,11 @@ pub enum OutputMode {
     NormalOnly,
     RoughnessOnly,
     OcclusionOnly,
+    DepthOnly,
 }
 
 impl OutputMode {
-    pub fn items() -> [&'static str; 6] {
+    pub fn items() -> [&'static str; 7] {
         [
             OutputMode::Default.as_str(),
             OutputMode::AlbedoOnly.as_str(),
@@ -76,6 +77,7 @@ impl OutputMode {
             OutputMode::NormalOnly.as_str(),
             OutputMode::RoughnessOnly.as_str(),
             OutputMode::OcclusionOnly.as_str(),
+            OutputMode::DepthOnly.as_str(),
         ]
     }
 
@@ -87,6 +89,7 @@ impl OutputMode {
             OutputMode::NormalOnly => "Normal Only",
             OutputMode::RoughnessOnly => "Roughness Only",
             OutputMode::OcclusionOnly => "Occlusion Only",
+            OutputMode::DepthOnly => "Depth Only",
         }
     }
 }
@@ -100,6 +103,7 @@ impl From<usize> for OutputMode {
             3 => OutputMode::NormalOnly,
             4 => OutputMode::RoughnessOnly,
             5 => OutputMode::OcclusionOnly,
+            6 => OutputMode::DepthOnly,
 
             _ => {
                 panic!("Unknown output texture index {}", value);

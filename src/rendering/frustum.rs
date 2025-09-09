@@ -49,6 +49,7 @@ impl FrustumCulling {
 
     pub fn set_view(&mut self, view: Mat4) {
         self.view = view;
+        self.update_state();
     }
 
     fn update_state(&mut self) {

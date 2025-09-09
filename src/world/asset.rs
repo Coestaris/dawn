@@ -33,7 +33,7 @@ pub const LIGHT_TEXTURE: &str = "light_texture";
 pub const GEOMETRY_SHADER: &str = "geometry_shader";
 pub const LINE_SHADER: &str = "line_shader";
 pub const BILLBOARD_SHADER: &str = "billboard_shader";
-pub const LIGHTING_SHADER: &str = "screen_shader";
+pub const LIGHTING_SHADER: &str = "lighting_shader";
 pub const POSTPROCESS_SHADER: &str = "postprocess_shader";
 
 
