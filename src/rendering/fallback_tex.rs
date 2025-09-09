@@ -5,8 +5,7 @@ use dawn_graphics::gl::raii::texture::Texture;
 pub struct FallbackTextures {
     pub albedo_texture: Texture,
     pub normal_texture: Texture,
-    pub metallic_texture: Texture,
-    pub roughness_texture: Texture,
+    pub metallic_roughness_texture: Texture,
     pub occlusion_texture: Texture,
 }
 
@@ -14,15 +13,14 @@ impl FallbackTextures {
     pub(crate) fn new(gl: &'static glow::Context) -> Self {
         let albedo_texture = Self::create_missing_albedo_texture(gl);
         let normal_texture = Self::create_missing_normal_texture(gl);
-        let metallic_texture = Self::create_missing_metallic_texture(gl);
-        let roughness_texture = Self::create_missing_roughness_texture(gl);
+        let metallic_roughness_texture =
+            Self::create_missing_metallic_roughness_texture(gl);
         let occlusion_texture = Self::create_missing_occlusion_texture(gl);
 
         FallbackTextures {
             albedo_texture,
             normal_texture,
-            metallic_texture,
-            roughness_texture,
+            metallic_roughness_texture,
             occlusion_texture,
         }
     }
@@ -82,33 +80,7 @@ impl FallbackTextures {
             .0
     }
 
-    fn create_missing_metallic_texture(gl: &'static glow::Context) -> Texture {
-        let data = [
-            255u8, 255, 255, 255, // Row 1
-            255u8, 255, 255, 255, // Row 2
-        ];
-
-        let texture_ir = IRTexture {
-            data: data.to_vec(),
-            texture_type: IRTextureType::Texture2D {
-                width: 2,
-                height: 2,
-            },
-            pixel_format: IRPixelFormat::R8,
-            use_mipmaps: false,
-            min_filter: Default::default(),
-            mag_filter: Default::default(),
-            wrap_s: Default::default(),
-            wrap_t: Default::default(),
-            wrap_r: Default::default(),
-        };
-
-        Texture::from_ir::<RenderingEvent>(gl, texture_ir)
-            .expect("Failed to create missing texture")
-            .0
-    }
-
-    fn create_missing_roughness_texture(gl: &'static glow::Context) -> Texture {
+    fn create_missing_metallic_roughness_texture(gl: &'static glow::Context) -> Texture {
         let data = [
             255u8, 255, 255, 255, // Row 1
             255u8, 255, 255, 255, // Row 2
