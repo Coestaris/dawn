@@ -1,7 +1,7 @@
 use dawn_assets::ir::texture::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::renderable::RenderablePointLight;
-use glam::UVec4;
+use glam::{UVec4, Vec4};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -82,7 +82,7 @@ impl PackedLights {
         self.vec.extend_from_slice(&l.brdf);
     }
 
-    pub fn push_point_light(&mut self, l: &RenderablePointLight) {
+    pub fn push_point_light(&mut self, l: &RenderablePointLight, view_mat: &glam::Mat4) {
         let mut packed = LightPackedCPU::default();
         packed.kind_flags_intensity[0] = LIGHT_KIND_POINT as u32;
         packed.kind_flags_intensity[1] = 0;
@@ -91,9 +91,10 @@ impl PackedLights {
         packed.color_rgba[0] = l.color.x;
         packed.color_rgba[1] = l.color.y;
         packed.color_rgba[2] = l.color.z;
-        packed.v0[0] = l.position.x;
-        packed.v0[1] = l.position.y;
-        packed.v0[2] = l.position.z;
+        let view_pos = view_mat * l.position.extend(1.0);
+        packed.v0[0] = view_pos.x;
+        packed.v0[1] = view_pos.y;
+        packed.v0[2] = view_pos.z;
         packed.v0[3] = l.range;
         packed.brdf = [0.0, 0.0, 0.0, 0.0];
         self.push_packed(&packed);

@@ -15,6 +15,8 @@ pub struct GBuffer {
     pub albedo_metalic: GTexture,
     // RG16F. View space, Octa-encoded normal
     pub normal: GTexture,
+    // RGB16F. View space
+    pub view_pos: GTexture,
     // RGBA8. R - roughness, G - occlusion, B - emissive, A - reserved
     pub pbr: GTexture, // RGBA8
 }
@@ -26,6 +28,7 @@ impl GBuffer {
         self.normal.resize(new_size);
         self.pbr.resize(new_size);
         self.depth.resize(new_size);
+        self.view_pos.resize(new_size);
     }
 
     pub fn new(gl: &'static glow::Context, initial: UVec2) -> Self {
@@ -35,6 +38,7 @@ impl GBuffer {
             albedo_metalic: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color0),
             normal: GTexture::new(gl, IRPixelFormat::RG16F, FramebufferAttachment::Color1),
             pbr: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color2),
+            view_pos: GTexture::new(gl, IRPixelFormat::RGB16F, FramebufferAttachment::Color3),
         };
 
         buffer.resize(initial);
@@ -44,12 +48,14 @@ impl GBuffer {
         buffer.normal.attach(&buffer.fbo);
         buffer.pbr.attach(&buffer.fbo);
         buffer.depth.attach(&buffer.fbo);
+        buffer.view_pos.attach(&buffer.fbo);
 
         Framebuffer::bind(gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[
             buffer.albedo_metalic.attachment,
             buffer.normal.attachment,
             buffer.pbr.attachment,
+            buffer.view_pos.attachment,
         ]);
         assert_eq!(buffer.fbo.is_complete(), true);
         Framebuffer::unbind(gl);

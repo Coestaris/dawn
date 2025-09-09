@@ -33,28 +33,7 @@ Map.Components.Array = [{ String = "Rotating" }]
 Map.Location.Vec3f = [0.0, 5.0, 0.0]
 Map.Color.Vec3f = [1.0, 1.0, 1.0]
 Map.Intensity.F32 = 200.0
-Map.Range.F32 = 200.0
+Map.Range.F32 = 2000.0
 Map.Components.Array = [{ String = "MovingByArrowKeys" }]
-
-[[properties.Dictionary.entries.Map.PointLights.Array]]
-Map.Location.Vec3f = [0.0, 5.0, -10.0]
-Map.Color.Vec3f = [1.0, 1.0, 1.0]
-Map.Intensity.F32 = 200.0
-Map.Range.F32 = 200.0
-Map.Components.Array = [{ String = "MovingByArrowKeys" }]
-
-[[properties.Dictionary.entries.Map.PointLights.Array]]
-Map.Location.Vec3f = [0.0, -5.0, -10.0]
-Map.Color.Vec3f = [1.0, 1.0, 1.0]
-Map.Intensity.F32 = 200.0
-Map.Range.F32 = 200.0
-Map.Components.Array = [{ String = "MovingByArrowKeys" }]
-
-[[properties.Dictionary.entries.Map.PointLights.Array]]
-Map.Location.Vec3f = [0.0, 5.0, 10.0]
-Map.Direction.Vec3f = [0.0, -1.0, 0.0]
-Map.Color.Vec3f = [1.0, 1.0, 1.0]
-Map.Intensity.F32 = 500.0
-Map.Range.F32 = 200.0
 
 
