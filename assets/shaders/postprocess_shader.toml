@@ -1,0 +1,20 @@
+[header]
+asset_type = "Shader"
+author = "Kurylko Maxim <vk_vm@ukr.net>"
+license = "MIT"
+
+[[properties.Shader.sources]]
+kind = "Vertex"
+origin.External.File = "shaders/postprocess.vsh"
+pre_include = [
+    { External.File = "shaders/inc/prelude.glsl" },
+]
+
+[[properties.Shader.sources]]
+kind = "Fragment"
+origin.External.File = "shaders/postprocess.fsh"
+pre_include = [
+    { External.File = "shaders/inc/ubo_camera.glsl" },
+    { External.File = "shaders/inc/debug_mode.glsl" },
+    { External.File = "shaders/inc/prelude.glsl" },
+]

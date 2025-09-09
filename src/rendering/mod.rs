@@ -1,16 +1,16 @@
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
-use crate::rendering::gbuffer::GBuffer;
+use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
 use crate::rendering::passes::gizmos_pass::GizmosPass;
-use crate::rendering::passes::screen_pass::ScreenPass;
+use crate::rendering::passes::lighting_pass::LightingPass;
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::rendering::ui::RenderingConfig;
 use crate::run::WINDOW_SIZE;
 use crate::ui::UIRendererConnection;
-use crate::world::asset::{BILLBOARD_SHADER, GEOMETRY_SHADER, LINE_SHADER, SCREEN_SHADER};
+use crate::world::asset::{BILLBOARD_SHADER, GEOMETRY_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER};
 use dawn_graphics::passes::events::RenderPassTargetId;
 use dawn_graphics::renderer::{CustomRenderer, RendererBackend};
 use dawn_graphics::{construct_chain, construct_chain_type};
@@ -23,12 +23,14 @@ use std::rc::Rc;
 use std::time::Instant;
 use winit::event::{Event, WindowEvent};
 use winit::window::Window;
+use crate::rendering::fbo::obuffer::OBuffer;
+use crate::rendering::passes::postprocess_pass::PostProcessPass;
 
 pub mod dispatcher;
 pub mod event;
 pub mod fallback_tex;
+pub mod fbo;
 pub mod frustum;
-pub mod gbuffer;
 pub mod passes;
 pub mod primitive;
 mod ubo;
@@ -52,7 +54,8 @@ pub struct Renderer {
     geometry_id: RenderPassTargetId,
     bounding_id: RenderPassTargetId,
     gizmos_id: RenderPassTargetId,
-    screen_id: RenderPassTargetId,
+    lighting_id: RenderPassTargetId,
+    postprocess_id: RenderPassTargetId,
 
     last_frame: Instant,
     imgui: Rc<RefCell<imgui::Context>>,
@@ -63,7 +66,7 @@ pub struct Renderer {
 }
 
 type ChainType =
-    construct_chain_type!(RenderingEvent; GeometryPass, ScreenPass, BoundingPass, GizmosPass);
+    construct_chain_type!(RenderingEvent; GeometryPass, LightingPass, PostProcessPass, BoundingPass, GizmosPass);
 
 impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
     fn spawn_chain(
@@ -84,6 +87,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         pre_pipeline_construct(&r.gl);
 
         let gbuffer = Rc::new(GBuffer::new(&r.gl, WINDOW_SIZE));
+        let obuffer = Rc::new(OBuffer::new(&r.gl, WINDOW_SIZE));
         let camera_ubo = CameraUBO::new(&r.gl, CAMERA_UBO_BINDING);
         let geometry_pass = GeometryPass::new(
             &r.gl,
@@ -92,6 +96,20 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             camera_ubo,
             self.config.clone(),
         );
+        let lighting_pass = LightingPass::new(
+            &r.gl,
+            self.lighting_id,
+            gbuffer.clone(),
+            obuffer.clone(),
+            self.config.clone(),
+        );
+        let postprocess_pass = PostProcessPass::new(
+            &r.gl,
+            self.postprocess_id,
+            obuffer.clone(),
+            self.config.clone(),
+        );
+
         let bounding_pass = BoundingPass::new(
             &r.gl,
             self.bounding_id,
@@ -100,12 +118,11 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         );
         let gizmo_pass =
             GizmosPass::new(&r.gl, self.gizmos_id, gbuffer.clone(), self.config.clone());
-        let screen_pass =
-            ScreenPass::new(&r.gl, self.screen_id, gbuffer.clone(), self.config.clone());
 
         Ok(construct_chain!(
             geometry_pass,
-            screen_pass,
+            lighting_pass,
+            postprocess_pass,
             bounding_pass,
             gizmo_pass
         ))
@@ -177,6 +194,18 @@ pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer)
             | RenderingEventMask::PERSP_PROJECTION_UPDATED,
         GEOMETRY_SHADER,
     );
+    let lighting_id = dispatcher.pass(
+        RenderingEventMask::DROP_ALL_ASSETS
+            | RenderingEventMask::UPDATE_SHADER
+            | RenderingEventMask::VIEWPORT_RESIZED,
+        LIGHTING_SHADER,
+    );
+    let postprocess_id = dispatcher.pass(
+        RenderingEventMask::DROP_ALL_ASSETS
+            | RenderingEventMask::UPDATE_SHADER,
+        POSTPROCESS_SHADER,
+    );
+    
     let bounding_id = dispatcher.pass(
         RenderingEventMask::DROP_ALL_ASSETS
             | RenderingEventMask::UPDATE_SHADER
@@ -190,12 +219,6 @@ pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer)
             | RenderingEventMask::SET_LIGHT_TEXTURE,
         BILLBOARD_SHADER,
     );
-    let screen_id = dispatcher.pass(
-        RenderingEventMask::DROP_ALL_ASSETS
-            | RenderingEventMask::UPDATE_SHADER
-            | RenderingEventMask::VIEWPORT_RESIZED,
-        SCREEN_SHADER,
-    );
 
     let config = RenderingConfig::new();
     let mut imgui = ui::UI::create_context();
@@ -203,7 +226,8 @@ pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer)
         geometry_id,
         bounding_id,
         gizmos_id,
-        screen_id,
+        lighting_id,
+        postprocess_id,
 
         imgui_winit: WinitPlatform::new(&mut imgui),
         imgui: Rc::new(RefCell::new(imgui)),

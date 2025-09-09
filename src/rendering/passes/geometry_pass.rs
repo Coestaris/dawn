@@ -1,7 +1,7 @@
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fallback_tex::FallbackTextures;
+use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
-use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::rendering::ui::RenderingConfig;
@@ -17,7 +17,6 @@ use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
-use log::info;
 
 const ALBEDO_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
@@ -73,21 +72,6 @@ impl GeometryPass {
             camera_ubo,
         }
     }
-
-    fn update_shader_state(&mut self) {
-        if let Some(shader) = self.shader.as_mut() {
-            let program = shader.shader.cast();
-            Program::bind(self.gl, &program);
-            program
-                .set_uniform_block_binding(shader.ubo_camera_location, CAMERA_UBO_BINDING as u32);
-            program.set_uniform(shader.albedo, ALBEDO_INDEX);
-            program.set_uniform(shader.normal, NORMAL_INDEX);
-            program.set_uniform(shader.metallic, METALLIC_INDEX);
-            program.set_uniform(shader.roughness, ROUGHNESS_INDEX);
-            program.set_uniform(shader.occlusion, OCCLUSION_INDEX);
-            Program::unbind(self.gl);
-        }
-    }
 }
 
 impl RenderPass<RenderingEvent> for GeometryPass {
@@ -118,7 +102,21 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                     roughness: shader.get_uniform_location("in_roughness").unwrap(),
                     occlusion: shader.get_uniform_location("in_occlusion").unwrap(),
                 });
-                self.update_shader_state();
+
+                if let Some(shader) = self.shader.as_mut() {
+                    let program = shader.shader.cast();
+                    Program::bind(self.gl, &program);
+                    program.set_uniform_block_binding(
+                        shader.ubo_camera_location,
+                        CAMERA_UBO_BINDING as u32,
+                    );
+                    program.set_uniform(shader.albedo, ALBEDO_INDEX);
+                    program.set_uniform(shader.normal, NORMAL_INDEX);
+                    program.set_uniform(shader.metallic, METALLIC_INDEX);
+                    program.set_uniform(shader.roughness, ROUGHNESS_INDEX);
+                    program.set_uniform(shader.occlusion, OCCLUSION_INDEX);
+                    Program::unbind(self.gl);
+                }
             }
             RenderingEvent::ViewportResized(size) => unsafe {
                 self.gl.viewport(0, 0, size.x as i32, size.y as i32);
