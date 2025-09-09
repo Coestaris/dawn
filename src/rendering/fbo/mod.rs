@@ -72,7 +72,7 @@ impl GTexture {
     fn resize(&self, new_size: UVec2) {
         Texture::bind(self.gl, TextureBind::Texture2D, &self.texture, 0);
         self.texture
-            .texture_image_2d(
+            .feed_image(
                 0,
                 new_size.x as usize,
                 new_size.y as usize,
