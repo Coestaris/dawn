@@ -6,9 +6,12 @@ layout (location = 0) out vec4 out_albedo_metalic;
 layout (location = 1) out vec2 out_normal_texture;
 // RGBA8. R - roughness, G - occlusion, BA - reserved
 layout (location = 2) out vec4 out_pbr;
+// RGB16F. View space position
+layout (location = 3) out vec3 out_position;
 
 in vec2 tex_coord;
 in vec3 normal;
+in vec3 view_position;
 
 uniform mat4 in_model;
 uniform sampler2D in_albedo;
@@ -55,4 +58,5 @@ void main()
     out_albedo_metalic = vec4(albedo, metallic);
     out_normal_texture = oct_normal;
     out_pbr = vec4(roughness, occlusion, 0.0, 0.0);
+    out_position = view_position;
 }

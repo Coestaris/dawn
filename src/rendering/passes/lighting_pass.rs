@@ -20,6 +20,7 @@ const NORMAL_INDEX: i32 = 1;
 const PBR_INDEX: i32 = 2;
 const DEPTH_INDEX: i32 = 3;
 const PACKED_LIGHTS_INDEX: i32 = 4;
+const VIEW_POS_INDEX: i32 = 5;
 
 struct ShaderContainer {
     shader: TypedAsset<Program>,
@@ -33,6 +34,7 @@ struct ShaderContainer {
     normal_texture: UniformLocation,
     pbr_texture: UniformLocation,
     depth_texture: UniformLocation,
+    view_pos_texture: UniformLocation,
 }
 
 pub(crate) struct LightingPass {
@@ -42,6 +44,7 @@ pub(crate) struct LightingPass {
 
     shader: Option<ShaderContainer>,
     quad: Quad,
+    view: glam::Mat4,
     packed_lights: PackedLights,
     gbuffer: Rc<GBuffer>,
     obuffer: Rc<OBuffer>,
@@ -61,6 +64,7 @@ impl LightingPass {
             config,
             shader: None,
             quad: Quad::new(gl),
+            view: glam::Mat4::IDENTITY,
             packed_lights: PackedLights::new(gl).unwrap(),
             gbuffer,
             obuffer,
@@ -82,6 +86,9 @@ impl RenderPass<RenderingEvent> for LightingPass {
         match event {
             RenderingEvent::DropAllAssets => {
                 self.shader = None;
+            }
+            RenderingEvent::ViewUpdated(view) => {
+                self.view = view;
             }
             RenderingEvent::UpdateShader(shader) => {
                 let clone = shader.clone();
@@ -112,6 +119,10 @@ impl RenderPass<RenderingEvent> for LightingPass {
                         .cast()
                         .get_uniform_location("in_depth_texture")
                         .unwrap(),
+                    view_pos_texture: shader
+                        .cast()
+                        .get_uniform_location("in_view_pos_texture")
+                        .unwrap(),
                 });
 
                 if let Some(shader) = self.shader.as_mut() {
@@ -122,6 +133,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
                     program.set_uniform(shader.pbr_texture, PBR_INDEX);
                     program.set_uniform(shader.depth_texture, DEPTH_INDEX);
                     program.set_uniform(shader.packed_lights_location, PACKED_LIGHTS_INDEX);
+                    program.set_uniform(shader.view_pos_texture, VIEW_POS_INDEX);
                     Program::unbind(self.gl);
                 }
             }
@@ -155,7 +167,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
         self.packed_lights.clear();
         let mut lights_count = 0;
         for light in frame.point_lights.iter() {
-            self.packed_lights.push_point_light(light);
+            self.packed_lights.push_point_light(light, &self.view);
             lights_count += 1;
         }
         self.packed_lights.upload();
@@ -197,6 +209,12 @@ impl RenderPass<RenderingEvent> for LightingPass {
             TextureBind::Texture2D,
             &self.packed_lights.texture,
             PACKED_LIGHTS_INDEX as u32,
+        );
+        Texture::bind(
+            self.gl,
+            TextureBind::Texture2D,
+            &self.gbuffer.view_pos.texture,
+            VIEW_POS_INDEX as u32,
         );
         self.quad.draw()
     }
