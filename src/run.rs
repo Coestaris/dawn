@@ -1,9 +1,8 @@
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
-use crate::rendering::gbuffer::GBuffer;
 use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
-use crate::rendering::passes::screen_pass::ScreenPass;
+use crate::rendering::passes::lighting_pass::LightingPass;
 use crate::rendering::{pre_pipeline_construct, setup_rendering};
 use crate::ui::{ui_bridge, UIWorldConnection};
 use crate::world::app_icon::map_app_icon_handler;

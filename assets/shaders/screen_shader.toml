@@ -15,5 +15,6 @@ pre_include = [
 kind = "Fragment"
 origin.External.File = "shaders/screen.fsh"
 pre_include = [
+    { External.File = "shaders/inc/debug_mode.glsl" },
     { External.File = "shaders/inc/prelude.glsl" },
 ]

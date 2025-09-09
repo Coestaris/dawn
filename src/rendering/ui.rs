@@ -110,6 +110,7 @@ impl From<usize> for OutputMode {
 
 pub struct RenderingConfigInner {
     pub wireframe: bool,
+    pub fxaa_enabled: bool,
     pub output_mode: OutputMode,
     pub bounding_box_mode: BoundingBoxMode,
     pub show_gizmos: bool,
@@ -127,6 +128,7 @@ impl RenderingConfig {
     pub fn new() -> Self {
         Self(Rc::new(RefCell::new(RenderingConfigInner {
             wireframe: false,
+            fxaa_enabled: true,
             output_mode: OutputMode::Default,
             bounding_box_mode: BoundingBoxMode::Disabled,
             show_gizmos: false,
@@ -696,6 +698,7 @@ impl UI {
 
                 ui.checkbox("Wireframe Mode", &mut config.wireframe);
                 ui.checkbox("Show Gizmos", &mut config.show_gizmos);
+                ui.checkbox("FXAA", &mut config.fxaa_enabled);
                 ui.separator();
 
                 let items = OutputMode::items();
@@ -750,6 +753,7 @@ impl UI {
                 ui.text("ESC - Quit");
                 ui.text("F1 - Toggle UI");
                 ui.text("F5 - Reload Assets");
+                ui.text("F11 - Toggle Fullscreen");
                 ui.text("WASD/Shift/Space - Move Camera");
                 ui.text("Right Mouse Drag - Rotate Camera");
             });
