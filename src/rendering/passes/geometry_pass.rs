@@ -20,9 +20,8 @@ use std::rc::Rc;
 
 const ALBEDO_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
-const METALLIC_INDEX: i32 = 2;
-const ROUGHNESS_INDEX: i32 = 3;
-const OCCLUSION_INDEX: i32 = 4;
+const METALLIC_ROUGHNESS_INDEX: i32 = 2;
+const OCCLUSION_INDEX: i32 = 3;
 
 struct ShaderContainer {
     shader: TypedAsset<Program>,
@@ -34,8 +33,7 @@ struct ShaderContainer {
     // Fragment uniforms
     albedo: UniformLocation,
     normal: UniformLocation,
-    metallic: UniformLocation,
-    roughness: UniformLocation,
+    metallic_roughness: UniformLocation,
     occlusion: UniformLocation,
 }
 
@@ -98,8 +96,9 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                     model_location: shader.get_uniform_location("in_model").unwrap(),
                     albedo: shader.get_uniform_location("in_albedo").unwrap(),
                     normal: shader.get_uniform_location("in_normal").unwrap(),
-                    metallic: shader.get_uniform_location("in_metallic").unwrap(),
-                    roughness: shader.get_uniform_location("in_roughness").unwrap(),
+                    metallic_roughness: shader
+                        .get_uniform_location("in_metallic_roughness")
+                        .unwrap(),
                     occlusion: shader.get_uniform_location("in_occlusion").unwrap(),
                 });
 
@@ -112,8 +111,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                     );
                     program.set_uniform(shader.albedo, ALBEDO_INDEX);
                     program.set_uniform(shader.normal, NORMAL_INDEX);
-                    program.set_uniform(shader.metallic, METALLIC_INDEX);
-                    program.set_uniform(shader.roughness, ROUGHNESS_INDEX);
+                    program.set_uniform(shader.metallic_roughness, METALLIC_ROUGHNESS_INDEX);
                     program.set_uniform(shader.occlusion, OCCLUSION_INDEX);
                     Program::unbind(self.gl);
                 }
@@ -209,23 +207,21 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                     return (true, RenderResult::default());
                 }
 
-                let (albedo, normal, metallic, roughness, occlusion) =
+                let (albedo, normal, metallic_roughness, occlusion) =
                     if let Some(material) = &submesh.material {
                         let material = material.cast::<Material>();
 
                         let albedo = material.albedo.cast();
                         let normal = material.normal.cast();
-                        let metallic = material.metallic.cast();
-                        let roughness = material.roughness.cast();
+                        let metallic_roughness = material.metallic_roughness.cast();
                         let occlusion = material.occlusion.cast();
 
-                        (albedo, normal, metallic, roughness, occlusion)
+                        (albedo, normal, metallic_roughness, occlusion)
                     } else {
                         (
                             &self.fallback_textures.albedo_texture,
                             &self.fallback_textures.normal_texture,
-                            &self.fallback_textures.metallic_texture,
-                            &self.fallback_textures.roughness_texture,
+                            &self.fallback_textures.metallic_roughness_texture,
                             &self.fallback_textures.occlusion_texture,
                         )
                     };
@@ -235,14 +231,8 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                 Texture::bind(
                     self.gl,
                     TextureBind::Texture2D,
-                    metallic,
-                    METALLIC_INDEX as u32,
-                );
-                Texture::bind(
-                    self.gl,
-                    TextureBind::Texture2D,
-                    roughness,
-                    ROUGHNESS_INDEX as u32,
+                    metallic_roughness,
+                    METALLIC_ROUGHNESS_INDEX as u32,
                 );
                 Texture::bind(
                     self.gl,
@@ -267,8 +257,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
         Program::unbind(self.gl);
         Texture::unbind(self.gl, TextureBind::Texture2D, ALBEDO_INDEX as u32);
         Texture::unbind(self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
-        Texture::unbind(self.gl, TextureBind::Texture2D, METALLIC_INDEX as u32);
-        Texture::unbind(self.gl, TextureBind::Texture2D, ROUGHNESS_INDEX as u32);
+        Texture::unbind(self.gl, TextureBind::Texture2D, METALLIC_ROUGHNESS_INDEX as u32);
         Texture::unbind(self.gl, TextureBind::Texture2D, OCCLUSION_INDEX as u32);
         Framebuffer::unbind(self.gl);
         RenderResult::default()
