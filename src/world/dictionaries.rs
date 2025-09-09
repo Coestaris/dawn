@@ -56,6 +56,7 @@ pub struct MapPointLight {
     pub location: Vec3,
     pub color: Vec3,
     pub intensity: f32,
+    pub linear_falloff: bool,
     pub range: f32,
     pub components: Vec<String>,
 }
@@ -67,6 +68,7 @@ impl MapPointLight {
             location: Vec3::ZERO,
             color: Vec3::ONE,
             intensity: 1.0,
+            linear_falloff: false,
             range: 100.0,
             components: Vec::new(),
         }
@@ -174,6 +176,9 @@ fn process_dictionary(ir: IRDictionary) -> anyhow::Result<(DictionaryEntry, Asse
                     }
                     "Range" => {
                         point_light.range = value.as_f32().unwrap();
+                    }
+                    "LinearFalloff" => {
+                        point_light.linear_falloff = value.as_bool().unwrap();
                     }
                     "Components" => {
                         let comps = value.as_array().unwrap();

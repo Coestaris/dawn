@@ -1,8 +1,8 @@
 use crate::rendering::fbo::GTexture;
+use dawn_assets::ir::texture::IRPixelFormat;
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
 use glam::UVec2;
 use log::info;
-use dawn_assets::ir::texture::IRPixelFormat;
 
 pub struct OBuffer {
     pub fbo: Framebuffer,
@@ -18,21 +18,21 @@ impl OBuffer {
     }
 
     pub fn new(gl: &'static glow::Context, initial: UVec2) -> Self {
-        let buffer= OBuffer {
+        let buffer = OBuffer {
             fbo: Framebuffer::new(gl).unwrap(),
             texture: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color0),
         };
-        
+
         buffer.resize(initial);
-        
+
         // Attach texture to the framebuffer
         buffer.texture.attach(&buffer.fbo);
-        
+
         Framebuffer::bind(gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[buffer.texture.attachment]);
         assert_eq!(buffer.fbo.is_complete(), true);
         Framebuffer::unbind(gl);
-        
+
         buffer
     }
 }

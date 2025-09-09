@@ -22,30 +22,36 @@ impl LightsHeaderCPU {
     }
 }
 
-const LIGHT_KIND_DIRECTIONAL: u8 = 0;
-const LIGHT_KIND_POINT: u8 = 1;
-const LIGHT_KIND_AREA_RECT: u8 = 2;
+const LIGHT_KIND_DIRECTIONAL: u32 = 1;
+const LIGHT_KIND_POINT: u32 = 2;
+const LIGHT_KIND_AREA_RECT: u32 = 3;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 struct LightPackedCPU {
-    // x=kind, y=flags, z=reserved, w=float bits of intensity
-    pub kind_flags_intensity: [u32; 4],
+    pub kind: u32,
+    pub flags: u32,
+    pub reserved: u32,
+    pub intensity: f32,
+
     // rgb=color, a=unused
     pub color_rgba: [f32; 4],
     // sun: dir; point: pos.xyz, w=radius
     pub v0: [f32; 4],
     // area: normal/halfHeight; others: reserved
     pub v1: [f32; 4],
-    // rough, metallic, falloff(0 phys / 1 lin), shadow
-    pub brdf: [f32; 4],
+
+    pub rough: f32,
+    pub metallic: f32,
+    pub falloff: f32,
+    pub shadow: f32,
 }
 
 pub struct PackedLights {
     gl: &'static glow::Context,
     capacity_texels: i32,
     pub texture: Texture,
-    vec: Vec<f32>,
+    vec: Vec<u32>,
 }
 
 impl PackedLights {
@@ -73,21 +79,31 @@ impl PackedLights {
     }
 
     fn push_packed(&mut self, l: &LightPackedCPU) {
-        for &u in &l.kind_flags_intensity {
-            self.vec.push(f32::from_bits(u));
+        self.vec.push(l.kind);
+        self.vec.push(l.flags);
+        self.vec.push(l.reserved);
+        self.vec.push(l.intensity.to_bits());
+        for c in &l.color_rgba {
+            self.vec.push(c.to_bits());
         }
-        self.vec.extend_from_slice(&l.color_rgba);
-        self.vec.extend_from_slice(&l.v0);
-        self.vec.extend_from_slice(&l.v1);
-        self.vec.extend_from_slice(&l.brdf);
+        for v in &l.v0 {
+            self.vec.push(v.to_bits());
+        }
+        for v in &l.v1 {
+            self.vec.push(v.to_bits());
+        }
+        self.vec.push(l.rough.to_bits());
+        self.vec.push(l.metallic.to_bits());
+        self.vec.push(l.falloff.to_bits());
+        self.vec.push(l.shadow.to_bits());
     }
 
     pub fn push_point_light(&mut self, l: &RenderablePointLight, view_mat: &glam::Mat4) {
         let mut packed = LightPackedCPU::default();
-        packed.kind_flags_intensity[0] = LIGHT_KIND_POINT as u32;
-        packed.kind_flags_intensity[1] = 0;
-        packed.kind_flags_intensity[2] = 0;
-        packed.kind_flags_intensity[3] = l.intensity.to_bits();
+        packed.kind = LIGHT_KIND_POINT;
+        packed.flags = 0;
+        packed.reserved = 0;
+        packed.intensity = l.intensity;
         packed.color_rgba[0] = l.color.x;
         packed.color_rgba[1] = l.color.y;
         packed.color_rgba[2] = l.color.z;
@@ -96,7 +112,11 @@ impl PackedLights {
         packed.v0[1] = view_pos.y;
         packed.v0[2] = view_pos.z;
         packed.v0[3] = l.range;
-        packed.brdf = [0.0, 0.0, 0.0, 0.0];
+        packed.v1 = [0.0; 4];
+        packed.rough = 0.0;
+        packed.metallic = 0.0;
+        packed.falloff = if l.linear_falloff { 1.0 } else { 0.0 };
+        packed.shadow = 0.0;
         self.push_packed(&packed);
     }
 
@@ -107,24 +127,24 @@ impl PackedLights {
         if needed_texels > self.capacity_texels {
             self.capacity_texels = (needed_texels * 2).max(16);
             self.texture
-                .feed_image(
+                .feed_2d(
                     0,
                     self.capacity_texels as usize,
                     1,
                     false,
-                    IRPixelFormat::RGBA32F,
+                    IRPixelFormat::RGBA32UI,
                     None,
                 )
                 .ok();
         }
 
         self.texture
-            .feed_image(
+            .feed_2d(
                 0,
                 needed_texels as usize,
                 1,
                 false,
-                IRPixelFormat::RGBA32F,
+                IRPixelFormat::RGBA32UI,
                 Some(bytemuck::cast_slice(&self.vec)),
             )
             .ok();

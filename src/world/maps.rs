@@ -4,8 +4,8 @@ use crate::world::{move_light_handler, rotate_handler, MovingByArrowKeys, Rotati
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::{AssetID, TypedAsset};
 use dawn_graphics::ecs::{
-    ObjectAreaLight, ObjectMesh, ObjectPointLight, ObjectPosition, ObjectRotation, ObjectScale,
-    ObjectSpotLight, ObjectSunLight,
+    ObjectAreaLight, ObjectColor, ObjectIntensity, ObjectMesh, ObjectPointLight, ObjectPosition,
+    ObjectRotation, ObjectScale, ObjectSpotLight, ObjectSunLight,
 };
 use dawn_graphics::gl::mesh::Mesh;
 use evenio::component::Component;
@@ -26,6 +26,8 @@ type SuperSender<'a> = Sender<
         Spawn,
         Insert<MapLink>,
         Insert<ObjectRotation>,
+        Insert<ObjectColor>,
+        Insert<ObjectIntensity>,
         Insert<ObjectPosition>,
         Insert<ObjectScale>,
         Insert<ObjectMesh>,
@@ -33,7 +35,6 @@ type SuperSender<'a> = Sender<
         Insert<ObjectSpotLight>,
         Insert<ObjectSunLight>,
         Insert<ObjectAreaLight>,
-
         // User components
         Insert<Rotating>,
         Insert<MovingByArrowKeys>,
@@ -102,9 +103,20 @@ impl MapDispatcher {
                 sender.insert(
                     id,
                     ObjectPointLight {
-                        color: point_light.color,
-                        intensity: point_light.intensity,
                         range: point_light.range,
+                        linear_falloff: point_light.linear_falloff,
+                    },
+                );
+                sender.insert(
+                    id,
+                    ObjectColor {
+                        color: point_light.color,
+                    },
+                );
+                sender.insert(
+                    id,
+                    ObjectIntensity {
+                        intensity: point_light.intensity,
                     },
                 );
                 self.derive_components(&point_light.components, id, sender);

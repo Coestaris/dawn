@@ -12,19 +12,17 @@ uniform sampler2D in_albedo_metallic_texture;
 uniform sampler2D in_normal_texture;
 // RGBA8. R - roughness, G - occlusion, BA - reserved
 uniform sampler2D in_pbr_texture;
-// RGBA32F, height 1
-uniform sampler2D in_packed_lights;
+// RGBA32, height 1
+uniform usampler2D in_packed_lights;
 
 // x=magic, y=ver, z=count, w=reserved
 uniform uvec4 in_packed_lights_header;
 // see inc/debug_mode.glsl
 uniform int in_debug_mode;
 
-uniform sampler2D in_view_pos_texture;
-
-const uint LIGHT_KIND_DIRECTIONAL = 0u;
-const uint LIGHT_KIND_POINT       = 1u;
-const uint LIGHT_KIND_AREA_RECT   = 2u;
+const uint LIGHT_KIND_DIRECTIONAL = 1u;
+const uint LIGHT_KIND_POINT       = 2u;
+const uint LIGHT_KIND_AREA_RECT   = 3u;
 
 struct LightPacked {
     // x=kind, y=flags, z=reserved, w=float bits of intensity
@@ -39,29 +37,73 @@ struct LightPacked {
     vec4 brdf;
 };
 
-int baseOf(int idx) {
-    return idx * 5;
+uint baseOf(uint idx) {
+    return idx * 5u;
 }
 
-vec4 fetch4(int i) {
-    return texelFetch(in_packed_lights, ivec2(i, 0), 0);
+uvec4 fetch4(uint i) {
+    return texelFetch(in_packed_lights, ivec2(int(i), 0), 0);
 }
-
 
 uint lightsCount() {
     return in_packed_lights_header.z;
 }
 
-LightPacked readLight(int idx) {
-    int b = baseOf(idx);
+LightPacked readLight(uint idx) {
+    uint b = baseOf(idx);
     LightPacked L;
-    L.kind_flags_intensity = floatBitsToUint(fetch4(b+0));
-    L.color_rgba           = fetch4(b+1);
-    L.v0                   = fetch4(b+2);
-    L.v1                   = fetch4(b+3);
-    L.brdf                 = fetch4(b+4);
+    L.kind_flags_intensity = fetch4(b + 0u);
+    L.color_rgba           = uintBitsToFloat(fetch4(b + 1u));
+    L.v0                   = uintBitsToFloat(fetch4(b + 2u));
+    L.v1                   = uintBitsToFloat(fetch4(b + 3u));
+    L.brdf                 = uintBitsToFloat(fetch4(b + 4u));
     return L;
 }
+
+uint lightKind(in LightPacked L) {
+    return L.kind_flags_intensity.x;
+}
+
+uint lightFlags(in LightPacked L) {
+    return L.kind_flags_intensity.y;
+}
+
+float lightIntensity(in LightPacked L) {
+    return uintBitsToFloat(L.kind_flags_intensity.w);
+}
+
+vec3 lightColor(in LightPacked L) {
+    return L.color_rgba.rgb;
+}
+
+vec3 lightSunDirection(in LightPacked L) {
+    return normalize(-L.v0.xyz);
+}
+
+vec3 lightPointPosition(in LightPacked L) {
+    return L.v0.xyz;
+}
+
+float lightPointRadius(in LightPacked L) {
+    return L.v0.w;
+}
+
+float lightRoughness(in LightPacked L) {
+    return L.brdf.x;
+}
+
+float lightMetallic(in LightPacked L) {
+    return L.brdf.y;
+}
+
+bool lightFalloffLinear(in LightPacked L) {
+    return L.brdf.z > 0.5;
+}
+
+bool lightCastsShadow(in LightPacked L) {
+    return (L.brdf.w > 0.5);
+}
+
 
 // Decode a normal from an octahedral encoded vector
 vec3 decode_oct(vec2 e) {
@@ -111,75 +153,74 @@ vec3 brdf_lambert(vec3 albedo, float metallic){
 }
 
 float point_atten(float d, float radius, bool linear){
-    if (d>radius) return 0.0;
-    if (linear) return 1.0 - d / radius;
-    float inv = 1.0 / (1.0 + d*d / max(radius*radius*0.25, 1e-4));
-    return inv;
+    if (d > radius) return 0.0;
+    if (linear) {
+        // Linear falloff to zero at radius
+        return 1.0 - d / radius;
+    } else {
+        // Physically based quadratic falloff
+        float att = 1.0 / (d * d);
+        // Normalize so that att(0) = 1 and att(radius) = 0
+        float att_radius = 1.0 / (radius * radius);
+        return att / (att + att_radius);
+    }
 }
 
 vec3 shade_sun(LightPacked L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
-    vec3 Ldir = -normalize(L.v0.xyz); // v0: dir (к источнику)
-    float NoL = max(dot(N, Ldir), 0.0);
-    if (NoL <= 0.0) return vec3(0);
-
-    float intensity = uintBitsToFloat(L.kind_flags_intensity.w);
-    vec3  Lc = L.color_rgba.rgb * intensity;
-
-    vec3 H = normalize(V + Ldir);
-    float NoV = max(dot(N, V), 1e-4);
-    float NoH = max(dot(N, H), 1e-4);
-    float HoV = max(dot(H, V), 1e-4);
-    float a = max(rough*rough, 1e-4);
-
-    vec3 F0 = mix(vec3(0.04), albedo, metallic);
-    float  D = D_GGX(NoH, a);
-    float  Vg= V_SmithGGXCorrelated(NoV, NoL, a);
-    vec3   F = F_Schlick(F0, HoV);
-
-    vec3 spec = (D*Vg) * F;
-    vec3 diff = brdf_lambert(albedo, metallic);
-    return (diff + spec) * Lc * NoL;
+    return vec3(0.2, 0.0, 0.0); // Placeholder
 }
 
 vec3 shade_point(LightPacked L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
-    vec3 Lvec = (L.v0.xyz - P);
-    float d2  = dot(Lvec, Lvec);
-    float d   = sqrt(d2);
-    vec3  Ldir= Lvec / max(d, 1e-5);
-
+    vec3 light_position = lightPointPosition(L);
+    // Vector from surface point to light
+    vec3 Lvec = (light_position - P);
+    float d2 = dot(Lvec, Lvec);
+    float d = sqrt(d2);
+    // Direction from surface point to light
+    vec3 Ldir = Lvec / max(d, 1e-5);
+    // NoL - cosine between normal and light direction
     float NoL = max(dot(N, Ldir), 0.0);
+    // If light is below the horizon, skip
     if (NoL <= 0.0) return vec3(0);
 
-    float intensity = uintBitsToFloat(L.kind_flags_intensity.w);
-    vec3  Lc = L.color_rgba.rgb * intensity;
+    // Light color and intensity
+    vec3 light_color = lightColor(L);
+    vec3 Lc = light_color * lightIntensity(L);
 
-    float radius = L.v0.w;
-    bool  linear = (L.brdf.z > 0.5); // falloff: 1=linear, 0=phys
-    float atten  = point_atten(d, radius, linear);
+    // Attenuation
+    float radius = lightPointRadius(L);
+    bool linear = lightFalloffLinear(L);
+    float atten = point_atten(d, radius, linear);
+    // If fully attenuated, skip to not waste computations
     if (atten <= 0.0) return vec3(0);
 
+    // Cook-Torrance BRDF
     vec3 H = normalize(V + Ldir);
     float NoV = max(dot(N, V), 1e-4);
     float NoH = max(dot(N, H), 1e-4);
     float HoV = max(dot(H, V), 1e-4);
     float a = max(rough*rough, 1e-4);
-
+    // Fresnel at normal incidence
     vec3 F0 = mix(vec3(0.04), albedo, metallic);
     float D = D_GGX(NoH, a);
     float Vg = V_SmithGGXCorrelated(NoV, NoL, a);
     vec3  F = F_Schlick(F0, HoV);
-
+    // Specular and diffuse terms
     vec3 spec = (D*Vg) * F;
     vec3 diff = brdf_lambert(albedo, metallic);
     return (diff + spec) * Lc * (NoL * atten);
 }
 
 vec3 shade_area_rect(LightPacked L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
-    float intensity = uintBitsToFloat(L.kind_flags_intensity.w);
-    return L.color_rgba.rgb * intensity * 1e-4;
+    return vec3(0.0, 1.0, 0.0); // Placeholder
 }
 
 vec4 process() {
+    // Check magic and version
+    if (in_packed_lights_header.x != 0x4C495445u) {
+        return vec4(0.0, 1.0, 1.0, 1.0); // Cyan for invalid lights buffer
+    }
+
     vec4 albedo_metallic = texture(in_albedo_metallic_texture, tex_coord);
     vec2 nor_oct = texture(in_normal_texture, tex_coord).rg;
     vec4 pbr = texture(in_pbr_texture, tex_coord);
@@ -194,16 +235,19 @@ vec4 process() {
     vec3 V = normalize(-P);
 
     vec3 Lo = vec3(0);
-    for (int i = 0; i < int(lightsCount()); ++i) {
+    for (uint i = 0u; i < lightsCount(); i++) {
         LightPacked L = readLight(i);
 
-        uint kind = L.kind_flags_intensity.x & 0x3u;
+        uint kind = lightKind(L);
         if (kind == LIGHT_KIND_DIRECTIONAL) {
             Lo += shade_sun(L, P, N, V, albedo, rough, metallic);
         } else if (kind == LIGHT_KIND_POINT) {
             Lo += shade_point(L, P, N, V, albedo, rough, metallic);
         } else if (kind == LIGHT_KIND_AREA_RECT) {
             Lo += shade_area_rect(L, P, N, V, albedo, rough, metallic);
+        } else {
+            // Unknown light kind. Output magenta to indicate error
+            Lo += vec3(1.0, 0.0, 1.0);
         }
     }
 
@@ -240,9 +284,6 @@ void main()
     } else if (in_debug_mode == DEBUG_MODE_POSITION) {
         float depth = texture(in_depth_texture, tex_coord).r;
         vec3 pos = reconstruct_view_pos(depth, tex_coord, in_inv_proj, in_viewport);
-        FragColor = vec4(pos * 0.5 + 0.5, 1.0);
-    } else if (in_debug_mode == DEBUG_MODE_POSITION_FROM_VS) {
-        vec3 pos = texture(in_view_pos_texture, tex_coord).xyz;
         FragColor = vec4(pos * 0.5 + 0.5, 1.0);
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // Magenta for invalid mode
