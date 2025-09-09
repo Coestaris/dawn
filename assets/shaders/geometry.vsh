@@ -7,6 +7,8 @@ layout (location = 2) in vec2 in_tex_coord;
 out vec2 tex_coord;
 out vec3 normal;
 
+out vec3 view_position;
+
 uniform mat4 in_model;
 
 void main()
@@ -16,4 +18,5 @@ void main()
     // Pass through the matrices and attributes to the fragment shader
     tex_coord = in_tex_coord;
     normal = in_normal;
+    view_position = vec3(in_view * in_model * vec4(in_position, 1.0));
 }

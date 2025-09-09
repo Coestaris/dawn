@@ -1,16 +1,20 @@
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
 use crate::rendering::fbo::gbuffer::GBuffer;
+use crate::rendering::fbo::obuffer::OBuffer;
 use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
 use crate::rendering::passes::gizmos_pass::GizmosPass;
 use crate::rendering::passes::lighting_pass::LightingPass;
+use crate::rendering::passes::postprocess_pass::PostProcessPass;
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::rendering::ui::RenderingConfig;
 use crate::run::WINDOW_SIZE;
 use crate::ui::UIRendererConnection;
-use crate::world::asset::{BILLBOARD_SHADER, GEOMETRY_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER};
+use crate::world::asset::{
+    BILLBOARD_SHADER, GEOMETRY_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER,
+};
 use dawn_graphics::passes::events::RenderPassTargetId;
 use dawn_graphics::renderer::{CustomRenderer, RendererBackend};
 use dawn_graphics::{construct_chain, construct_chain_type};
@@ -23,8 +27,6 @@ use std::rc::Rc;
 use std::time::Instant;
 use winit::event::{Event, WindowEvent};
 use winit::window::Window;
-use crate::rendering::fbo::obuffer::OBuffer;
-use crate::rendering::passes::postprocess_pass::PostProcessPass;
 
 pub mod dispatcher;
 pub mod event;
@@ -65,8 +67,7 @@ pub struct Renderer {
     config: RenderingConfig,
 }
 
-type ChainType =
-    construct_chain_type!(RenderingEvent; GeometryPass, LightingPass, PostProcessPass, BoundingPass, GizmosPass);
+type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, LightingPass, PostProcessPass, BoundingPass, GizmosPass);
 
 impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
     fn spawn_chain(
@@ -197,15 +198,15 @@ pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer)
     let lighting_id = dispatcher.pass(
         RenderingEventMask::DROP_ALL_ASSETS
             | RenderingEventMask::UPDATE_SHADER
-            | RenderingEventMask::VIEWPORT_RESIZED,
+            | RenderingEventMask::VIEWPORT_RESIZED
+            | RenderingEventMask::VIEW_UPDATED,
         LIGHTING_SHADER,
     );
     let postprocess_id = dispatcher.pass(
-        RenderingEventMask::DROP_ALL_ASSETS
-            | RenderingEventMask::UPDATE_SHADER,
+        RenderingEventMask::DROP_ALL_ASSETS | RenderingEventMask::UPDATE_SHADER,
         POSTPROCESS_SHADER,
     );
-    
+
     let bounding_id = dispatcher.pass(
         RenderingEventMask::DROP_ALL_ASSETS
             | RenderingEventMask::UPDATE_SHADER

@@ -20,16 +20,23 @@ uniform uvec4 in_packed_lights_header;
 // see inc/debug_mode.glsl
 uniform int in_debug_mode;
 
+uniform sampler2D in_view_pos_texture;
+
 const uint LIGHT_KIND_DIRECTIONAL = 0u;
 const uint LIGHT_KIND_POINT       = 1u;
 const uint LIGHT_KIND_AREA_RECT   = 2u;
 
 struct LightPacked {
+    // x=kind, y=flags, z=reserved, w=float bits of intensity
     uvec4 kind_flags_intensity;
-    vec4  color_rgba;
-    vec4  v0;
-    vec4  v1;
-    vec4  brdf;
+    // rgb=color, a=unused
+    vec4 color_rgba;
+    // sun: dir; point: pos.xyz, w=radius
+    vec4 v0;
+    // area: normal/halfHeight; others: reserved
+    vec4 v1;
+    // rough, metallic, falloff(0 phys / 1 lin), shadow
+    vec4 brdf;
 };
 
 int baseOf(int idx) {
@@ -73,10 +80,14 @@ vec3 reconstruct_view_pos(float depth, vec2 uv, mat4 invProj, vec2 viewportSize)
 }
 
 // Simple helpers
-float saturate(float x){ return clamp(x, 0.0, 1.0); }
-vec3  saturate3(vec3 v){ return clamp(v, 0.0, 1.0); }
+float saturate(float x) {
+    return clamp(x, 0.0, 1.0);
+}
 
-// BRDF (минимальный Disney/GGX скелет; подменишь своим при желании)
+vec3 saturate3(vec3 v) {
+    return clamp(v, 0.0, 1.0);
+}
+
 float D_GGX(float NoH, float a) {
     float a2 = a*a;
     float d = (NoH*NoH) * (a2 - 1.0) + 1.0;
@@ -225,10 +236,14 @@ void main()
     } else if (in_debug_mode == DEBUG_MODE_DEPTH) {
         // Reconstruct linear depth [0..1]
         float depth = texture(in_depth_texture, tex_coord).r;
-        const float z_near = 0.1;
-        const float z_far  = 100.0;
-        depth = (2.0 * z_near) / (z_far + z_near - depth * (z_far - z_near));
         FragColor = vec4(vec3(depth), 1.0);
+    } else if (in_debug_mode == DEBUG_MODE_POSITION) {
+        float depth = texture(in_depth_texture, tex_coord).r;
+        vec3 pos = reconstruct_view_pos(depth, tex_coord, in_inv_proj, in_viewport);
+        FragColor = vec4(pos * 0.5 + 0.5, 1.0);
+    } else if (in_debug_mode == DEBUG_MODE_POSITION_FROM_VS) {
+        vec3 pos = texture(in_view_pos_texture, tex_coord).xyz;
+        FragColor = vec4(pos * 0.5 + 0.5, 1.0);
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // Magenta for invalid mode
     }
