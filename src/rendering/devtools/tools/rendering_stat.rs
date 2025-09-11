@@ -1,6 +1,5 @@
 use crate::rendering::devtools::tools::{mul_sample, row_duration, row_f32, row_f32_s, row_height};
 use dawn_graphics::renderer::RendererMonitorEvent;
-use dawn_util::profile::MonitorSample;
 use egui_extras::{Column, TableBuilder};
 
 pub fn tool_rendering_stat(ui: &egui::Context, stat: &RendererMonitorEvent) {

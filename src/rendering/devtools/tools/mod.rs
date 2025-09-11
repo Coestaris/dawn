@@ -2,10 +2,10 @@ use dawn_util::profile::MonitorSample;
 
 pub mod about;
 pub mod assets_info;
+pub mod controls;
 pub mod rendering_settings;
 pub mod rendering_stat;
 pub mod world_stat;
-pub mod controls;
 
 pub fn row_height() -> f32 {
     egui::TextStyle::Body

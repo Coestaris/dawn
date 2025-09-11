@@ -1,8 +1,7 @@
 use crate::devtools::{DevtoolsToRendererMessage, DevtoolsToWorldMessage, DevtoolsWorldConnection};
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
-use crate::world::asset::{LIGHT_TEXTURE};
-use crate::world::dictionaries::Blob;
+use crate::world::asset::LIGHT_TEXTURE;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_ecs::events::TickEvent;
 use dawn_ecs::world::WorldLoopMonitorEvent;
