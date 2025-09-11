@@ -38,7 +38,7 @@ impl DevToolsGUI {
         if self.egui_winit.is_none() {
             let egui = egui::Context::default();
             egui.set_visuals(egui::Visuals::dark());
-            egui.set_zoom_factor(1.25);
+            egui.set_zoom_factor(1.1);
 
             let id = egui.viewport_id();
             let state = egui_winit::State::new(egui, id, w, None, None, None);
@@ -63,6 +63,7 @@ impl DevToolsGUI {
             let full_output = egui_winit.egui_ctx().run(raw_input, |ctx| {
                self.compositor.run(ctx);
             });
+            egui_winit.handle_platform_output(&window, full_output.platform_output);
 
             let pixels_per_point = egui_winit.egui_ctx().pixels_per_point();
             let clipped_meshes = egui_winit
