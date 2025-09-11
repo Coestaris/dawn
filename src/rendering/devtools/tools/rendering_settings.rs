@@ -109,6 +109,8 @@ impl RenderingConfig {
 pub fn tool_rendering_settings(ui: &egui::Context, config: &mut RenderingConfig) {
     egui::Window::new("Rendering settings")
         .resizable(true)
+        .fade_in(true)
+        .fade_out(true)
         .collapsible(true)
         .show(ui, |ui| {
             ui.checkbox(&mut config.0.borrow_mut().wireframe, "Wireframe");

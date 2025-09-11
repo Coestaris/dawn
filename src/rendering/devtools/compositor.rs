@@ -65,7 +65,9 @@ impl Compositor {
 
     pub fn run(&mut self, ui: &egui::Context) {
         // Create a toolbar window
-        egui::TopBottomPanel::top("toolbar").show(ui, |ui| {
+        egui::TopBottomPanel::top("toolbar")
+            .exact_height(25.0)
+            .show(ui, |ui| {
             ui.horizontal(|ui| {
                 // Output: FPS: xx, Frame time: xx ms. Tools:
                 if let Some(rs) = &self.rendering_stat {
@@ -77,24 +79,24 @@ impl Compositor {
                 ui.separator();
                 ui.label("Tools:");
 
-                if ui.button("About").clicked() {
-                    self.display_about = !self.display_about;
+                fn highlighted_button(ui: &mut egui::Ui, label: &str, active: &mut bool) {
+                    let btn = ui.button(label);
+                    let btn = if *active {
+                        btn.highlight()
+                    } else {
+                        btn
+                    };
+                    if btn.clicked() {
+                        *active = !*active;
+                    }
                 }
-                if ui.button("Controls").clicked() {
-                    self.display_controls = !self.display_controls;
-                }
-                if ui.button("World Stats").clicked() {
-                    self.display_world_stat = !self.display_world_stat;
-                }
-                if ui.button("Rendering Stats").clicked() {
-                    self.display_rendering_stat = !self.display_rendering_stat;
-                }
-                if ui.button("Rendering Settings").clicked() {
-                    self.display_rendering_settings = !self.display_rendering_settings;
-                }
-                if ui.button("Assets Info").clicked() {
-                    self.display_assets_infos = !self.display_assets_infos;
-                }
+
+                highlighted_button(ui, "About", &mut self.display_about);
+                highlighted_button(ui, "Controls", &mut self.display_controls);
+                highlighted_button(ui, "World Statistics", &mut self.display_world_stat);
+                highlighted_button(ui, "Rendering Statistics", &mut self.display_rendering_stat);
+                highlighted_button(ui, "Rendering Settings", &mut self.display_rendering_settings);
+                highlighted_button(ui, "Assets Info", &mut self.display_assets_infos);
             });
         });
 

@@ -1,5 +1,10 @@
 pub fn tool_controls(ui: &egui::Context) {
-    egui::Window::new("Controls").show(ui, |ui| {
+    egui::Window::new("Controls")
+        .resizable(true)
+        .fade_in(true)
+        .fade_out(true)
+        .collapsible(true)
+        .show(ui, |ui| {
         ui.vertical(|ui| {
             ui.label("Use the following controls to navigate the 3D scene:");
             ui.horizontal_wrapped(|ui| {
