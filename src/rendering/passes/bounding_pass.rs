@@ -1,9 +1,9 @@
+use crate::rendering::config::{BoundingBoxMode, RenderingConfig};
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::primitive::cube::Cube;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
-use crate::rendering::ui::{BoundingBoxMode, RenderingConfig};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
@@ -110,8 +110,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
             return RenderResult::default();
         }
 
-        let config = self.config.borrow();
-        match config.bounding_box_mode {
+        match self.config.get_bounding_box_mode() {
             BoundingBoxMode::Disabled => {
                 return RenderResult::default();
             }
@@ -153,7 +152,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         }
 
         if matches!(
-            self.config.borrow().bounding_box_mode,
+            self.config.get_bounding_box_mode(),
             BoundingBoxMode::Disabled
         ) {
             return RenderResult::default();
@@ -175,7 +174,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         ) -> RenderResult {
             let shader = pass.shader.as_ref().unwrap();
             let program = shader.shader.cast();
-            let mode = pass.config.borrow().bounding_box_mode;
+            let mode = pass.config.get_bounding_box_mode();
 
             match mode {
                 BoundingBoxMode::OBB | BoundingBoxMode::OBBHonorDepth => pass.cube.draw(
@@ -218,7 +217,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
             return RenderResult::default();
         }
         if matches!(
-            self.config.borrow().bounding_box_mode,
+            self.config.get_bounding_box_mode(),
             BoundingBoxMode::Disabled
         ) {
             return RenderResult::default();

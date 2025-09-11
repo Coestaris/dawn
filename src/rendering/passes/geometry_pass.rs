@@ -1,10 +1,10 @@
+use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fallback_tex::FallbackTextures;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
-use crate::rendering::ui::RenderingConfig;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
@@ -160,7 +160,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
             self.gl.depth_func(glow::LESS);
             self.gl.disable(glow::BLEND);
 
-            if self.config.borrow().wireframe {
+            if self.config.get_is_wireframe() {
                 self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::LINE);
             }
         }
@@ -257,7 +257,11 @@ impl RenderPass<RenderingEvent> for GeometryPass {
         Program::unbind(self.gl);
         Texture::unbind(self.gl, TextureBind::Texture2D, ALBEDO_INDEX as u32);
         Texture::unbind(self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
-        Texture::unbind(self.gl, TextureBind::Texture2D, METALLIC_ROUGHNESS_INDEX as u32);
+        Texture::unbind(
+            self.gl,
+            TextureBind::Texture2D,
+            METALLIC_ROUGHNESS_INDEX as u32,
+        );
         Texture::unbind(self.gl, TextureBind::Texture2D, OCCLUSION_INDEX as u32);
         Framebuffer::unbind(self.gl);
         RenderResult::default()

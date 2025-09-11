@@ -27,7 +27,6 @@ use std::time::Duration;
 pub const CURRENT_MAP: &str = "map1";
 
 pub const APPLICATION_ICON_BLOB_ID: &str = "icon_blob";
-pub const UI_FONT_BLOB_ID: &str = "ui_font_blob";
 pub const LIGHT_TEXTURE: &str = "light_texture";
 
 pub const GEOMETRY_SHADER: &str = "geometry_shader";
