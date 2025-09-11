@@ -1,9 +1,17 @@
+#[cfg(feature = "devtools")]
+use crate::devtools::DevtoolsRendererConnection;
 use crate::rendering::config::RenderingConfig;
+#[cfg(feature = "devtools")]
+use crate::rendering::devtools::DevToolsGUI;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::obuffer::OBuffer;
+#[cfg(feature = "devtools")]
+use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
+#[cfg(feature = "devtools")]
+use crate::rendering::passes::gizmos_pass::GizmosPass;
 use crate::rendering::passes::lighting_pass::LightingPass;
 use crate::rendering::passes::postprocess_pass::PostProcessPass;
 use crate::rendering::ubo::camera::CameraUBO;
@@ -12,23 +20,16 @@ use crate::run::WINDOW_SIZE;
 use crate::world::asset::{
     BILLBOARD_SHADER, GEOMETRY_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER,
 };
+use dawn_graphics::gl::probe::OpenGLInfo;
 use dawn_graphics::passes::events::RenderPassTargetId;
 use dawn_graphics::renderer::{CustomRenderer, RendererBackend};
 use dawn_graphics::{construct_chain, construct_chain_type};
 use glow::HasContext;
+use log::{info, warn};
 use std::ops::DerefMut;
 use std::rc::Rc;
 use winit::event::WindowEvent;
 use winit::window::Window;
-
-#[cfg(feature = "devtools")]
-use crate::devtools::DevtoolsRendererConnection;
-#[cfg(feature = "devtools")]
-use crate::rendering::devtools::DevToolsGUI;
-#[cfg(feature = "devtools")]
-use crate::rendering::passes::bounding_pass::BoundingPass;
-#[cfg(feature = "devtools")]
-use crate::rendering::passes::gizmos_pass::GizmosPass;
 
 mod config;
 #[cfg(feature = "devtools")]
@@ -42,7 +43,31 @@ pub mod passes;
 pub mod primitive;
 mod ubo;
 
-pub fn pre_pipeline_construct(gl: &glow::Context) {
+fn log_info(info: &OpenGLInfo) {
+    info!("OpenGL information:");
+    info!("  Version: {}", info.version);
+    info!("  Vendor: {}", info.vendor);
+    info!("  Renderer: {}", info.renderer);
+    if let Some(shading_lang_version) = &info.shading_language_version {
+        info!("  Shading Language Version: {}", shading_lang_version);
+    } else {
+        warn!("  Shading Language Version: Unknown");
+    }
+    info!("  Number of Extensions: {}", info.extensions.len());
+    info!("  Number of Binary Formats: {}", info.binary_formats.len());
+    if let Some(depth) = info.depth_bits {
+        info!("  Depth Bits: {}", depth);
+    } else {
+        warn!("  Depth Bits: Unknown");
+    }
+    if let Some(stencil) = info.stencil_bits {
+        info!("  Stencil Bits: {}", stencil);
+    } else {
+        warn!("  Stencil Bits: Unknown");
+    }
+}
+
+fn pre_pipeline_construct(gl: &glow::Context) {
     // Setup OpenGL state
     unsafe {
         gl.enable(glow::DEPTH_TEST);
@@ -85,6 +110,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         #[cfg(feature = "devtools")]
         self.devtools_gui.attach_to_window(w, r);
 
+        log_info(&r.info);
         pre_pipeline_construct(&r.gl);
 
         let gbuffer = Rc::new(GBuffer::new(&r.gl, WINDOW_SIZE));

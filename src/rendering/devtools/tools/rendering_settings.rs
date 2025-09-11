@@ -107,7 +107,7 @@ impl RenderingConfig {
 }
 
 pub fn tool_rendering_settings(ui: &egui::Context, config: &mut RenderingConfig) {
-    egui::Window::new("Rendering settings")
+    egui::Window::new("🔧 Rendering settings")
         .resizable(true)
         .fade_in(true)
         .fade_out(true)

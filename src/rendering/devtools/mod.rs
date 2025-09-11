@@ -11,7 +11,6 @@ use std::time::Instant;
 use winit::window::Window;
 
 pub struct DevToolsGUI {
-    last_frame: Instant,
     egui_winit: Option<egui_winit::State>,
     egui_glow: Option<egui_glow::Painter>,
     compositor: Compositor,
@@ -20,7 +19,6 @@ pub struct DevToolsGUI {
 impl DevToolsGUI {
     pub(crate) fn new(config: RenderingConfig, connection: DevtoolsRendererConnection) -> Self {
         DevToolsGUI {
-            last_frame: Instant::now(),
             egui_winit: None,
             egui_glow: None,
             compositor: Compositor::new(connection, config),
@@ -28,6 +26,8 @@ impl DevToolsGUI {
     }
 
     pub fn attach_to_window(&mut self, w: &Window, r: &RendererBackend<RenderingEvent>) {
+        self.compositor.update_gl_info(r.info.clone());
+
         if self.egui_glow.is_none() {
             let painter =
                 egui_glow::Painter::new(Arc::new(r.new_context().unwrap()), "", None, true)

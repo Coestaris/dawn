@@ -7,6 +7,12 @@ pub mod rendering_stat;
 pub mod world_stat;
 pub mod controls;
 
+pub fn row_height() -> f32 {
+    egui::TextStyle::Body
+        .resolve(&egui::Style::default())
+        .size
+        .max(20.0)
+}
 
 pub fn row_duration(
     row: &mut egui_extras::TableRow,
