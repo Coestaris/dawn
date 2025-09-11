@@ -25,6 +25,10 @@ pub fn add_row(ui: &mut egui::Ui, label: &str, value: &str) {
 
 pub fn tool_about(ui: &egui::Context) {
     egui::Window::new("About Dawn")
+        .resizable(true)
+        .fade_in(true)
+        .fade_out(true)
+        .collapsible(true)
         .show(ui, |ui| {
         ui.vertical(|ui| {
             let bi = dawn_build_info();

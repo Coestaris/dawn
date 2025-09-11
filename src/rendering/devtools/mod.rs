@@ -2,13 +2,13 @@ mod compositor;
 mod tools;
 
 use crate::devtools::DevtoolsRendererConnection;
-use crate::rendering::config::{BoundingBoxMode, OutputMode, RenderingConfig};
+use crate::rendering::config::RenderingConfig;
+use crate::rendering::devtools::compositor::Compositor;
 use crate::rendering::event::RenderingEvent;
 use dawn_graphics::renderer::RendererBackend;
 use std::sync::Arc;
 use std::time::Instant;
 use winit::window::Window;
-use crate::rendering::devtools::compositor::Compositor;
 
 pub struct DevToolsGUI {
     last_frame: Instant,
@@ -37,7 +37,15 @@ impl DevToolsGUI {
 
         if self.egui_winit.is_none() {
             let egui = egui::Context::default();
-            egui.set_visuals(egui::Visuals::dark());
+            let mut visuals = egui::Visuals::dark();
+            visuals.window_fill = egui::Color32::from_rgba_unmultiplied(
+                visuals.window_fill.r(),
+                visuals.window_fill.g(),
+                visuals.window_fill.b(),
+                200,
+            );
+
+            egui.set_visuals(visuals);
             egui.set_zoom_factor(1.1);
 
             let id = egui.viewport_id();
@@ -61,7 +69,7 @@ impl DevToolsGUI {
         if let (Some(egui_winit), Some(egui_glow)) = (&mut self.egui_winit, &mut self.egui_glow) {
             let raw_input = egui_winit.take_egui_input(&window);
             let full_output = egui_winit.egui_ctx().run(raw_input, |ctx| {
-               self.compositor.run(ctx);
+                self.compositor.run(ctx);
             });
             egui_winit.handle_platform_output(&window, full_output.platform_output);
 

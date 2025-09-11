@@ -4,7 +4,12 @@ use egui_extras::{Column, TableBuilder};
 use crate::rendering::devtools::tools::{mul_sample, row_duration, row_f32, row_f32_s};
 
 pub fn tool_rendering_stat(ui: &egui::Context, stat: &RendererMonitorEvent) {
-    egui::Window::new("Rendering Statistics").show(ui, |ui| {
+    egui::Window::new("Rendering Statistics")
+        .resizable(true)
+        .fade_in(true)
+        .fade_out(true)
+        .collapsible(true)
+        .show(ui, |ui| {
         let text_height = egui::TextStyle::Body
             .resolve(ui.style())
             .size
@@ -18,7 +23,7 @@ pub fn tool_rendering_stat(ui: &egui::Context, stat: &RendererMonitorEvent) {
             .column(Column::remainder())
             .header(text_height, |mut header| {
                 header.col(|ui| {
-                    ui.strong("Statistic");
+                    ui.strong("");
                 });
                 header.col(|ui| {
                     ui.strong("Min");

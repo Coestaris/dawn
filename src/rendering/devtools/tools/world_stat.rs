@@ -8,7 +8,12 @@ pub fn tool_world_stat(
     monitor: &WorldLoopMonitorEvent,
     stat: &WorldStatistics,
 ) {
-    egui::Window::new("World Statistics").show(ui, |ui| {
+    egui::Window::new("World Statistics")
+        .resizable(true)
+        .fade_in(true)
+        .fade_out(true)
+        .collapsible(true)
+        .show(ui, |ui| {
         let text_height = egui::TextStyle::Body
             .resolve(ui.style())
             .size
@@ -22,7 +27,7 @@ pub fn tool_world_stat(
             .column(Column::remainder())
             .header(text_height, |mut header| {
                 header.col(|ui| {
-                    ui.strong("Statistic");
+                    ui.strong("");
                 });
                 header.col(|ui| {
                     ui.strong("Min");
