@@ -1,6 +1,6 @@
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
-use crate::rendering::{pre_pipeline_construct, setup_rendering, SetupRenderingParameters};
+use crate::rendering::{setup_rendering, SetupRenderingParameters};
 use crate::world::app_icon::map_app_icon_handler;
 use crate::world::asset::setup_assets_system;
 use crate::world::exit::escape_handler;

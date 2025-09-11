@@ -11,6 +11,7 @@ use crate::rendering::devtools::tools::world_stat::tool_world_stat;
 use crate::world::devtools::WorldStatistics;
 use dawn_assets::hub::AssetInfo;
 use dawn_ecs::world::WorldLoopMonitorEvent;
+use dawn_graphics::gl::probe::OpenGLInfo;
 use dawn_graphics::renderer::RendererMonitorEvent;
 
 pub(crate) struct Compositor {
@@ -24,6 +25,7 @@ pub(crate) struct Compositor {
     display_about: bool,
     display_controls: bool,
 
+    gl_info: Option<OpenGLInfo>,
     assets_infos: Vec<AssetInfo>,
     world_stat: Option<(WorldLoopMonitorEvent, WorldStatistics)>,
     rendering_stat: Option<RendererMonitorEvent>,
@@ -40,10 +42,15 @@ impl Compositor {
             display_assets_infos: false,
             display_about: false,
             display_controls: false,
+            gl_info: None,
             assets_infos: vec![],
             world_stat: None,
             rendering_stat: None,
         }
+    }
+
+    pub fn update_gl_info(&mut self, info: OpenGLInfo) {
+        self.gl_info = Some(info);
     }
 
     pub fn before_frame(&mut self) {
@@ -65,10 +72,14 @@ impl Compositor {
 
     pub fn run(&mut self, ui: &egui::Context) {
         // Create a toolbar window
-        egui::TopBottomPanel::top("toolbar")
-            .exact_height(25.0)
+        let fill = ui.style().visuals.window_fill();
+        egui::TopBottomPanel::bottom("toolbar")
+            .frame(egui::Frame::default().inner_margin(5.0).fill(fill))
             .show(ui, |ui| {
             ui.horizontal(|ui| {
+                ui.label("♂");
+                ui.separator();
+
                 // Output: FPS: xx, Frame time: xx ms. Tools:
                 if let Some(rs) = &self.rendering_stat {
                     ui.label(format!("FPS: {:.2}", rs.fps.average(),));
@@ -97,7 +108,13 @@ impl Compositor {
                 highlighted_button(ui, "Rendering Statistics", &mut self.display_rendering_stat);
                 highlighted_button(ui, "Rendering Settings", &mut self.display_rendering_settings);
                 highlighted_button(ui, "Assets Info", &mut self.display_assets_infos);
+
+                ui.separator();
+                ui.add_space(ui.available_width() - 26.0);
+                ui.separator();
+                ui.label("♂");
             });
+
         });
 
         if self.display_world_stat {
@@ -125,7 +142,7 @@ impl Compositor {
             }
         }
         if self.display_about {
-            tool_about(ui);
+            tool_about(ui, self.gl_info.as_ref())
         }
         if self.display_controls {
             tool_controls(ui);

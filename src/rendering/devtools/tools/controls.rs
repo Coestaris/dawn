@@ -1,5 +1,5 @@
 pub fn tool_controls(ui: &egui::Context) {
-    egui::Window::new("Controls")
+    egui::Window::new("🔦 Controls")
         .resizable(true)
         .fade_in(true)
         .fade_out(true)
@@ -37,7 +37,7 @@ pub fn tool_controls(ui: &egui::Context) {
             ui.horizontal_wrapped(|ui| {
                 ui.label("Press");
                 ui.strong("F5");
-                ui.label("to reload all shaders.");
+                ui.label("to reload all assets.");
             });
             ui.horizontal_wrapped(|ui| {
                 ui.label("Press");
