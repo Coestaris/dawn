@@ -1,7 +1,7 @@
 use dawn_assets::ir::texture::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::renderable::RenderablePointLight;
-use glam::{UVec4, Vec4};
+use glam::UVec4;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]

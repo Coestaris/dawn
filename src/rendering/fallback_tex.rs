@@ -13,8 +13,7 @@ impl FallbackTextures {
     pub(crate) fn new(gl: &'static glow::Context) -> Self {
         let albedo_texture = Self::create_missing_albedo_texture(gl);
         let normal_texture = Self::create_missing_normal_texture(gl);
-        let metallic_roughness_texture =
-            Self::create_missing_metallic_roughness_texture(gl);
+        let metallic_roughness_texture = Self::create_missing_metallic_roughness_texture(gl);
         let occlusion_texture = Self::create_missing_occlusion_texture(gl);
 
         FallbackTextures {
@@ -106,7 +105,7 @@ impl FallbackTextures {
             .0
     }
 
-    fn create_missing_occlusion_texture(gl: &'static  glow::Context) -> Texture {
+    fn create_missing_occlusion_texture(gl: &'static glow::Context) -> Texture {
         let data = [
             255u8, 255, 255, 255, // Row 1
             255u8, 255, 255, 255, // Row 2

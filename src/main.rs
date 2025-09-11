@@ -6,12 +6,12 @@ use crate::run::run_dawn;
 use log::error;
 use std::panic;
 
+#[cfg(feature = "devtools")]
+pub mod devtools;
 pub mod logging;
 pub mod rendering;
 mod run;
 pub mod world;
-#[cfg(feature="devtools")]
-pub mod devtools;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]

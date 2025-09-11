@@ -101,7 +101,10 @@ pub fn tool_assets_info(ui: &egui::Context, assets: &Vec<AssetInfo>) -> ToolAsse
                                     ui.label(asset.header.id.as_str());
                                 });
                                 row.col(|ui| {
-                                    ui.colored_label(color_type(asset), asset.header.asset_type.as_str());
+                                    ui.colored_label(
+                                        color_type(asset),
+                                        asset.header.asset_type.as_str(),
+                                    );
                                 });
                                 row.col(|ui| {
                                     ui.colored_label(color_state(asset), asset.state.as_str());

@@ -26,7 +26,6 @@ use dawn_graphics::renderer::{CustomRenderer, RendererBackend};
 use dawn_graphics::{construct_chain, construct_chain_type};
 use glow::HasContext;
 use log::{info, warn};
-use std::ops::DerefMut;
 use std::rc::Rc;
 use winit::event::WindowEvent;
 use winit::window::Window;

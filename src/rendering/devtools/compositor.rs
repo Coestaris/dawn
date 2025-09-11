@@ -76,46 +76,49 @@ impl Compositor {
         egui::TopBottomPanel::bottom("toolbar")
             .frame(egui::Frame::default().inner_margin(5.0).fill(fill))
             .show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.label("♂");
-                ui.separator();
+                ui.horizontal(|ui| {
+                    ui.label("♂");
+                    ui.separator();
 
-                // Output: FPS: xx, Frame time: xx ms. Tools:
-                if let Some(rs) = &self.rendering_stat {
-                    ui.label(format!("FPS: {:.2}", rs.fps.average(),));
-                } else {
-                    ui.label("FPS: N/A");
-                }
-
-                ui.separator();
-                ui.label("Tools:");
-
-                fn highlighted_button(ui: &mut egui::Ui, label: &str, active: &mut bool) {
-                    let btn = ui.button(label);
-                    let btn = if *active {
-                        btn.highlight()
+                    // Output: FPS: xx, Frame time: xx ms. Tools:
+                    if let Some(rs) = &self.rendering_stat {
+                        ui.label(format!("FPS: {:.2}", rs.fps.average(),));
                     } else {
-                        btn
-                    };
-                    if btn.clicked() {
-                        *active = !*active;
+                        ui.label("FPS: N/A");
                     }
-                }
 
-                highlighted_button(ui, "About", &mut self.display_about);
-                highlighted_button(ui, "Controls", &mut self.display_controls);
-                highlighted_button(ui, "World Statistics", &mut self.display_world_stat);
-                highlighted_button(ui, "Rendering Statistics", &mut self.display_rendering_stat);
-                highlighted_button(ui, "Rendering Settings", &mut self.display_rendering_settings);
-                highlighted_button(ui, "Assets Info", &mut self.display_assets_infos);
+                    ui.separator();
+                    ui.label("Tools:");
 
-                ui.separator();
-                ui.add_space(ui.available_width() - 26.0);
-                ui.separator();
-                ui.label("♂");
+                    fn highlighted_button(ui: &mut egui::Ui, label: &str, active: &mut bool) {
+                        let btn = ui.button(label);
+                        let btn = if *active { btn.highlight() } else { btn };
+                        if btn.clicked() {
+                            *active = !*active;
+                        }
+                    }
+
+                    highlighted_button(ui, "About", &mut self.display_about);
+                    highlighted_button(ui, "Controls", &mut self.display_controls);
+                    highlighted_button(ui, "World Statistics", &mut self.display_world_stat);
+                    highlighted_button(
+                        ui,
+                        "Rendering Statistics",
+                        &mut self.display_rendering_stat,
+                    );
+                    highlighted_button(
+                        ui,
+                        "Rendering Settings",
+                        &mut self.display_rendering_settings,
+                    );
+                    highlighted_button(ui, "Assets Info", &mut self.display_assets_infos);
+
+                    ui.separator();
+                    ui.add_space(ui.available_width() - 26.0);
+                    ui.separator();
+                    ui.label("♂");
+                });
             });
-
-        });
 
         if self.display_world_stat {
             if let Some((me, ws)) = &self.world_stat {

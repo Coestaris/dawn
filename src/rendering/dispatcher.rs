@@ -10,8 +10,7 @@ use evenio::fetch::Single;
 use evenio::prelude::World;
 use glam::{Mat4, UVec2};
 use log::info;
-use winit::event::{ElementState, KeyEvent, WindowEvent};
-use winit::keyboard::{Key, NamedKey};
+use winit::event::WindowEvent;
 
 struct PassDescriptor {
     id: RenderPassTargetId,
@@ -69,7 +68,7 @@ impl RenderDispatcher {
                 RenderingEventMask::ORTHO_PROJECTION_UPDATED
             }
             RenderingEvent::ViewportResized(_) => RenderingEventMask::VIEWPORT_RESIZED,
-            
+
             RenderingEvent::SetLightTexture(_) => RenderingEventMask::SET_LIGHT_TEXTURE,
         };
 

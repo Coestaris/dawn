@@ -1,22 +1,22 @@
 use crate::world::input::InputHolder;
 use dawn_ecs::events::TickEvent;
-use dawn_graphics::ecs::{ObjectPointLight, ObjectPosition, ObjectRotation};
+use dawn_graphics::ecs::{ObjectPosition, ObjectRotation};
 use evenio::component::Component;
 use evenio::event::Receiver;
 use evenio::fetch::{Fetcher, Single};
 use glam::Quat;
 use winit::keyboard::{KeyCode, PhysicalKey};
 
+pub mod app_icon;
 pub mod asset;
+#[cfg(feature = "devtools")]
+pub mod devtools;
 pub mod dictionaries;
 pub mod exit;
 pub mod fcam;
 pub mod fullscreen;
 pub mod input;
 pub mod maps;
-#[cfg(feature="devtools")]
-pub mod devtools;
-pub mod app_icon;
 
 #[derive(Component)]
 pub struct Rotating;

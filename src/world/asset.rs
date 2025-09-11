@@ -2,7 +2,7 @@ use crate::logging::format_system_time;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
 use crate::world::dictionaries::{BlobAssetFactory, DictionaryAssetFactory};
-use dawn_assets::hub::{AssetHub, AssetHubEvent, AssetInfoState};
+use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::{BasicReader, ReaderBinding};
 use dawn_assets::requests::{AssetRequest, AssetRequestID, AssetRequestQuery};
@@ -34,7 +34,6 @@ pub const LINE_SHADER: &str = "line_shader";
 pub const BILLBOARD_SHADER: &str = "billboard_shader";
 pub const LIGHTING_SHADER: &str = "lighting_shader";
 pub const POSTPROCESS_SHADER: &str = "postprocess_shader";
-
 
 #[derive(Component)]
 struct ReaderHandle {
