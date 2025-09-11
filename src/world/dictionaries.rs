@@ -254,10 +254,7 @@ impl BlobAssetFactory {
                 |msg| {
                     if let IRAsset::Blob(data) = msg.ir {
                         let len = data.data.len();
-                        Ok((
-                            Blob { data: data.data },
-                            AssetMemoryUsage::new(len, 0)
-                        ))
+                        Ok((Blob { data: data.data }, AssetMemoryUsage::new(len, 0)))
                     } else {
                         Err(anyhow::anyhow!("Expected Blob asset"))
                     }

@@ -7,7 +7,6 @@ use crate::rendering::devtools::compositor::Compositor;
 use crate::rendering::event::RenderingEvent;
 use dawn_graphics::renderer::RendererBackend;
 use std::sync::Arc;
-use std::time::Instant;
 use winit::window::Window;
 
 pub struct DevToolsGUI {

@@ -1,8 +1,6 @@
-use crate::rendering::fbo::{GRenderBuffer, GTexture};
+use crate::rendering::fbo::GTexture;
 use dawn_assets::ir::texture::IRPixelFormat;
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
-use dawn_graphics::gl::raii::renderbuffer::{RenderBufferStorage, Renderbuffer};
-use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use glam::UVec2;
 use log::info;
 
