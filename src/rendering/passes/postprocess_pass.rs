@@ -1,8 +1,8 @@
+use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::obuffer::OBuffer;
 use crate::rendering::primitive::quad::Quad;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
-use crate::rendering::ui::RenderingConfig;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
@@ -114,7 +114,10 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
         Program::bind(self.gl, program);
-        program.set_uniform(shader.fxaa_enabled, self.config.borrow().fxaa_enabled as i32);
+        program.set_uniform(
+            shader.fxaa_enabled,
+            self.config.get_is_fxaa_enabled() as i32,
+        );
         Texture::bind(
             self.gl,
             TextureBind::Texture2D,

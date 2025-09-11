@@ -1,9 +1,9 @@
+use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::obuffer::OBuffer;
 use crate::rendering::primitive::quad::Quad;
 use crate::rendering::ubo::packed_light::{LightsHeaderCPU, PackedLights};
-use crate::rendering::ui::RenderingConfig;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
@@ -171,7 +171,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
         Program::bind(self.gl, program);
-        program.set_uniform(shader.debug_mode, self.config.borrow().output_mode as i32);
+        program.set_uniform(shader.debug_mode, self.config.get_output_mode() as i32);
         program.set_uniform(shader.packed_lights_header_location, header.as_uvec4());
         Texture::bind(
             self.gl,

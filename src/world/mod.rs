@@ -14,7 +14,8 @@ pub mod fcam;
 pub mod fullscreen;
 pub mod input;
 pub mod maps;
-pub mod ui;
+#[cfg(feature="devtools")]
+pub mod devtools;
 pub mod app_icon;
 
 #[derive(Component)]
