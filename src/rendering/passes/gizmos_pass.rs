@@ -1,8 +1,8 @@
+use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::primitive::quad::Quad;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
-use crate::rendering::ui::RenderingConfig;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
@@ -123,7 +123,7 @@ impl RenderPass<RenderingEvent> for GizmosPass {
         if self.light_texture.is_none() {
             return RenderResult::default();
         }
-        if !self.config.borrow().show_gizmos {
+        if !self.config.get_show_gizmos() {
             return RenderResult::default();
         }
 
@@ -162,7 +162,7 @@ impl RenderPass<RenderingEvent> for GizmosPass {
     }
 
     fn end(&mut self, _backend: &mut RendererBackend<RenderingEvent>) -> RenderResult {
-        if !self.config.borrow().show_gizmos {
+        if !self.config.get_show_gizmos() {
             return RenderResult::default();
         }
 

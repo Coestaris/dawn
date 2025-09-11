@@ -1,17 +1,14 @@
+use crate::rendering::config::RenderingConfig;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::obuffer::OBuffer;
-use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
-use crate::rendering::passes::gizmos_pass::GizmosPass;
 use crate::rendering::passes::lighting_pass::LightingPass;
 use crate::rendering::passes::postprocess_pass::PostProcessPass;
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
-use crate::rendering::ui::RenderingConfig;
 use crate::run::WINDOW_SIZE;
-use crate::ui::UIRendererConnection;
 use crate::world::asset::{
     BILLBOARD_SHADER, GEOMETRY_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER,
 };
@@ -19,15 +16,23 @@ use dawn_graphics::passes::events::RenderPassTargetId;
 use dawn_graphics::renderer::{CustomRenderer, RendererBackend};
 use dawn_graphics::{construct_chain, construct_chain_type};
 use glow::HasContext;
-use imgui_glow_renderer::AutoRenderer;
-use imgui_winit_support::WinitPlatform;
-use std::cell::RefCell;
 use std::ops::DerefMut;
 use std::rc::Rc;
-use std::time::Instant;
-use winit::event::{Event, WindowEvent};
+use winit::event::WindowEvent;
 use winit::window::Window;
 
+#[cfg(feature = "devtools")]
+use crate::devtools::DevtoolsRendererConnection;
+#[cfg(feature = "devtools")]
+use crate::rendering::devtools::DevToolsGUI;
+#[cfg(feature = "devtools")]
+use crate::rendering::passes::bounding_pass::BoundingPass;
+#[cfg(feature = "devtools")]
+use crate::rendering::passes::gizmos_pass::GizmosPass;
+
+mod config;
+#[cfg(feature = "devtools")]
+pub mod devtools;
 pub mod dispatcher;
 pub mod event;
 pub mod fallback_tex;
@@ -36,7 +41,6 @@ pub mod frustum;
 pub mod passes;
 pub mod primitive;
 mod ubo;
-mod ui;
 
 pub fn pre_pipeline_construct(gl: &glow::Context) {
     // Setup OpenGL state
@@ -54,20 +58,23 @@ pub fn pre_pipeline_construct(gl: &glow::Context) {
 pub struct Renderer {
     // Pass IDs
     geometry_id: RenderPassTargetId,
-    bounding_id: RenderPassTargetId,
-    gizmos_id: RenderPassTargetId,
+
     lighting_id: RenderPassTargetId,
     postprocess_id: RenderPassTargetId,
-
-    last_frame: Instant,
-    imgui: Rc<RefCell<imgui::Context>>,
-    imgui_winit: WinitPlatform,
-    ig_render: Option<AutoRenderer>,
-    ui: ui::UI,
     config: RenderingConfig,
+
+    #[cfg(feature = "devtools")]
+    devtools_gui: DevToolsGUI,
+    #[cfg(feature = "devtools")]
+    bounding_id: RenderPassTargetId,
+    #[cfg(feature = "devtools")]
+    gizmos_id: RenderPassTargetId,
 }
 
+#[cfg(feature = "devtools")]
 type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, LightingPass, PostProcessPass, BoundingPass, GizmosPass);
+#[cfg(not(feature = "devtools"))]
+type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, LightingPass, PostProcessPass);
 
 impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
     fn spawn_chain(
@@ -75,15 +82,8 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         w: &Window,
         r: &'static mut RendererBackend<RenderingEvent>,
     ) -> anyhow::Result<ChainType> {
-        let imgui_context = r.new_context()?;
-        let mut imgui = self.imgui.borrow_mut();
-        self.ig_render = Some(AutoRenderer::new(imgui_context, imgui.deref_mut())?);
-        drop(imgui);
-        self.imgui_winit.attach_window(
-            self.imgui.borrow_mut().io_mut(),
-            w,
-            imgui_winit_support::HiDpiMode::Default,
-        );
+        #[cfg(feature = "devtools")]
+        self.devtools_gui.attach_to_window(w, r);
 
         pre_pipeline_construct(&r.gl);
 
@@ -111,78 +111,63 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             self.config.clone(),
         );
 
-        let bounding_pass = BoundingPass::new(
-            &r.gl,
-            self.bounding_id,
-            gbuffer.clone(),
-            self.config.clone(),
-        );
-        let gizmo_pass =
-            GizmosPass::new(&r.gl, self.gizmos_id, gbuffer.clone(), self.config.clone());
+        #[cfg(feature = "devtools")]
+        {
+            let bounding_pass = BoundingPass::new(
+                &r.gl,
+                self.bounding_id,
+                gbuffer.clone(),
+                self.config.clone(),
+            );
+            let gizmo_pass =
+                GizmosPass::new(&r.gl, self.gizmos_id, gbuffer.clone(), self.config.clone());
 
-        Ok(construct_chain!(
-            geometry_pass,
-            lighting_pass,
-            postprocess_pass,
-            bounding_pass,
-            gizmo_pass
-        ))
+            Ok(construct_chain!(
+                geometry_pass,
+                lighting_pass,
+                postprocess_pass,
+                bounding_pass,
+                gizmo_pass
+            ))
+        }
+
+        #[cfg(not(feature = "devtools"))]
+        {
+            Ok(construct_chain!(
+                geometry_pass,
+                lighting_pass,
+                postprocess_pass
+            ))
+        }
     }
 
     fn on_window_event(
         &mut self,
-        window: &Window,
+        _window: &Window,
         _backend: &RendererBackend<RenderingEvent>,
-        event: &WindowEvent,
+        _event: &WindowEvent,
     ) {
-        self.imgui_winit.handle_event::<()>(
-            self.imgui.borrow_mut().io_mut(),
-            window,
-            // Fake the event to be a winit::event::Event for imgui_winit_support
-            &Event::<()>::WindowEvent {
-                window_id: window.id(),
-                event: event.clone(),
-            },
-        );
+        #[cfg(feature = "devtools")]
+        self.devtools_gui.on_window_event(_window, _event);
     }
 
-    fn before_frame(&mut self, window: &Window, _backend: &RendererBackend<RenderingEvent>) {
-        let now = Instant::now();
-        self.imgui
-            .borrow_mut()
-            .io_mut()
-            .update_delta_time(now - self.last_frame);
-        self.last_frame = now;
-
-        self.imgui_winit
-            .prepare_frame(self.imgui.borrow_mut().io_mut(), &window)
-            .unwrap();
+    fn before_frame(&mut self, _window: &Window, _backend: &RendererBackend<RenderingEvent>) {
+        #[cfg(feature = "devtools")]
+        self.devtools_gui.before_frame(_window, _backend);
     }
 
-    fn after_render(&mut self, window: &Window, _backend: &RendererBackend<RenderingEvent>) {
-        // Render UI here if needed
-        let mut imgui = self.imgui.borrow_mut();
-        if self.ui.before_frame(imgui.deref_mut(), window) {
-            // User requested to recreate the renderer (e.g. changed font size)
-            let ig_context = _backend.new_context().unwrap();
-            self.ig_render = Some(AutoRenderer::new(ig_context, imgui.deref_mut()).unwrap());
-        }
-
-        if let Some(renderer) = &mut self.ig_render {
-            let ui = imgui.frame();
-            self.imgui_winit.prepare_render(ui, &window);
-
-            self.ui.render(ui);
-
-            let draw_data = imgui.render();
-            unsafe {
-                renderer.render(draw_data).unwrap();
-            }
-        }
+    fn after_render(&mut self, _window: &Window, _backend: &RendererBackend<RenderingEvent>) {
+        #[cfg(feature = "devtools")]
+        self.devtools_gui.after_render(_window, _backend);
     }
 }
 
-pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer) {
+pub struct SetupRenderingParameters {
+    #[cfg(feature = "devtools")]
+    pub connection: DevtoolsRendererConnection,
+}
+
+pub fn setup_rendering(_param: SetupRenderingParameters) -> (RenderDispatcher, Renderer) {
     // Allocate the render pass IDs and select the events they will respond to.
     // This must be done before creating the renderer, because the passes
     // will need the IDs during their construction.
@@ -207,12 +192,14 @@ pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer)
         POSTPROCESS_SHADER,
     );
 
+    #[cfg(feature = "devtools")]
     let bounding_id = dispatcher.pass(
         RenderingEventMask::DROP_ALL_ASSETS
             | RenderingEventMask::UPDATE_SHADER
             | RenderingEventMask::VIEWPORT_RESIZED,
         LINE_SHADER,
     );
+    #[cfg(feature = "devtools")]
     let gizmos_id = dispatcher.pass(
         RenderingEventMask::DROP_ALL_ASSETS
             | RenderingEventMask::UPDATE_SHADER
@@ -222,20 +209,19 @@ pub fn setup_rendering(ui: UIRendererConnection) -> (RenderDispatcher, Renderer)
     );
 
     let config = RenderingConfig::new();
-    let mut imgui = ui::UI::create_context();
     let renderer = Renderer {
         geometry_id,
-        bounding_id,
-        gizmos_id,
         lighting_id,
-        postprocess_id,
 
-        imgui_winit: WinitPlatform::new(&mut imgui),
-        imgui: Rc::new(RefCell::new(imgui)),
-        last_frame: Instant::now(),
-        ig_render: None,
+        postprocess_id,
         config: config.clone(),
-        ui: ui::UI::new(config.clone(), ui),
+
+        #[cfg(feature = "devtools")]
+        devtools_gui: DevToolsGUI::new(config.clone(), _param.connection),
+        #[cfg(feature = "devtools")]
+        gizmos_id,
+        #[cfg(feature = "devtools")]
+        bounding_id,
     };
 
     (dispatcher, renderer)

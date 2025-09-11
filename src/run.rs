@@ -1,10 +1,6 @@
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
-use crate::rendering::passes::bounding_pass::BoundingPass;
-use crate::rendering::passes::geometry_pass::GeometryPass;
-use crate::rendering::passes::lighting_pass::LightingPass;
-use crate::rendering::{pre_pipeline_construct, setup_rendering};
-use crate::ui::{ui_bridge, UIWorldConnection};
+use crate::rendering::{pre_pipeline_construct, setup_rendering, SetupRenderingParameters};
 use crate::world::app_icon::map_app_icon_handler;
 use crate::world::asset::setup_assets_system;
 use crate::world::exit::escape_handler;
@@ -12,7 +8,6 @@ use crate::world::fcam::FreeCamera;
 use crate::world::fullscreen::setup_fullscreen_system;
 use crate::world::input::InputHolder;
 use crate::world::maps::setup_maps_system;
-use crate::world::ui::setup_ui_system;
 use crate::{logging, panic_hook, WorldSyncMode};
 use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
@@ -27,13 +22,17 @@ use log::info;
 use std::panic;
 use winit::window::{Cursor, CursorIcon};
 
+#[cfg(feature = "devtools")]
+use crate::devtools::{devtools_bridge, DevtoolsWorldConnection};
+
 pub(crate) static WINDOW_SIZE: UVec2 = UVec2::new(1280, 720);
 
 struct MainToEcs {
     hub: AssetHub,
     renderer_proxy: RendererProxy<RenderingEvent>,
-    ui_connection: UIWorldConnection,
     dispatcher: RenderDispatcher,
+    #[cfg(feature = "devtools")]
+    devtools_connection: DevtoolsWorldConnection,
 }
 
 fn init_world(world: &mut World, to_ecs: MainToEcs) {
@@ -46,7 +45,12 @@ fn init_world(world: &mut World, to_ecs: MainToEcs) {
     setup_assets_system(world, to_ecs.hub);
     setup_maps_system(world);
     setup_fullscreen_system(world);
-    setup_ui_system(world, to_ecs.ui_connection);
+
+    #[cfg(feature = "devtools")]
+    {
+        use crate::world::devtools::setup_devtools_system;
+        setup_devtools_system(world, to_ecs.devtools_connection);
+    }
 
     world.add_handler(escape_handler);
     world.add_handler(map_app_icon_handler);
@@ -108,7 +112,6 @@ pub fn run_dawn(sync: WorldSyncMode) {
         },
     };
 
-    let (renderer_ui, world_ui) = ui_bridge();
     let backend_config = RendererConfig {
         shader_factory_binding: Some(hub.get_factory_biding(AssetType::Shader)),
         texture_factory_binding: Some(hub.get_factory_biding(AssetType::Texture)),
@@ -117,10 +120,17 @@ pub fn run_dawn(sync: WorldSyncMode) {
         font_factory_binding: Some(hub.get_factory_biding(AssetType::Font)),
     };
 
+    #[cfg(feature = "devtools")]
+    let (renderer_connection, world_connection) = devtools_bridge();
+
     // Construct the renderer
     // No rendering will happen until we call `run` on the renderer.
     // The renderer will run on the main thread, while the world loop
-    let (dispatcher, custom_renderer) = setup_rendering(renderer_ui);
+    let param = SetupRenderingParameters {
+        #[cfg(feature = "devtools")]
+        connection: renderer_connection,
+    };
+    let (dispatcher, custom_renderer) = setup_rendering(param);
     let (renderer, proxy) =
         Renderer::new_with_monitoring(window_config.clone(), backend_config, custom_renderer)
             .unwrap();
@@ -131,7 +141,8 @@ pub fn run_dawn(sync: WorldSyncMode) {
     let to_ecs = MainToEcs {
         hub,
         renderer_proxy: proxy,
-        ui_connection: world_ui,
+        #[cfg(feature = "devtools")]
+        devtools_connection: world_connection,
         dispatcher,
     };
     let _world_loop = match sync {

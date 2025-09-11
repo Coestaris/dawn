@@ -10,7 +10,8 @@ pub mod logging;
 pub mod rendering;
 mod run;
 pub mod world;
-pub mod ui;
+#[cfg(feature="devtools")]
+pub mod devtools;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
