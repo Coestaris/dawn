@@ -24,6 +24,7 @@ pub enum BoundingBoxMode {
 #[cfg(feature = "devtools")]
 mod config_impl {
     use crate::rendering::config::{BoundingBoxMode, OutputMode};
+    use glam::Vec3;
     use std::cell::RefCell;
     use std::rc::Rc;
 
@@ -33,6 +34,11 @@ mod config_impl {
         pub output_mode: OutputMode,
         pub bounding_box_mode: BoundingBoxMode,
         pub show_gizmos: bool,
+
+        pub sky_color: Vec3,
+        pub ground_color: Vec3,
+        pub diffuse_scale: f32,
+        pub specular_scale: f32,
     }
 
     pub struct RenderingConfig(pub(crate) Rc<RefCell<RenderingConfigInner>>);
@@ -51,6 +57,10 @@ mod config_impl {
                 output_mode: OutputMode::Default,
                 bounding_box_mode: BoundingBoxMode::Disabled,
                 show_gizmos: false,
+                sky_color: Vec3::new(0.9, 0.95, 1.0),
+                ground_color: Vec3::new(0.5, 0.45, 0.4),
+                diffuse_scale: 1.0,
+                specular_scale: 0.2,
             })))
         }
 
@@ -72,6 +82,22 @@ mod config_impl {
 
         pub fn get_show_gizmos(&self) -> bool {
             self.0.borrow().show_gizmos
+        }
+
+        pub fn get_sky_color(&self) -> Vec3 {
+            self.0.borrow().sky_color
+        }
+
+        pub fn get_ground_color(&self) -> Vec3 {
+            self.0.borrow().ground_color
+        }
+
+        pub fn get_diffuse_scale(&self) -> f32 {
+            self.0.borrow().diffuse_scale
+        }
+
+        pub fn get_specular_scale(&self) -> f32 {
+            self.0.borrow().specular_scale
         }
     }
 }
