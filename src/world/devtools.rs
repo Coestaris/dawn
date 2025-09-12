@@ -6,7 +6,8 @@ use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_ecs::events::TickEvent;
 use dawn_ecs::world::WorldLoopMonitorEvent;
 use dawn_graphics::ecs::{
-    ObjectAreaLight, ObjectMesh, ObjectPointLight, ObjectSpotLight, ObjectSunLight,
+    ObjectAreaLight, ObjectColor, ObjectIntensity, ObjectMesh, ObjectPointLight, ObjectSpotLight,
+    ObjectSunLight,
 };
 use dawn_graphics::gl::raii::texture::Texture;
 use dawn_graphics::passes::events::RenderPassEvent;
@@ -14,9 +15,17 @@ use dawn_graphics::renderer::RendererMonitorEvent;
 use evenio::entity::EntityId;
 use evenio::event::Sender;
 use evenio::fetch::{Fetcher, Single};
-use evenio::prelude::Receiver;
+use evenio::prelude::{Query, Receiver};
 use evenio::world::World;
 use log::info;
+
+#[derive(Query)]
+struct SunLightQuery<'a> {
+    entity_id: EntityId,
+    light: &'a mut ObjectSunLight,
+    intensity: &'a mut ObjectIntensity,
+    color: &'a mut ObjectColor,
+}
 
 pub struct WorldStatistics {
     pub entities: usize,
@@ -66,6 +75,7 @@ fn recv_messages_from_renderer_handler(
     _: Receiver<TickEvent>,
     hub: Single<&mut AssetHub>,
     connection: Single<&mut DevtoolsWorldConnection>,
+    mut sun_light_query: Fetcher<SunLightQuery>,
 ) {
     while let Ok(msg) = connection.receiver.try_recv() {
         match msg {
@@ -76,6 +86,19 @@ fn recv_messages_from_renderer_handler(
                 let _ = connection
                     .sender
                     .send(DevtoolsToRendererMessage::AssetsEnumerated(infos));
+            }
+
+            DevtoolsToWorldMessage::ControlSunlight(control) => {
+                for sunlight in sun_light_query.iter_mut() {
+                    info!(
+                        "Setting sunlight {:?} intensity to {}, color to {:?}, direction to {:?}",
+                        sunlight.entity_id, control.intensity, control.color, control.direction
+                    );
+                    sunlight.intensity.intensity = control.intensity;
+                    sunlight.color.color = control.color;
+                    sunlight.light.direction = control.direction;
+                    sunlight.light.ambient = control.ambient;
+                }
             }
         }
     }

@@ -1,6 +1,6 @@
 use dawn_assets::ir::texture::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
-use dawn_graphics::renderable::RenderablePointLight;
+use dawn_graphics::renderable::{RenderablePointLight, RenderableSunLight};
 use glam::UVec4;
 
 #[repr(C)]
@@ -22,9 +22,10 @@ impl LightsHeaderCPU {
     }
 }
 
-const LIGHT_KIND_DIRECTIONAL: u32 = 1;
-const LIGHT_KIND_POINT: u32 = 2;
-const LIGHT_KIND_AREA_RECT: u32 = 3;
+const LIGHT_KIND_SUN: u32 = 1;
+const LIGHT_KIND_SPOT: u32 = 2;
+const LIGHT_KIND_POINT: u32 = 3;
+const LIGHT_KIND_AREA_RECT: u32 = 4;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -34,16 +35,30 @@ struct LightPackedCPU {
     pub reserved: u32,
     pub intensity: f32,
 
-    // rgb=color, a=unused
+    // sun: rgb
+    // spot: rgb, a=outer angle (cosine)
+    // point: rgb, a=unused
     pub color_rgba: [f32; 4],
-    // sun: dir; point: pos.xyz, w=radius
+
+    // sun: dir.xyz, w=ambient
+    // spot: pos.xyz, w=range
+    // point: pos.xyz, w=radius
     pub v0: [f32; 4],
-    // area: normal/halfHeight; others: reserved
+
+    // sun: unused
+    // spot: dir.xyz, w=inner angle (cosine)
+    // point: unused
     pub v1: [f32; 4],
 
     pub rough: f32,
     pub metallic: f32,
+    // sun: unused
+    // spot: linear falloff (1.0 = linear, 0.0 = quadratic)
+    // point: linear falloff (1.0 = linear, 0.0 = quadratic)
     pub falloff: f32,
+    // sun: shadow (1.0 = yes, 0.0 = no)
+    // spot: shadow (1.0 = yes, 0.0 = no)
+    // point: shadow (1.0 = yes, 0.0 = no)
     pub shadow: f32,
 }
 
@@ -116,6 +131,28 @@ impl PackedLights {
         packed.rough = 0.0;
         packed.metallic = 0.0;
         packed.falloff = if l.linear_falloff { 1.0 } else { 0.0 };
+        packed.shadow = 0.0;
+        self.push_packed(&packed);
+    }
+
+    pub fn push_sun_light(&mut self, l: &RenderableSunLight, view_mat: &glam::Mat4) {
+        let mut packed = LightPackedCPU::default();
+        packed.kind = LIGHT_KIND_SUN;
+        packed.flags = 0;
+        packed.reserved = 0;
+        packed.intensity = l.intensity;
+        packed.color_rgba[0] = l.color.x;
+        packed.color_rgba[1] = l.color.y;
+        packed.color_rgba[2] = l.color.z;
+        let view_dir = view_mat * l.direction.extend(0.0);
+        packed.v0[0] = view_dir.x;
+        packed.v0[1] = view_dir.y;
+        packed.v0[2] = view_dir.z;
+        packed.v0[3] = l.ambient;
+        packed.v1 = [0.0; 4];
+        packed.rough = 0.0;
+        packed.metallic = 0.0;
+        packed.falloff = 0.0;
         packed.shadow = 0.0;
         self.push_packed(&packed);
     }

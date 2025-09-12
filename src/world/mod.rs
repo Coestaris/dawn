@@ -11,12 +11,12 @@ pub mod app_icon;
 pub mod asset;
 #[cfg(feature = "devtools")]
 pub mod devtools;
-pub mod dictionaries;
 pub mod exit;
 pub mod fcam;
 pub mod fullscreen;
 pub mod input;
 pub mod maps;
+mod assets;
 
 #[derive(Component)]
 pub struct Rotating;

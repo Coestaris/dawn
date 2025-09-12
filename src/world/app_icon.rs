@@ -1,11 +1,11 @@
 use crate::world::asset::APPLICATION_ICON_BLOB_ID;
-use crate::world::dictionaries::Blob;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_graphics::renderer::OutputEvent;
 use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
 use log::info;
 use winit::window::Icon;
+use crate::world::assets::blob::Blob;
 
 pub fn map_app_icon_handler(
     r: Receiver<AssetHubEvent>,

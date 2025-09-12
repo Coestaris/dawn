@@ -29,6 +29,11 @@ struct ShaderContainer {
     packed_lights_location: UniformLocation,
     packed_lights_header_location: UniformLocation,
 
+    sky_color_location: UniformLocation,
+    ground_color_location: UniformLocation,
+    diffuse_scale_location: UniformLocation,
+    specular_scale_location: UniformLocation,
+
     albedo_metallic_texture: UniformLocation,
     normal_texture: UniformLocation,
     pbr_texture: UniformLocation,
@@ -101,6 +106,22 @@ impl RenderPass<RenderingEvent> for LightingPass {
                         .cast()
                         .get_uniform_location("in_packed_lights_header")
                         .unwrap(),
+                    sky_color_location: shader
+                        .cast()
+                        .get_uniform_location("ENV_SKY_COLOR")
+                        .unwrap(),
+                    ground_color_location: shader
+                        .cast()
+                        .get_uniform_location("ENV_GROUND_COLOR")
+                        .unwrap(),
+                    diffuse_scale_location: shader
+                        .cast()
+                        .get_uniform_location("ENV_DIFFUSE_SCALE")
+                        .unwrap(),
+                    specular_scale_location: shader
+                        .cast()
+                        .get_uniform_location("ENV_SPECULAR_SCALE")
+                        .unwrap(),
                     albedo_metallic_texture: shader
                         .cast()
                         .get_uniform_location("in_albedo_metallic_texture")
@@ -163,6 +184,10 @@ impl RenderPass<RenderingEvent> for LightingPass {
             self.packed_lights.push_point_light(light, &self.view);
             lights_count += 1;
         }
+        for light in frame.sun_lights.iter() {
+            self.packed_lights.push_sun_light(light, &self.view);
+            lights_count += 1;
+        }
         self.packed_lights.upload();
         let header = LightsHeaderCPU::new(lights_count as u32);
 
@@ -171,6 +196,16 @@ impl RenderPass<RenderingEvent> for LightingPass {
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
         Program::bind(self.gl, program);
+        program.set_uniform(shader.sky_color_location, self.config.get_sky_color());
+        program.set_uniform(shader.ground_color_location, self.config.get_ground_color());
+        program.set_uniform(
+            shader.diffuse_scale_location,
+            self.config.get_diffuse_scale(),
+        );
+        program.set_uniform(
+            shader.specular_scale_location,
+            self.config.get_specular_scale(),
+        );
         program.set_uniform(shader.debug_mode, self.config.get_output_mode() as i32);
         program.set_uniform(shader.packed_lights_header_location, header.as_uvec4());
         Texture::bind(

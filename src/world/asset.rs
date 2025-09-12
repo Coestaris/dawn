@@ -1,7 +1,6 @@
 use crate::logging::format_system_time;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
-use crate::world::dictionaries::{BlobAssetFactory, DictionaryAssetFactory};
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::ir::IRAsset;
 use dawn_assets::reader::{BasicReader, ReaderBinding};
@@ -23,6 +22,8 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
 use std::time::Duration;
+use crate::world::assets::blob::BlobAssetFactory;
+use crate::world::assets::dict::DictionaryAssetFactory;
 
 pub const CURRENT_MAP: &str = "map1";
 

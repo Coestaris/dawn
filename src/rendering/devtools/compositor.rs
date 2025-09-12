@@ -1,11 +1,13 @@
 use crate::devtools::{
-    DevtoolsRendererConnection, DevtoolsToRendererMessage, DevtoolsToWorldMessage,
+    DevtoolsRendererConnection, DevtoolsToRendererMessage, DevtoolsToWorldMessage, SunlightControl,
 };
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::devtools::tools::about::tool_about;
 use crate::rendering::devtools::tools::assets_info::{tool_assets_info, ToolAssetsInfoMessage};
 use crate::rendering::devtools::tools::controls::tool_controls;
-use crate::rendering::devtools::tools::rendering_settings::tool_rendering_settings;
+use crate::rendering::devtools::tools::rendering_settings::{
+    tool_rendering_settings, ToolRenderingSettingsMessage,
+};
 use crate::rendering::devtools::tools::rendering_stat::tool_rendering_stat;
 use crate::rendering::devtools::tools::world_stat::tool_world_stat;
 use crate::world::devtools::WorldStatistics;
@@ -29,6 +31,7 @@ pub(crate) struct Compositor {
     assets_infos: Vec<AssetInfo>,
     world_stat: Option<(WorldLoopMonitorEvent, WorldStatistics)>,
     rendering_stat: Option<RendererMonitorEvent>,
+    sunlight_control: SunlightControl,
 }
 
 impl Compositor {
@@ -46,6 +49,7 @@ impl Compositor {
             assets_infos: vec![],
             world_stat: None,
             rendering_stat: None,
+            sunlight_control: SunlightControl::default(),
         }
     }
 
@@ -131,7 +135,17 @@ impl Compositor {
             }
         }
         if self.display_rendering_settings {
-            tool_rendering_settings(ui, &mut self.config);
+            match tool_rendering_settings(ui, &mut self.config, &mut self.sunlight_control) {
+                ToolRenderingSettingsMessage::Nothing => {}
+                ToolRenderingSettingsMessage::ControlSunlight => {
+                    let _ = self
+                        .connection
+                        .sender
+                        .send(DevtoolsToWorldMessage::ControlSunlight(
+                            self.sunlight_control.clone(),
+                        ));
+                }
+            }
         }
         if self.display_assets_infos {
             match tool_assets_info(ui, &self.assets_infos) {

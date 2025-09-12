@@ -1,5 +1,6 @@
 use crate::world::asset::{DropAllAssetsEvent, CURRENT_MAP};
-use crate::world::dictionaries::{DictionaryEntry, MapUID};
+use crate::world::assets::dict::DictionaryEntry;
+use crate::world::assets::map::{MapEntryData, MapEntryID};
 use crate::world::{move_light_handler, rotate_handler, MovingByArrowKeys, Rotating};
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::{AssetID, TypedAsset};
@@ -12,12 +13,13 @@ use evenio::component::Component;
 use evenio::entity::EntityId;
 use evenio::event::{Despawn, Insert, Receiver, Sender, Spawn};
 use evenio::fetch::{Fetcher, Single};
+use glam::{Quat, Vec3};
 use log::{info, warn};
 
 #[derive(Component)]
 struct MapLink {
     map_name: String,
-    map_uid: MapUID,
+    map_uid: MapEntryID,
 }
 
 type SuperSender<'a> = Sender<
@@ -75,51 +77,86 @@ impl MapDispatcher {
     fn propagate_map(&self, sender: &mut SuperSender) {
         if let Some(map) = &self.map {
             let map = map.cast().as_map().unwrap();
-            for object in map.objects.iter() {
+            for entry in map.iter() {
                 let id = sender.spawn();
                 sender.insert(
                     id,
                     MapLink {
                         map_name: self.name.clone(),
-                        map_uid: object.uid,
+                        map_uid: entry.meta.id,
                     },
                 );
-                sender.insert(id, ObjectPosition(object.location));
-                sender.insert(id, ObjectRotation(object.rotation));
-                sender.insert(id, ObjectScale(object.scale));
-                self.derive_components(&object.components, id, sender);
-            }
-            for point_light in map.point_lights.iter() {
-                let id = sender.spawn();
-                sender.insert(
-                    id,
-                    MapLink {
-                        map_name: self.name.clone(),
-                        map_uid: point_light.uid,
-                    },
-                );
+                self.derive_components(&entry.meta.components, id, sender);
 
-                sender.insert(id, ObjectPosition(point_light.location));
-                sender.insert(
-                    id,
-                    ObjectPointLight {
-                        range: point_light.range,
-                        linear_falloff: point_light.linear_falloff,
-                    },
-                );
-                sender.insert(
-                    id,
-                    ObjectColor {
-                        color: point_light.color,
-                    },
-                );
-                sender.insert(
-                    id,
-                    ObjectIntensity {
-                        intensity: point_light.intensity,
-                    },
-                );
-                self.derive_components(&point_light.components, id, sender);
+                match entry.data.clone() {
+                    MapEntryData::Mesh {
+                        location,
+                        mesh,
+                        scale,
+                        rotation,
+                    } => {
+                        sender.insert(id, ObjectPosition(location));
+                        sender.insert(id, ObjectRotation(rotation));
+                        sender.insert(id, ObjectScale(scale));
+                    }
+                    MapEntryData::PointLight {
+                        location,
+                        color,
+                        intensity,
+                        linear_falloff,
+                        range,
+                        shadow,
+                    } => {
+                        sender.insert(id, ObjectPosition(location));
+                        sender.insert(
+                            id,
+                            ObjectPointLight {
+                                range,
+                                linear_falloff,
+                                shadow,
+                            },
+                        );
+                        sender.insert(id, ObjectColor { color });
+                        sender.insert(id, ObjectIntensity { intensity });
+                    }
+                    MapEntryData::SunLight {
+                        direction,
+                        color,
+                        intensity,
+                        ambient,
+                        shadow,
+                    } => {
+                        sender.insert(id, ObjectColor { color });
+                        sender.insert(id, ObjectIntensity { intensity });
+                        sender.insert(id, ObjectSunLight { direction, ambient, shadow });
+                    }
+                    MapEntryData::SpotLight {
+                        location,
+                        direction,
+                        color,
+                        intensity,
+                        range,
+                        inner_cone_angle,
+                        outer_cone_angle,
+                        linear_falloff,
+                        shadow,
+                    } => {
+                        sender.insert(id, ObjectPosition(location));
+                        sender.insert(
+                            id,
+                            ObjectSpotLight {
+                                direction,
+                                range,
+                                inner_cone_angle,
+                                outer_cone_angle,
+                                linear_falloff,
+                                shadow,
+                            },
+                        );
+                        sender.insert(id, ObjectColor { color });
+                        sender.insert(id, ObjectIntensity { intensity });
+                    }
+                }
             }
         }
     }
@@ -133,21 +170,23 @@ impl MapDispatcher {
     ) {
         if let Some(map) = &self.map {
             let map = map.cast().as_map().unwrap();
-            for object in map.objects.iter() {
-                // Found the mesh asset we want to assign
-                if object.mesh.as_str() == aid.as_str() {
-                    let mesh = hub.get_typed::<Mesh>(aid.clone()).unwrap();
+            for entry in map.iter() {
+                if let MapEntryData::Mesh { mesh, .. } = &entry.data {
+                    // Found the mesh asset we want to assign
+                    if mesh.as_str() == aid.as_str() {
+                        let mesh = hub.get_typed::<Mesh>(aid.clone()).unwrap();
 
-                    // Now find the entity with the matching MapLink
-                    for (entity, link) in link_fetcher.iter() {
-                        if link.map_name == self.name && link.map_uid == object.uid {
-                            info!(
-                                "Assigning mesh {} to entity {:?} (UID: {})",
-                                aid.as_str(),
-                                entity,
-                                object.uid
-                            );
-                            sender.insert(entity.clone(), ObjectMesh(mesh.clone()));
+                        // Now find the entity with the matching MapLink
+                        for (entity, link) in link_fetcher.iter() {
+                            if link.map_name == self.name && link.map_uid == entry.meta.id {
+                                info!(
+                                    "Assigning mesh {} to entity {:?} (UID: {})",
+                                    aid.as_str(),
+                                    entity,
+                                    entry.meta.id
+                                );
+                                sender.insert(entity.clone(), ObjectMesh(mesh.clone()));
+                            }
                         }
                     }
                 }

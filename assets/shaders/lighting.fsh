@@ -20,38 +20,52 @@ uniform uvec4 in_packed_lights_header;
 // see inc/debug_mode.glsl
 uniform int in_debug_mode;
 
-const uint LIGHT_KIND_DIRECTIONAL = 1u;
-const uint LIGHT_KIND_POINT       = 2u;
-const uint LIGHT_KIND_AREA_RECT   = 3u;
+uniform vec3 ENV_SKY_COLOR;
+uniform vec3 ENV_GROUND_COLOR;
+uniform float ENV_DIFFUSE_SCALE;
+uniform float ENV_SPECULAR_SCALE;
 
-struct LightPacked {
+const vec3 ENV_UP = vec3(0.0, 1.0, 0.0);
+
+const uint LIGHT_KIND_SUN       = 1u;
+const uint LIGHT_KIND_SPOT      = 2u;
+const uint LIGHT_KIND_POINT     = 3u;
+const uint LIGHT_KIND_AREA_RECT = 4u;
+
+struct PackedLight {
     // x=kind, y=flags, z=reserved, w=float bits of intensity
     uvec4 kind_flags_intensity;
-    // rgb=color, a=unused
+
+    // sun: rgb
+    // spot: rgb, a=outer angle (cosine)
+    // point: rgb, a=unused
     vec4 color_rgba;
-    // sun: dir; point: pos.xyz, w=radius
+
+    // sun: dir.xyz, w=ambient
+    // spot: pos.xyz, w=range
+    // point: pos.xyz, w=radius
     vec4 v0;
-    // area: normal/halfHeight; others: reserved
+
+    // sun: unused
+    // spot: dir.xyz, w=inner angle (cosine)
+    // point: unused
     vec4 v1;
+    
     // rough, metallic, falloff(0 phys / 1 lin), shadow
     vec4 brdf;
 };
-
-uint baseOf(uint idx) {
-    return idx * 5u;
-}
 
 uvec4 fetch4(uint i) {
     return texelFetch(in_packed_lights, ivec2(int(i), 0), 0);
 }
 
-uint lightsCount() {
+uint get_lights_count() {
     return in_packed_lights_header.z;
 }
 
-LightPacked readLight(uint idx) {
-    uint b = baseOf(idx);
-    LightPacked L;
+PackedLight get_light(uint idx) {
+    uint b = idx * 5u;
+    PackedLight L;
     L.kind_flags_intensity = fetch4(b + 0u);
     L.color_rgba           = uintBitsToFloat(fetch4(b + 1u));
     L.v0                   = uintBitsToFloat(fetch4(b + 2u));
@@ -60,50 +74,66 @@ LightPacked readLight(uint idx) {
     return L;
 }
 
-uint lightKind(in LightPacked L) {
+// 
+// Common light accessors
+//
+uint get_light_kind(in PackedLight L) {
     return L.kind_flags_intensity.x;
 }
 
-uint lightFlags(in LightPacked L) {
+uint get_light_flags(in PackedLight L) {
     return L.kind_flags_intensity.y;
 }
 
-float lightIntensity(in LightPacked L) {
+float get_light_intensity(in PackedLight L) {
     return uintBitsToFloat(L.kind_flags_intensity.w);
 }
 
-vec3 lightColor(in LightPacked L) {
+vec3 get_light_color(in PackedLight L) {
     return L.color_rgba.rgb;
 }
 
-vec3 lightSunDirection(in LightPacked L) {
-    return normalize(-L.v0.xyz);
+//
+// Sun light accessors
+//
+vec3 get_light_sun_direction(in PackedLight L) {
+    return normalize(L.v0.xyz);
 }
-
-vec3 lightPointPosition(in LightPacked L) {
-    return L.v0.xyz;
-}
-
-float lightPointRadius(in LightPacked L) {
+float get_light_sun_ambient(in PackedLight L) {
     return L.v0.w;
 }
 
-float lightRoughness(in LightPacked L) {
-    return L.brdf.x;
+//
+// Point light accessors
+//
+vec3 get_light_point_position(in PackedLight L) {
+    return L.v0.xyz;
+}
+float get_light_point_radius(in PackedLight L) {
+    return L.v0.w;
+}
+bool get_light_point_falloff_linear(in PackedLight L) {
+    return (L.brdf.z > 0.5);
 }
 
-float lightMetallic(in LightPacked L) {
-    return L.brdf.y;
+//
+// Spot light accessors
+//
+vec3 get_light_spot_position(in PackedLight L) {
+    return L.v0.xyz;
 }
-
-bool lightFalloffLinear(in LightPacked L) {
-    return L.brdf.z > 0.5;
+float get_light_spot_range(in PackedLight L) {
+    return L.v0.w;
 }
-
-bool lightCastsShadow(in LightPacked L) {
-    return (L.brdf.w > 0.5);
+vec3 get_light_spot_direction(in PackedLight L) {
+    return normalize(L.v1.xyz);
 }
-
+float get_light_spot_inner_cone(in PackedLight L) {
+    return L.v1.w;
+}
+float get_light_spot_outer_cone(in PackedLight L) {
+    return L.color_rgba.a;
+}
 
 // Decode a normal from an octahedral encoded vector
 vec3 decode_oct(vec2 e) {
@@ -166,12 +196,8 @@ float point_atten(float d, float radius, bool linear){
     }
 }
 
-vec3 shade_sun(LightPacked L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
-    return vec3(0.2, 0.0, 0.0); // Placeholder
-}
-
-vec3 shade_point(LightPacked L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
-    vec3 light_position = lightPointPosition(L);
+vec3 shade_point(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
+    vec3 light_position = get_light_point_position(L);
     // Vector from surface point to light
     vec3 Lvec = (light_position - P);
     float d2 = dot(Lvec, Lvec);
@@ -184,12 +210,12 @@ vec3 shade_point(LightPacked L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough
     if (NoL <= 0.0) return vec3(0);
 
     // Light color and intensity
-    vec3 light_color = lightColor(L);
-    vec3 Lc = light_color * lightIntensity(L);
+    vec3 light_color = get_light_color(L);
+    vec3 Lc = light_color * get_light_intensity(L);
 
     // Attenuation
-    float radius = lightPointRadius(L);
-    bool linear = lightFalloffLinear(L);
+    float radius = get_light_point_radius(L);
+    bool linear = get_light_point_falloff_linear(L);
     float atten = point_atten(d, radius, linear);
     // If fully attenuated, skip to not waste computations
     if (atten <= 0.0) return vec3(0);
@@ -211,7 +237,75 @@ vec3 shade_point(LightPacked L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough
     return (diff + spec) * Lc * (NoL * atten);
 }
 
-vec3 shade_area_rect(LightPacked L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
+vec3 shade_sun(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
+    // Нормализованные базовые векторы
+    N = normalize(N);
+    V = normalize(V);
+
+    // ===== Прямой солнечный свет (Cook-Torrance) =====
+    vec3  Ldir = -get_light_sun_direction(L);
+    float NoL  = max(dot(N, Ldir), 0.0);
+    if (NoL <= 0.0) {
+        // Солнце за горизонтом — только окружение (ниже)
+        // но не выходим — вернем ниже полный ambient
+    }
+
+    vec3 light_color = get_light_color(L);
+    vec3 Lc = light_color * get_light_intensity(L);
+
+    float a = max(rough * rough, 1e-4);
+    vec3  H = normalize(V + Ldir);
+    float NoV = max(dot(N, V),   1e-4);
+    float NoH = max(dot(N, H),   1e-4);
+    float HoV = max(dot(H, V),   1e-4);
+
+    vec3 F0  = mix(vec3(0.04), albedo, metallic);
+
+    float D   = D_GGX(NoH, a);
+    float Vg  = V_SmithGGXCorrelated(NoV, NoL, a);
+    vec3  F   = F_Schlick(F0, HoV);
+    float ao  = 1.0; // TODO: get from texture
+
+    vec3  diff = brdf_lambert(albedo, metallic);
+    vec3  spec = (D * Vg) * F;
+
+    vec3 Lo_direct = (NoL > 0.0) ? (diff + spec) * Lc * NoL : vec3(0.0);
+
+    // ===== Псевдо-IBL: диффузный hemi-ambient =====
+    // скаляр «окружающего» от солнца (НЕ смешиваем с Lc и НЕ умножаем на NoL)
+    float ambSun = get_light_sun_ambient(L);
+
+    // 0..1 — насколько нормаль направлена "к небу"
+    float NoUp = clamp(dot(N, normalize(ENV_UP)) * 0.5 + 0.5, 0.0, 1.0);
+
+    // Небо ярче/холоднее, "земля" темнее/теплее
+    vec3 hemiIrradiance = mix(ENV_GROUND_COLOR, ENV_SKY_COLOR, NoUp) * ambSun * ENV_DIFFUSE_SCALE;
+
+    // На металлах глушим диффуз (иначе «меловые» металлы)
+    vec3 ambientDiffuse = albedo * hemiIrradiance * (1.0 - metallic) * ao;
+
+    // (Опционально) немного уменьшаем диффузный ambient,
+    // если материал с высоким F0 (чтобы не было двойного счёта энергии)
+    float avgF0 = clamp((F0.x + F0.y + F0.z) * (1.0 / 3.0), 0.0, 1.0);
+    ambientDiffuse *= (1.0 - 0.25 * avgF0); // мягкая компенсация
+
+    // ===== Псевдо-IBL: спекулярный ambient =====
+    // Используем Френель от направления взгляда, roughness можно чуть «размягчить».
+    // Это не физично как prefiltered IBL, но дешево и визуально работает.
+    vec3 F_amb = F_Schlick(F0, NoV);
+    // Чем шероховатее, тем больше "размазка" и меньше энергия блика от мира:
+    float roughAtten = mix(1.0, 0.5, clamp(rough, 0.0, 1.0));  // эмпирически
+    vec3 specAmb = F_amb * ambSun * ENV_SPECULAR_SCALE * roughAtten * ao;
+
+    // Итог
+    return Lo_direct + ambientDiffuse + specAmb;
+}
+
+vec3 shade_spot(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
+    return vec3(0.0, 0.2, 0.0); // Placeholder
+}
+
+vec3 shade_area_rect(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
     return vec3(0.0, 1.0, 0.0); // Placeholder
 }
 
@@ -235,12 +329,14 @@ vec4 process() {
     vec3 V = normalize(-P);
 
     vec3 Lo = vec3(0);
-    for (uint i = 0u; i < lightsCount(); i++) {
-        LightPacked L = readLight(i);
+    for (uint i = 0u; i < get_lights_count(); ++i) {
+        PackedLight L = get_light(i);
 
-        uint kind = lightKind(L);
-        if (kind == LIGHT_KIND_DIRECTIONAL) {
+        uint kind = get_light_kind(L);
+        if (kind == LIGHT_KIND_SUN) {
             Lo += shade_sun(L, P, N, V, albedo, rough, metallic);
+        } else if (kind == LIGHT_KIND_SPOT) {
+            Lo += shade_spot(L, P, N, V, albedo, rough, metallic);
         } else if (kind == LIGHT_KIND_POINT) {
             Lo += shade_point(L, P, N, V, albedo, rough, metallic);
         } else if (kind == LIGHT_KIND_AREA_RECT) {
