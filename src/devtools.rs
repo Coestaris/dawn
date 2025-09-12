@@ -4,6 +4,26 @@ use dawn_assets::hub::AssetInfo;
 use dawn_ecs::world::WorldLoopMonitorEvent;
 use dawn_graphics::renderer::RendererMonitorEvent;
 use evenio::component::Component;
+use glam::Vec3;
+
+#[derive(Clone)]
+pub struct SunlightControl {
+    pub intensity: f32,
+    pub ambient: f32,
+    pub color: Vec3,
+    pub direction: Vec3,
+}
+
+impl Default for SunlightControl {
+    fn default() -> Self {
+        SunlightControl {
+            intensity: 1.0,
+            ambient: 0.1,
+            color: Vec3::ONE,
+            direction: Vec3::new(-1.0, -1.0, -1.0).normalize(),
+        }
+    }
+}
 
 pub enum DevtoolsToRendererMessage {
     WorldMonitor(WorldLoopMonitorEvent, WorldStatistics),
@@ -13,6 +33,7 @@ pub enum DevtoolsToRendererMessage {
 
 pub enum DevtoolsToWorldMessage {
     EnumerateAssets,
+    ControlSunlight(SunlightControl),
 }
 
 pub struct DevtoolsRendererConnection {
