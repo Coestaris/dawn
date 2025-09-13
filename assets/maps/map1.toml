@@ -29,21 +29,21 @@ Map.Components.Array = [{ String = "Rotating" }]
 #
 # Point Lights
 #
-#[[properties.Dictionary.entries.Map.PointLights.Array]]
-#Map.Location.Vec3f = [0.0, 5.0, 0.0]
-#Map.Color.Vec3f = [1.0, 1.0, 1.0]
-#Map.Intensity.F32 = 2.0
-#Map.Range.F32 = 15.0
-#Map.LinearFalloff.Bool = true
-#Map.Components.Array = [{ String = "MovingByArrowKeys" }]
-#
-#[[properties.Dictionary.entries.Map.PointLights.Array]]
-#Map.Location.Vec3f = [5.0, 5.0, 5.0]
-#Map.Color.Vec3f = [1.0, 0.0, 0.0]
-#Map.Intensity.F32 = 2.0
-#Map.Range.F32 = 15.0
-#Map.LinearFalloff.Bool = true
-#Map.Components.Array = [{ String = "MovingByArrowKeys" }]
+[[properties.Dictionary.entries.Map.PointLights.Array]]
+Map.Location.Vec3f = [0.0, 5.0, 0.0]
+Map.Color.Vec3f = [1.0, 1.0, 1.0]
+Map.Intensity.F32 = 2.0
+Map.Range.F32 = 15.0
+Map.LinearFalloff.Bool = true
+Map.Components.Array = [{ String = "MovingByArrowKeys" }]
+
+[[properties.Dictionary.entries.Map.PointLights.Array]]
+Map.Location.Vec3f = [5.0, 5.0, 5.0]
+Map.Color.Vec3f = [1.0, 0.0, 0.0]
+Map.Intensity.F32 = 2.0
+Map.Range.F32 = 15.0
+Map.LinearFalloff.Bool = true
+Map.Components.Array = [{ String = "MovingByArrowKeys" }]
 
 [[properties.Dictionary.entries.Map.SunLights.Array]]
 Map.Direction.Vec3f = [-1.0, -1.0, -1.0]
