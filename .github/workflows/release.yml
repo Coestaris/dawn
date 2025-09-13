@@ -9,7 +9,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-linux-x11:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Install global dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libgl1-mesa-dev
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
 
       - name: Set TAG env (from pushed tag)
         shell: bash
@@ -45,7 +45,7 @@ jobs:
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-linux-x11
+          name: build-linux
           path: target/release/dawn
           retention-days: 5
 
@@ -86,7 +86,7 @@ jobs:
           cargo set-version "${{ env.TAG_NO_V }}"
 
       - name: Build
-        run: cargo build --verbose --release --features no_assets
+        run: cargo build --verbose --release --no-default-features --features devtools
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -98,7 +98,7 @@ jobs:
   create-release:
     permissions: write-all
     runs-on: ubuntu-latest
-    needs: [build-linux-x11, build-windows]
+    needs: [build-linux, build-windows]
     steps:
       - name: Set TAG env (from pushed tag)
         shell: bash
@@ -107,8 +107,8 @@ jobs:
       - name: Download Linux artifact
         uses: actions/download-artifact@v5
         with:
-          name: build-linux-x11
-          path: ./build-linux-x11
+          name: build-linux
+          path: ./build-linux
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v5
@@ -139,8 +139,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build-linux-x11/dawn
-          asset_name: dawn-${{ env.TAG }}-linux-x11
+          asset_path: ./build-linux/dawn
+          asset_name: dawn-${{ env.TAG }}-linux
           asset_content_type: application/octet-stream
 
       - name: Upload Windows binary to Release
