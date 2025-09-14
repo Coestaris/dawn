@@ -3,7 +3,7 @@ use log::{info, Level, LevelFilter};
 use std::path::{Path, PathBuf};
 use std::ptr::addr_of_mut;
 use std::sync::OnceLock;
-use std::time::{Instant, SystemTime};
+use web_time::{Instant, SystemTime};
 use std::{fmt, mem};
 
 pub fn format_system_time(system_time: SystemTime) -> Option<String> {
@@ -57,7 +57,7 @@ pub fn format_inner<'a, F, const COLORED: bool>(
     let white: &'static str = if COLORED { "\x1B[37m" } else { "" }; // White
     let reset: &'static str = if COLORED { "\x1B[0m" } else { "" }; // Reset
 
-    let elapsed = START_TIME.get().map(|start| start.elapsed()).unwrap();
+    let elapsed = START_TIME.get().map(|start| start.elapsed()).unwrap_or_default();
 
     // Keep only the file name, not the full path since that can be very long
     // and filename is really additional info anyway

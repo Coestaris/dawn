@@ -17,7 +17,7 @@ pub fn row_height() -> f32 {
 pub fn row_duration(
     row: &mut egui_extras::TableRow,
     label: &str,
-    sample: MonitorSample<std::time::Duration>,
+    sample: MonitorSample<web_time::Duration>,
 ) {
     row.col(|ui| {
         ui.strong(label);

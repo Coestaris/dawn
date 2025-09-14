@@ -6,7 +6,7 @@ use evenio::component::Component;
 use evenio::event::Receiver;
 use evenio::fetch::Single;
 use evenio::prelude::World;
-use std::time::Duration;
+use web_time::Duration;
 
 pub struct Blob {
     pub data: Vec<u8>,
