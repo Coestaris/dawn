@@ -64,6 +64,7 @@ egui = { version = "0.32.2", features = ["default_fonts", "persistence", "rayon"
 egui-winit = { version = "0.32.2", optional = true }
 egui_extras = { version = "0.32.2", optional = true }
 egui_glow = { version = "0.32.2", optional = true }
+native-dialog = "0.9.0"
 
 [profile.release]
 lto = true

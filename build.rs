@@ -28,6 +28,7 @@ fn main() {
         );
         res.set_version_info(VersionInfo::FILEVERSION, version_code);
         res.set_version_info(VersionInfo::PRODUCTVERSION, version_code);
+        res.set_manifest(include_str!("assets/app.manifest"));
         res.compile().unwrap();
     }
 

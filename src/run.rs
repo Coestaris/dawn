@@ -145,7 +145,7 @@ pub fn run_dawn(sync: WorldSyncMode) {
         devtools_connection: world_connection,
         dispatcher,
     };
-    let _world_loop = match sync {
+    let world_loop = match sync {
         WorldSyncMode::FixedTickRate(tps) => {
             WorldLoopProxy::new_unsynchronized_with_monitoring(tps as f32, |w| {
                 Ok(init_world(w, to_ecs))
@@ -168,6 +168,6 @@ pub fn run_dawn(sync: WorldSyncMode) {
     info!("Renderer loop has exited");
 
     // Drop the world loop first to make sure it exits cleanly.
-    drop(_world_loop);
+    drop(world_loop);
     info!("World loop has exited");
 }
