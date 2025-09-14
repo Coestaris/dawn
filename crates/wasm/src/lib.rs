@@ -8,7 +8,13 @@ build_info::build_info!(pub fn dawn_build_info);
 
 fn panic_hook(info: &panic::PanicHookInfo) {
     // TODO: Display a dialog in the browser if possible.
-    error!("Panic: {}", info);
+    WebLogger::error(format!("Panic: {}", info).as_str());
+
+    // Print the backtrace if possible.
+    let capture = std::backtrace::Backtrace::capture();
+    if let std::backtrace::BacktraceStatus::Captured = capture.status() {
+        WebLogger::error(format!("Backtrace:\n{:?}", capture).as_str());
+    }
 }
 
 pub struct WebLogger;
@@ -57,6 +63,11 @@ impl log::Log for WebLogger {
 
 #[wasm_bindgen]
 pub fn run() {
+    // Bootstrap the panic hook
+    // The app will override it later,
+    // but we want to catch panics as early as possible
+    panic::set_hook(Box::new(panic_hook));
+
     WebLogger::log("Starting Dawn in WebAssembly...");
 
     let logger = WebLogger;
