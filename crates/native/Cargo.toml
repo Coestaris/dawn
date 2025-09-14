@@ -1,0 +1,32 @@
+[package]
+name = "dawn-native"
+# The version is derived from git tags by GitHub Actions
+description = "Bootstrapper for Dawn Application (Native)"
+license = "MIT"
+edition = "2021"
+
+[features]
+default = ["build_assets", "devtools"]
+build_assets = [
+    "dep:dawn-dacgen",
+    "dep:dawn-dac",
+    "dep:dirs",
+]
+devtools = [ "dawn-app/devtools" ]
+
+[build-dependencies]
+build-info-build = "0.0.41"
+dawn-dacgen = { path = "../../lib/crates/dacgen", optional = true }
+dawn-dac = { path = "../../lib/crates/dac", optional = true }
+dirs = { version = "6.0.0", optional = true }
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+winresource = "0.1"
+
+[dependencies]
+dawn-app = { path = "../app" }
+native-dialog = "0.9.0"
+build-info = "0.0.41"
+error = "0.1.9"
+log = "0.4.28"
+fern = "0.7.1"

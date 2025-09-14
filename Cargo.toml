@@ -1,6 +1,9 @@
 [workspace]
+resolver = "2"
 members = [
-    ".",
+    "crates/app",
+    "crates/native",
+    "crates/wasm",
     "lib/crates/assets",
     "lib/crates/audio",
     "lib/crates/ecs",
@@ -8,68 +11,3 @@ members = [
     "lib/crates/util",
     "lib/crates/dac",
 ]
-
-[package]
-name = "dawn"
-# The version is derived from git tags by GitHub Actions
-edition = "2021"
-
-[features]
-default = ["build_assets", "devtools"]
-build_assets = [
-    "dep:dawn-dacgen",
-    "dep:dawn-dac",
-    "dep:dirs",
-]
-devtools = [
-    "dep:egui",
-    "dep:egui-winit",
-    "dep:egui_glow",
-    "dep:egui_extras",
-]
-
-[build-dependencies]
-build-info-build = "0.0.41"
-
-dawn-dacgen = { path = "lib/crates/dacgen", optional = true }
-dawn-dac = { path = "lib/crates/dac", optional = true }
-dirs = { version = "6.0.0", optional = true }
-
-[target.'cfg(target_os = "windows")'.build-dependencies]
-winresource = "0.1"
-
-[dependencies]
-dawn-assets = { path = "lib/crates/assets", features = ["hub"] }
-dawn-audio = { path = "lib/crates/audio" }
-dawn-ecs = { path = "lib/crates/ecs" }
-dawn-graphics = { path = "lib/crates/graphics" }
-dawn-util = { path = "lib/crates/util" }
-dawn-dac = { path = "lib/crates/dac" }
-glow = "0.16.0"
-evenio = "0.6.0"
-log = "0.4.27"
-fern = "0.7"
-ico = "0.4.0"
-dirs = "6.0.0"
-build-info = "0.0.41"
-glam = "0.30.5"
-libc = "0.2.172"
-anyhow = "1.0.99"
-bitflags = "2.9.2"
-winit = "0.30.12"
-crossbeam-channel = "0.5.15"
-bytemuck = "1.23.2"
-
-egui = { version = "0.32.2", features = ["default_fonts", "persistence", "rayon", "log" ], optional = true }
-egui-winit = { version = "0.32.2", optional = true }
-egui_extras = { version = "0.32.2", optional = true }
-egui_glow = { version = "0.32.2", optional = true }
-native-dialog = "0.9.0"
-
-[profile.release]
-lto = true
-opt-level = 3
-
-[profile.dev]
-lto = false
-opt-level = 1
