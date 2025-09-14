@@ -28,7 +28,7 @@ use log::{error, info};
 use std::backtrace::BacktraceStatus;
 use std::panic;
 use std::panic::PanicHookInfo;
-use std::time::Instant;
+use web_time::Instant;
 use winit::window::{Cursor, CursorIcon};
 
 #[cfg(feature = "devtools")]

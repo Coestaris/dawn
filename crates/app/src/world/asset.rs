@@ -21,7 +21,7 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread::{Builder, JoinHandle};
-use std::time::Duration;
+use web_time::Duration;
 use crate::world::assets::blob::BlobAssetFactory;
 use crate::world::assets::dict::DictionaryAssetFactory;
 

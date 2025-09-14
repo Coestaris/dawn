@@ -41,6 +41,7 @@ bytemuck = "1.23.2"
 egui = { version = "0.32.2", features = ["default_fonts", "persistence", "rayon", "log" ], optional = true }
 egui_extras = { version = "0.32.2", optional = true }
 egui_glow = { version = "0.32.2", optional = true }
+web-time = "1.1.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }

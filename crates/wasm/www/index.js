@@ -1,3 +1,3 @@
-import * as dawn from "./pkg/dawn_bootstrap_wasm"
+import * as dawn from "./pkg/dawn_wasm"
 
 dawn.run()

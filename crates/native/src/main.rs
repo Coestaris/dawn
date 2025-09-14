@@ -6,7 +6,7 @@ use log::{error, LevelFilter};
 use std::backtrace::BacktraceStatus;
 use std::panic;
 use std::path::PathBuf;
-use std::time::Instant;
+use web_time::Instant;
 
 build_info::build_info!(pub fn dawn_build_info);
 
