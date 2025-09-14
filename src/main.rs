@@ -4,6 +4,7 @@
 use crate::logging::setup_logging;
 use crate::run::run_dawn;
 use log::error;
+use std::backtrace::BacktraceStatus;
 use std::panic;
 
 #[cfg(feature = "devtools")]
@@ -30,9 +31,29 @@ const WORLD_SYNC_MODE: WorldSyncMode = WorldSyncMode::SynchronizedWithMonitor;
 pub fn panic_hook(info: &panic::PanicHookInfo) {
     // For development, it's more convenient to see the panic messages in the console.
     #[cfg(not(debug_assertions))]
-    {}
+    {
+        use native_dialog;
+        native_dialog::DialogBuilder::message()
+            .set_level(native_dialog::MessageLevel::Error)
+            .set_title("Application Error")
+            .set_text(&format!(
+                "The application has encountered a fatal error:\n\n{}\n\nSee the log file for more details.\nApplication will now exit.",
+                info
+            ))
+            .alert()
+            .show()
+            .map_err(|e| {
+                error!("Failed to show panic message dialog: {}", e);
+            });
+    }
 
     error!("Panic: {}", info);
+
+    // Print the backtrace if possible.
+    let capture = std::backtrace::Backtrace::capture();
+    if let BacktraceStatus::Captured = capture.status() {
+        error!("Backtrace:\n{:?}", capture);
+    }
 }
 
 fn main() {
