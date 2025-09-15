@@ -1,5 +1,7 @@
 [header]
 asset_type = "Mesh"
+author = "Frank Meinl, Crytek"
+license = "CC BY 3.0"
 
 [properties.Mesh.source]
 Url.url = "https://github.com/Breush/lava-assets/raw/refs/heads/master/models/sponza.glb"

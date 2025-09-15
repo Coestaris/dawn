@@ -1,5 +1,7 @@
 [header]
 asset_type = "Mesh"
+author = "Coestaris <vk_vm@ukr.net>"
+license = "MIT"
 
 [properties.Mesh.source]
 File = "blobs/cube.glb"

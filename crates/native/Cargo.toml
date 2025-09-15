@@ -34,3 +34,11 @@ error = "0.1.9"
 log = "0.4.28"
 fern = "0.7.1"
 web-time = "1.1.0"
+
+[profile.release]
+lto = true
+opt-level = 3
+
+[profile.dev]
+lto = false
+opt-level = 1
