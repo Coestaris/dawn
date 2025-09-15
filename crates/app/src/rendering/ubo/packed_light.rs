@@ -2,6 +2,7 @@ use dawn_assets::ir::texture::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::renderable::{RenderablePointLight, RenderableSunLight};
 use glam::UVec4;
+use std::sync::Arc;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -63,23 +64,23 @@ struct LightPackedCPU {
 }
 
 pub struct PackedLights {
-    gl: &'static glow::Context,
+    gl: Arc<glow::Context>,
     capacity_texels: i32,
     pub texture: Texture,
     vec: Vec<u32>,
 }
 
 impl PackedLights {
-    pub fn new(gl: &'static glow::Context) -> Option<Self> {
-        let texture = Texture::new2d(gl).ok()?;
+    pub fn new(gl: Arc<glow::Context>) -> Option<Self> {
+        let texture = Texture::new2d(gl.clone()).ok()?;
 
-        Texture::bind(gl, TextureBind::Texture2D, &texture, 0);
+        Texture::bind(&gl, TextureBind::Texture2D, &texture, 0);
         texture.set_mag_filter(IRTextureFilter::Nearest).ok()?;
         texture.set_min_filter(IRTextureFilter::Nearest).ok()?;
         texture.set_wrap_r(IRTextureWrap::ClampToEdge).ok()?;
         texture.set_wrap_s(IRTextureWrap::ClampToEdge).ok()?;
         texture.set_wrap_t(IRTextureWrap::ClampToEdge).ok()?;
-        Texture::unbind(gl, TextureBind::Texture2D, 0);
+        Texture::unbind(&gl, TextureBind::Texture2D, 0);
 
         Some(Self {
             gl,
@@ -158,7 +159,7 @@ impl PackedLights {
     }
 
     pub fn upload(&mut self) {
-        Texture::bind(self.gl, TextureBind::Texture2D, &self.texture, 0);
+        Texture::bind(&self.gl, TextureBind::Texture2D, &self.texture, 0);
 
         let needed_texels = self.vec.len() as i32;
         if needed_texels > self.capacity_texels {
@@ -185,6 +186,6 @@ impl PackedLights {
                 Some(bytemuck::cast_slice(&self.vec)),
             )
             .ok();
-        Texture::unbind(self.gl, TextureBind::Texture2D, 0);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
     }
 }

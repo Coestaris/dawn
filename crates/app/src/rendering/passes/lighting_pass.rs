@@ -14,6 +14,7 @@ use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
+use std::sync::Arc;
 
 const ALBEDO_METALLIC_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
@@ -41,7 +42,7 @@ struct ShaderContainer {
 }
 
 pub(crate) struct LightingPass {
-    gl: &'static glow::Context,
+    gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     config: RenderingConfig,
 
@@ -55,18 +56,18 @@ pub(crate) struct LightingPass {
 
 impl LightingPass {
     pub fn new(
-        gl: &'static glow::Context,
+        gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
         obuffer: Rc<OBuffer>,
         config: RenderingConfig,
     ) -> Self {
         LightingPass {
-            gl,
+            gl: gl.clone(),
             id,
             config,
             shader: None,
-            quad: Quad::new(gl),
+            quad: Quad::new(gl.clone()),
             view: glam::Mat4::IDENTITY,
             packed_lights: PackedLights::new(gl).unwrap(),
             gbuffer,
@@ -142,13 +143,13 @@ impl RenderPass<RenderingEvent> for LightingPass {
 
                 if let Some(shader) = self.shader.as_mut() {
                     let program = shader.shader.cast();
-                    Program::bind(self.gl, &program);
+                    Program::bind(&self.gl, &program);
                     program.set_uniform(&shader.albedo_metallic_texture, ALBEDO_METALLIC_INDEX);
                     program.set_uniform(&shader.normal_texture, NORMAL_INDEX);
                     program.set_uniform(&shader.pbr_texture, PBR_INDEX);
                     program.set_uniform(&shader.depth_texture, DEPTH_INDEX);
                     program.set_uniform(&shader.packed_lights_location, PACKED_LIGHTS_INDEX);
-                    Program::unbind(self.gl);
+                    Program::unbind(&self.gl);
                 }
             }
             RenderingEvent::ViewportResized(size) => {
@@ -191,11 +192,11 @@ impl RenderPass<RenderingEvent> for LightingPass {
         self.packed_lights.upload();
         let header = LightsHeaderCPU::new(lights_count as u32);
 
-        Framebuffer::bind(self.gl, &self.obuffer.fbo);
+        Framebuffer::bind(&self.gl, &self.obuffer.fbo);
 
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
-        Program::bind(self.gl, program);
+        Program::bind(&self.gl, program);
         program.set_uniform(&shader.sky_color_location, self.config.get_sky_color());
         program.set_uniform(
             &shader.ground_color_location,
@@ -212,31 +213,31 @@ impl RenderPass<RenderingEvent> for LightingPass {
         program.set_uniform(&shader.debug_mode, self.config.get_output_mode() as i32);
         program.set_uniform(&shader.packed_lights_header_location, header.as_uvec4());
         Texture::bind(
-            self.gl,
+            &self.gl,
             TextureBind::Texture2D,
             &self.gbuffer.albedo_metalic.texture,
             ALBEDO_METALLIC_INDEX as u32,
         );
         Texture::bind(
-            self.gl,
+            &self.gl,
             TextureBind::Texture2D,
             &self.gbuffer.normal.texture,
             NORMAL_INDEX as u32,
         );
         Texture::bind(
-            self.gl,
+            &self.gl,
             TextureBind::Texture2D,
             &self.gbuffer.pbr.texture,
             PBR_INDEX as u32,
         );
         Texture::bind(
-            self.gl,
+            &self.gl,
             TextureBind::Texture2D,
             &self.gbuffer.depth.texture,
             DEPTH_INDEX as u32,
         );
         Texture::bind(
-            self.gl,
+            &self.gl,
             TextureBind::Texture2D,
             &self.packed_lights.texture,
             PACKED_LIGHTS_INDEX as u32,
@@ -246,9 +247,9 @@ impl RenderPass<RenderingEvent> for LightingPass {
 
     #[inline(always)]
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
-        Framebuffer::unbind(self.gl);
-        Program::unbind(self.gl);
-        Texture::unbind(self.gl, TextureBind::Texture2D, 0);
+        Framebuffer::unbind(&self.gl);
+        Program::unbind(&self.gl);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
         RenderResult::default()
     }
 }

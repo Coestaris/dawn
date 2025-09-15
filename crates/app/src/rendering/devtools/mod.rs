@@ -8,7 +8,6 @@ use crate::rendering::devtools::compositor::Compositor;
 use crate::rendering::event::RenderingEvent;
 use build_info::BuildInfo;
 use dawn_graphics::renderer::RendererBackend;
-use std::fs::read;
 use std::sync::Arc;
 use winit::window::Window;
 
@@ -36,9 +35,8 @@ impl DevToolsGUI {
         self.compositor.update_gl_info(r.info.clone());
 
         if self.egui_glow.is_none() {
-            let painter =
-                egui_glow::Painter::new(Arc::new(r.new_context().unwrap()), "", None, true)
-                    .expect("Failed to initialize egui_glow painter");
+            let painter = egui_glow::Painter::new(r.gl.clone(), "", None, true)
+                .expect("Failed to initialize egui_glow painter");
             self.egui_glow = Some(painter);
         }
 

@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use dawn_assets::ir::texture::IRPixelFormat;
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
 use dawn_graphics::gl::raii::renderbuffer::{RenderBufferStorage, Renderbuffer};
@@ -8,14 +9,14 @@ pub mod gbuffer;
 pub mod obuffer;
 
 pub struct GTexture {
-    gl: &'static glow::Context,
+    gl: Arc<glow::Context>,
     pub texture: Texture,
     pub format: IRPixelFormat,
     pub attachment: FramebufferAttachment,
 }
 
 pub struct GRenderBuffer {
-    gl: &'static glow::Context,
+    gl: Arc<glow::Context>,
     pub render_buffer: Renderbuffer,
     pub format: RenderBufferStorage,
     pub attachment: FramebufferAttachment,
@@ -23,11 +24,11 @@ pub struct GRenderBuffer {
 
 impl GRenderBuffer {
     fn new(
-        gl: &'static glow::Context,
+        gl: Arc<glow::Context>,
         format: RenderBufferStorage,
         attachment: FramebufferAttachment,
     ) -> Self {
-        let render_buffer = Renderbuffer::new(gl).unwrap();
+        let render_buffer = Renderbuffer::new(gl.clone()).unwrap();
         GRenderBuffer {
             gl,
             render_buffer,
@@ -37,29 +38,29 @@ impl GRenderBuffer {
     }
 
     fn resize(&self, new_size: UVec2) {
-        Renderbuffer::bind(self.gl, &self.render_buffer);
+        Renderbuffer::bind(&self.gl, &self.render_buffer);
         self.render_buffer
             .storage(self.format, new_size.x as usize, new_size.y as usize);
-        Renderbuffer::unbind(self.gl);
+        Renderbuffer::unbind(&self.gl);
     }
 
     fn attach(&self, fbo: &Framebuffer) {
-        Framebuffer::bind(self.gl, fbo);
+        Framebuffer::bind(&self.gl, fbo);
         fbo.attach_renderbuffer(self.attachment, &self.render_buffer);
-        Framebuffer::unbind(self.gl);
+        Framebuffer::unbind(&self.gl);
     }
 }
 
 impl GTexture {
     fn new(
-        gl: &'static glow::Context,
+        gl: Arc<glow::Context>,
         format: IRPixelFormat,
         attachment: FramebufferAttachment,
     ) -> Self {
-        let texture = Texture::new2d(gl).unwrap();
-        Texture::bind(gl, TextureBind::Texture2D, &texture, 0);
+        let texture = Texture::new2d(gl.clone()).unwrap();
+        Texture::bind(&gl, TextureBind::Texture2D, &texture, 0);
         texture.generate_mipmap();
-        Texture::unbind(gl, TextureBind::Texture2D, 0);
+        Texture::unbind(&gl, TextureBind::Texture2D, 0);
 
         GTexture {
             gl,
@@ -70,7 +71,7 @@ impl GTexture {
     }
 
     fn resize(&self, new_size: UVec2) {
-        Texture::bind(self.gl, TextureBind::Texture2D, &self.texture, 0);
+        Texture::bind(&self.gl, TextureBind::Texture2D, &self.texture, 0);
         self.texture
             .feed_2d(
                 0,
@@ -82,15 +83,15 @@ impl GTexture {
             )
             .unwrap();
         self.texture.generate_mipmap();
-        Texture::unbind(self.gl, TextureBind::Texture2D, 0);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
     }
 
     fn attach(&self, fbo: &Framebuffer) {
-        Framebuffer::bind(self.gl, fbo);
-        Texture::bind(self.gl, TextureBind::Texture2D, &self.texture, 0);
+        Framebuffer::bind(&self.gl, fbo);
+        Texture::bind(&self.gl, TextureBind::Texture2D, &self.texture, 0);
         fbo.attach_texture_2d(self.attachment, &self.texture, 0);
         assert_eq!(fbo.is_complete(), true);
-        Texture::unbind(self.gl, TextureBind::Texture2D, 0);
-        Framebuffer::unbind(self.gl);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
+        Framebuffer::unbind(&self.gl);
     }
 }

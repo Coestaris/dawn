@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use dawn_assets::ir::mesh::{IRIndexType, IRLayout, IRLayoutField, IRLayoutSampleType, IRTopology};
 use dawn_graphics::gl::raii::array_buffer::{ArrayBuffer, ArrayBufferUsage};
 use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementArrayBufferUsage};
@@ -13,7 +14,7 @@ pub struct Cube {
 }
 
 impl Cube {
-    pub fn new(gl: &'static glow::Context) -> Self {
+    pub fn new(gl: Arc<glow::Context>) -> Self {
         let vertex = [
             // Top face
             1.0f32, 1.0, 1.0, // 0
@@ -32,8 +33,8 @@ impl Cube {
             4, 5, 5, 6, 6, 7, 7, 4, // Bottom face edges
             0, 4, 1, 5, 2, 6, 3, 7, // Side edges
         ];
-        let vao = VertexArray::new(gl, IRTopology::Lines, IRIndexType::U16).unwrap();
-        let mut vbo = ArrayBuffer::new(gl).unwrap();
+        let vao = VertexArray::new(gl.clone(), IRTopology::Lines, IRIndexType::U16).unwrap();
+        let mut vbo = ArrayBuffer::new(gl.clone()).unwrap();
         let mut ebo = ElementArrayBuffer::new(gl).unwrap();
 
         let vao_binding = vao.bind();

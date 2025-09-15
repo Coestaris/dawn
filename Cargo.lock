@@ -984,6 +984,7 @@ dependencies = [
  "log",
  "thiserror 2.0.16",
  "triple_buffer",
+ "web-sys",
  "web-time",
  "winit",
 ]
@@ -1020,9 +1021,11 @@ dependencies = [
 name = "dawn-wasm"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "build-info",
  "build-info-build",
  "dawn-app",
+ "dawn-assets",
  "dawn-dac",
  "dawn-dacgen",
  "dirs",
