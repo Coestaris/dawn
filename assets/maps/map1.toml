@@ -4,6 +4,8 @@ dependencies = [
     "barrel",
     "sponza",
 ]
+author = "Coestaris <vk_vm@ukr.net>"
+license = "MIT"
 
 [[properties.Dictionary.entries]]
 [[properties.Dictionary.entries.Map.Objects.Array]]
