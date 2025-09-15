@@ -87,11 +87,7 @@ pub fn tool_assets_info(
                     ));
                     ui.label(format!(
                         "Created: {}",
-                        manifest
-                            .created
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .map(|d| format_system_time(manifest.created).unwrap())
-                            .unwrap_or_else(|_| "Invalid time".to_string())
+                        format_system_time(manifest.created).unwrap()
                     ));
                     ui.label(format!("Read mode: {:?}", manifest.read_mode));
                     ui.label(format!(
