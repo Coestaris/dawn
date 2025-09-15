@@ -16,6 +16,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::{UVec2, Vec2};
 use glow::HasContext;
 use std::rc::Rc;
+use std::sync::Arc;
 
 struct ShaderContainer {
     shader: TypedAsset<Program>,
@@ -26,7 +27,7 @@ struct ShaderContainer {
 }
 
 pub(crate) struct GizmosPass {
-    gl: &'static glow::Context,
+    gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     shader: Option<ShaderContainer>,
 
@@ -40,13 +41,13 @@ pub(crate) struct GizmosPass {
 
 impl GizmosPass {
     pub fn new(
-        gl: &'static glow::Context,
+        gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
         config: RenderingConfig,
     ) -> Self {
         GizmosPass {
-            gl,
+            gl: gl.clone(),
             id,
             shader: None,
             viewport_size: Default::default(),
@@ -90,14 +91,14 @@ impl RenderPass<RenderingEvent> for GizmosPass {
 
                 if let Some(shader) = self.shader.as_mut() {
                     let program = shader.shader.cast();
-                    Program::bind(self.gl, &program);
+                    Program::bind(&self.gl, &program);
                     program.set_uniform_block_binding(
                         shader.ubo_camera_location,
                         CAMERA_UBO_BINDING as u32,
                     );
                     program.set_uniform(&shader.texture_location, 0);
                     program.set_uniform(&shader.size_location, Vec2::new(0.7, 0.7));
-                    Program::unbind(self.gl);
+                    Program::unbind(&self.gl);
                 }
             }
             RenderingEvent::SetLightTexture(texture) => {
@@ -128,7 +129,7 @@ impl RenderPass<RenderingEvent> for GizmosPass {
         }
 
         Framebuffer::blit_to_default(
-            self.gl,
+            &self.gl,
             &self.gbuffer.fbo,
             self.viewport_size,
             BlitFramebufferMask::Depth,
@@ -145,10 +146,10 @@ impl RenderPass<RenderingEvent> for GizmosPass {
 
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
-        Program::bind(self.gl, &program);
+        Program::bind(&self.gl, &program);
 
         let light_texture = self.light_texture.as_ref().unwrap().cast();
-        Texture::bind(self.gl, TextureBind::Texture2D, light_texture, 0);
+        Texture::bind(&self.gl, TextureBind::Texture2D, light_texture, 0);
 
         let mut result = RenderResult::default();
 
@@ -166,7 +167,7 @@ impl RenderPass<RenderingEvent> for GizmosPass {
             return RenderResult::default();
         }
 
-        Program::unbind(self.gl);
+        Program::unbind(&self.gl);
 
         RenderResult::default()
     }

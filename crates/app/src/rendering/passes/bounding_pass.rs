@@ -17,6 +17,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::{Mat4, UVec2, Vec3, Vec4};
 use glow::HasContext;
 use std::rc::Rc;
+use std::sync::Arc;
 
 struct ShaderContainer {
     shader: TypedAsset<Program>,
@@ -26,7 +27,7 @@ struct ShaderContainer {
 }
 
 pub(crate) struct BoundingPass {
-    gl: &'static glow::Context,
+    gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     cube: Cube,
     shader: Option<ShaderContainer>,
@@ -37,13 +38,13 @@ pub(crate) struct BoundingPass {
 
 impl BoundingPass {
     pub fn new(
-        gl: &'static glow::Context,
+        gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
         config: RenderingConfig,
     ) -> Self {
         BoundingPass {
-            gl,
+            gl: gl.clone(),
             id,
             shader: None,
             cube: Cube::new(gl),
@@ -81,12 +82,12 @@ impl RenderPass<RenderingEvent> for BoundingPass {
 
                 if let Some(shader) = self.shader.as_mut() {
                     let program = shader.shader.cast();
-                    Program::bind(self.gl, &program);
+                    Program::bind(&self.gl, &program);
                     program.set_uniform_block_binding(
                         shader.ubo_camera_location,
                         CAMERA_UBO_BINDING as u32,
                     );
-                    Program::unbind(self.gl);
+                    Program::unbind(&self.gl);
                 }
             }
             RenderingEvent::ViewportResized(size) => {
@@ -117,7 +118,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
             BoundingBoxMode::AABBHonorDepth | BoundingBoxMode::OBBHonorDepth => {
                 // Blit the depth buffer to the default framebuffer
                 Framebuffer::blit_to_default(
-                    self.gl,
+                    &self.gl,
                     &self.gbuffer.fbo,
                     self.viewport_size,
                     BlitFramebufferMask::Depth,
@@ -136,7 +137,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         // Bind shader
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
-        Program::bind(self.gl, &program);
+        Program::bind(&self.gl, &program);
 
         RenderResult::default()
     }
@@ -224,7 +225,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         }
 
         // Unbind shader
-        Program::unbind(self.gl);
+        Program::unbind(&self.gl);
 
         RenderResult::default()
     }

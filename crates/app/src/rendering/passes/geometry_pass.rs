@@ -8,7 +8,7 @@ use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
-use dawn_graphics::gl::raii::shader_program::{Program, UniformBlockLocation, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
@@ -17,6 +17,7 @@ use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
+use std::sync::Arc;
 
 const ALBEDO_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
@@ -38,7 +39,7 @@ struct ShaderContainer {
 }
 
 pub(crate) struct GeometryPass {
-    gl: &'static glow::Context,
+    gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     config: RenderingConfig,
 
@@ -53,14 +54,14 @@ pub(crate) struct GeometryPass {
 
 impl GeometryPass {
     pub fn new(
-        gl: &'static glow::Context,
+        gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
         camera_ubo: CameraUBO,
         config: RenderingConfig,
     ) -> Self {
         GeometryPass {
-            gl,
+            gl: gl.clone(),
             id,
             config,
             shader: None,
@@ -104,7 +105,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
 
                 if let Some(shader) = self.shader.as_mut() {
                     let program = shader.shader.cast();
-                    Program::bind(self.gl, &program);
+                    Program::bind(&self.gl, &program);
                     program.set_uniform_block_binding(
                         shader.ubo_camera_location,
                         CAMERA_UBO_BINDING as u32,
@@ -113,7 +114,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                     program.set_uniform(&shader.normal, NORMAL_INDEX);
                     program.set_uniform(&shader.metallic_roughness, METALLIC_ROUGHNESS_INDEX);
                     program.set_uniform(&shader.occlusion, OCCLUSION_INDEX);
-                    Program::unbind(self.gl);
+                    Program::unbind(&self.gl);
                 }
             }
             RenderingEvent::ViewportResized(size) => unsafe {
@@ -147,7 +148,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
         _: &RendererBackend<RenderingEvent>,
         _frame: &DataStreamFrame,
     ) -> RenderResult {
-        Framebuffer::bind(self.gl, &self.gbuffer.fbo);
+        Framebuffer::bind(&self.gl, &self.gbuffer.fbo);
 
         unsafe {
             self.gl.clear_color(0.1, 0.1, 0.1, 1.0);
@@ -168,7 +169,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
         if let Some(shader) = self.shader.as_mut() {
             // Load view matrix into shader
             let program = shader.shader.cast();
-            Program::bind(self.gl, &program);
+            Program::bind(&self.gl, &program);
         }
 
         RenderResult::default()
@@ -226,16 +227,26 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                         )
                     };
 
-                Texture::bind(self.gl, TextureBind::Texture2D, albedo, ALBEDO_INDEX as u32);
-                Texture::bind(self.gl, TextureBind::Texture2D, normal, NORMAL_INDEX as u32);
                 Texture::bind(
-                    self.gl,
+                    &self.gl,
+                    TextureBind::Texture2D,
+                    albedo,
+                    ALBEDO_INDEX as u32,
+                );
+                Texture::bind(
+                    &self.gl,
+                    TextureBind::Texture2D,
+                    normal,
+                    NORMAL_INDEX as u32,
+                );
+                Texture::bind(
+                    &self.gl,
                     TextureBind::Texture2D,
                     metallic_roughness,
                     METALLIC_ROUGHNESS_INDEX as u32,
                 );
                 Texture::bind(
-                    self.gl,
+                    &self.gl,
                     TextureBind::Texture2D,
                     occlusion,
                     OCCLUSION_INDEX as u32,
@@ -254,16 +265,16 @@ impl RenderPass<RenderingEvent> for GeometryPass {
             self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::FILL);
         }
 
-        Program::unbind(self.gl);
-        Texture::unbind(self.gl, TextureBind::Texture2D, ALBEDO_INDEX as u32);
-        Texture::unbind(self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
+        Program::unbind(&self.gl);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, ALBEDO_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
         Texture::unbind(
-            self.gl,
+            &self.gl,
             TextureBind::Texture2D,
             METALLIC_ROUGHNESS_INDEX as u32,
         );
-        Texture::unbind(self.gl, TextureBind::Texture2D, OCCLUSION_INDEX as u32);
-        Framebuffer::unbind(self.gl);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, OCCLUSION_INDEX as u32);
+        Framebuffer::unbind(&self.gl);
         RenderResult::default()
     }
 }

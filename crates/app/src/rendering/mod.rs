@@ -106,25 +106,25 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         log_info(&r.info);
         pre_pipeline_construct(&r.gl);
 
-        let gbuffer = Rc::new(GBuffer::new(&r.gl, WINDOW_SIZE));
-        let obuffer = Rc::new(OBuffer::new(&r.gl, WINDOW_SIZE));
-        let camera_ubo = CameraUBO::new(&r.gl, CAMERA_UBO_BINDING);
+        let gbuffer = Rc::new(GBuffer::new(r.gl.clone(), WINDOW_SIZE));
+        let obuffer = Rc::new(OBuffer::new(r.gl.clone(), WINDOW_SIZE));
+        let camera_ubo = CameraUBO::new(r.gl.clone(), CAMERA_UBO_BINDING);
         let geometry_pass = GeometryPass::new(
-            &r.gl,
+            r.gl.clone(),
             self.ids.geometry_id,
             gbuffer.clone(),
             camera_ubo,
             self.config.clone(),
         );
         let lighting_pass = LightingPass::new(
-            &r.gl,
+            r.gl.clone(),
             self.ids.lighting_id,
             gbuffer.clone(),
             obuffer.clone(),
             self.config.clone(),
         );
         let postprocess_pass = PostProcessPass::new(
-            &r.gl,
+            r.gl.clone(),
             self.ids.postprocess_id,
             obuffer.clone(),
             self.config.clone(),
@@ -133,13 +133,13 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         #[cfg(feature = "devtools")]
         {
             let bounding_pass = BoundingPass::new(
-                &r.gl,
+                r.gl.clone(),
                 self.ids.bounding_id,
                 gbuffer.clone(),
                 self.config.clone(),
             );
             let gizmo_pass = GizmosPass::new(
-                &r.gl,
+                r.gl.clone(),
                 self.ids.gizmos_id,
                 gbuffer.clone(),
                 self.config.clone(),
@@ -276,7 +276,12 @@ impl RendererBuilder {
             ids: self.ids,
             config: self.config.clone(),
             #[cfg(feature = "devtools")]
-            devtools_gui: DevToolsGUI::new(self.config, param.connection, param.bi, param.reader_backend),
+            devtools_gui: DevToolsGUI::new(
+                self.config,
+                param.connection,
+                param.bi,
+                param.reader_backend,
+            ),
         }
     }
 }

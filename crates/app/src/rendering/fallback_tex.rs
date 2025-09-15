@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::rendering::event::RenderingEvent;
 use dawn_assets::ir::texture::{IRPixelFormat, IRTexture, IRTextureType};
 use dawn_graphics::gl::raii::texture::Texture;
@@ -10,11 +11,11 @@ pub struct FallbackTextures {
 }
 
 impl FallbackTextures {
-    pub(crate) fn new(gl: &'static glow::Context) -> Self {
-        let albedo_texture = Self::create_missing_albedo_texture(gl);
-        let normal_texture = Self::create_missing_normal_texture(gl);
-        let metallic_roughness_texture = Self::create_missing_metallic_roughness_texture(gl);
-        let occlusion_texture = Self::create_missing_occlusion_texture(gl);
+    pub(crate) fn new(gl: Arc<glow::Context>) -> Self {
+        let albedo_texture = Self::create_missing_albedo_texture(gl.clone());
+        let normal_texture = Self::create_missing_normal_texture(gl.clone());
+        let metallic_roughness_texture = Self::create_missing_metallic_roughness_texture(gl.clone());
+        let occlusion_texture = Self::create_missing_occlusion_texture(gl.clone());
 
         FallbackTextures {
             albedo_texture,
@@ -24,7 +25,7 @@ impl FallbackTextures {
         }
     }
 
-    fn create_missing_albedo_texture(gl: &'static glow::Context) -> Texture {
+    fn create_missing_albedo_texture(gl: Arc<glow::Context>) -> Texture {
         // Create a 2x2 checkerboard pattern (magenta and black)
         let data: [u8; 12] = [
             255, 0, 255, // Magenta
@@ -53,7 +54,7 @@ impl FallbackTextures {
             .0
     }
 
-    fn create_missing_normal_texture(gl: &'static glow::Context) -> Texture {
+    fn create_missing_normal_texture(gl: Arc<glow::Context>) -> Texture {
         let data = [
             128u8, 128, 255, 128, 128, 255, 128, 128, 255, 128, 128, 255, // Row 1
             128u8, 128, 255, 128, 128, 255, 128, 128, 255, 128, 128, 255, // Row 2
@@ -79,7 +80,7 @@ impl FallbackTextures {
             .0
     }
 
-    fn create_missing_metallic_roughness_texture(gl: &'static glow::Context) -> Texture {
+    fn create_missing_metallic_roughness_texture(gl: Arc<glow::Context>) -> Texture {
         let data = [
             255u8, 255, 255, 255, // Row 1
             255u8, 255, 255, 255, // Row 2
@@ -105,7 +106,7 @@ impl FallbackTextures {
             .0
     }
 
-    fn create_missing_occlusion_texture(gl: &'static glow::Context) -> Texture {
+    fn create_missing_occlusion_texture(gl: Arc<glow::Context>) -> Texture {
         let data = [
             255u8, 255, 255, 255, // Row 1
             255u8, 255, 255, 255, // Row 2
