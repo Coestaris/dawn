@@ -77,9 +77,16 @@ pub fn tool_about(ui: &egui::Context, bi: &BuildInfo, glinfo: Option<&OpenGLInfo
                     add_row(
                         ui,
                         "OpenGL Version:",
-                        format!("{}", glinfo.version).as_str(),
+                        format!(
+                            "{}.{}.{} {} {}",
+                            glinfo.version.major,
+                            glinfo.version.minor,
+                            glinfo.version.revision.unwrap_or(0),
+                            if glinfo.version.is_embedded { "ES" } else { "Core" },
+                            glinfo.version.vendor_info
+                        )
+                        .as_str(),
                     );
-                    add_row(ui, "Vendor:", &glinfo.vendor);
                     add_row(ui, "Renderer:", &glinfo.renderer);
                     let s = if let Some(sl) = &glinfo.shading_language_version {
                         format!("{}", sl)

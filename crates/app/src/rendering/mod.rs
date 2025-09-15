@@ -47,8 +47,18 @@ mod ubo;
 
 fn log_info(info: &OpenGLInfo) {
     info!("OpenGL information:");
-    info!("  Version: {}", info.version);
-    info!("  Vendor: {}", info.vendor);
+    info!(
+        "{}.{}.{} {} {}",
+        info.version.major,
+        info.version.minor,
+        info.version.revision.unwrap_or(0),
+        if info.version.is_embedded {
+            "ES"
+        } else {
+            "Core"
+        },
+        info.version.vendor_info
+    );
     info!("  Renderer: {}", info.renderer);
     if let Some(shading_lang_version) = &info.shading_language_version {
         info!("  Shading Language Version: {}", shading_lang_version);
