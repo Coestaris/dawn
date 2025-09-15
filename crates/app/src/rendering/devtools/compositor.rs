@@ -1,4 +1,4 @@
-use build_info::BuildInfo;
+use crate::assets::reader::ReaderBackend;
 use crate::devtools::{
     DevtoolsRendererConnection, DevtoolsToRendererMessage, DevtoolsToWorldMessage, SunlightControl,
 };
@@ -12,15 +12,20 @@ use crate::rendering::devtools::tools::rendering_settings::{
 use crate::rendering::devtools::tools::rendering_stat::tool_rendering_stat;
 use crate::rendering::devtools::tools::world_stat::tool_world_stat;
 use crate::world::devtools::WorldStatistics;
+use build_info::BuildInfo;
 use dawn_assets::hub::AssetInfo;
 use dawn_ecs::world::WorldLoopMonitorEvent;
 use dawn_graphics::gl::probe::OpenGLInfo;
 use dawn_graphics::renderer::RendererMonitorEvent;
+use std::sync::Arc;
+use dawn_dac::Manifest;
 
 pub(crate) struct Compositor {
     connection: DevtoolsRendererConnection,
     bi: BuildInfo,
     config: RenderingConfig,
+    reader_backend: Arc<dyn ReaderBackend>,
+    manifest: Option<Manifest>,
 
     display_world_stat: bool,
     display_rendering_stat: bool,
@@ -37,10 +42,16 @@ pub(crate) struct Compositor {
 }
 
 impl Compositor {
-    pub fn new(connection: DevtoolsRendererConnection, config: RenderingConfig, bi: BuildInfo) -> Self {
+    pub fn new(
+        connection: DevtoolsRendererConnection,
+        config: RenderingConfig,
+        bi: BuildInfo,
+        reader_backend: Arc<dyn ReaderBackend>,
+    ) -> Self {
         Self {
             connection,
             bi,
+            reader_backend,
             config,
             display_world_stat: false,
             display_rendering_stat: false,
@@ -53,6 +64,7 @@ impl Compositor {
             world_stat: None,
             rendering_stat: None,
             sunlight_control: SunlightControl::default(),
+            manifest: None,
         }
     }
 
@@ -151,9 +163,10 @@ impl Compositor {
             }
         }
         if self.display_assets_infos {
-            match tool_assets_info(ui, &self.assets_infos) {
+            match tool_assets_info(ui, &self.assets_infos, self.manifest.as_ref()) {
                 ToolAssetsInfoMessage::Nothing => {}
                 ToolAssetsInfoMessage::Refresh => {
+                    self.manifest = self.reader_backend.enumerate().ok();
                     let _ = self
                         .connection
                         .sender

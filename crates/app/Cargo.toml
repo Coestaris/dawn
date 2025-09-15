@@ -9,7 +9,12 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["devtools"]
+default = ["devtools" ]
+
+threading = [
+    "egui/rayon",
+    "evenio/rayon"
+]
 
 devtools = [
     "dep:egui",
@@ -38,7 +43,7 @@ winit = "0.30.12"
 crossbeam-channel = "0.5.15"
 bytemuck = "1.23.2"
 
-egui = { version = "0.32.2", features = ["default_fonts", "persistence", "rayon", "log" ], optional = true }
+egui = { version = "0.32.2", features = ["default_fonts", "persistence", "log" ], optional = true }
 egui_extras = { version = "0.32.2", optional = true }
 egui_glow = { version = "0.32.2", optional = true }
 web-time = "1.1.0"

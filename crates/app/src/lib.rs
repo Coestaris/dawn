@@ -1,12 +1,17 @@
+pub mod assets;
 #[cfg(feature = "devtools")]
 pub mod devtools;
 pub mod logging;
 pub mod rendering;
 pub mod world;
 
+use crate::assets::reader::ReaderBackend;
+#[cfg(feature = "devtools")]
+use crate::devtools::{devtools_bridge, DevtoolsWorldConnection};
+use crate::logging::{print_build_info, START_TIME};
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
-use crate::rendering::{setup_rendering, SetupRenderingParameters};
+use crate::rendering::{RendererBuilder, SetupRenderingParameters};
 use crate::world::app_icon::map_app_icon_handler;
 use crate::world::asset::setup_assets_system;
 use crate::world::exit::escape_handler;
@@ -17,7 +22,7 @@ use crate::world::maps::setup_maps_system;
 use build_info::BuildInfo;
 use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
-use dawn_ecs::world::WorldLoopProxy;
+use dawn_ecs::world::{WorldLoop, WorldLoopTickResult};
 use dawn_graphics::renderer::{
     Renderer, RendererConfig, RendererProxy, RendererSynchronization, WindowConfig,
 };
@@ -28,12 +33,9 @@ use log::{error, info};
 use std::backtrace::BacktraceStatus;
 use std::panic;
 use std::panic::PanicHookInfo;
+use std::sync::Arc;
 use web_time::Instant;
 use winit::window::{Cursor, CursorIcon};
-
-#[cfg(feature = "devtools")]
-use crate::devtools::{devtools_bridge, DevtoolsWorldConnection};
-use crate::logging::{print_build_info, START_TIME};
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
@@ -45,6 +47,7 @@ pub enum WorldSyncMode {
 pub(crate) static WINDOW_SIZE: UVec2 = UVec2::new(1280, 720);
 
 struct MainToEcs {
+    reader_backend: Arc<dyn ReaderBackend>,
     hub: AssetHub,
     renderer_proxy: RendererProxy<RenderingEvent>,
     dispatcher: RenderDispatcher,
@@ -59,7 +62,7 @@ fn init_world(world: &mut World, to_ecs: MainToEcs) {
     InputHolder::new().attach_to_ecs(world);
     FreeCamera::new().attach_to_ecs(world);
 
-    setup_assets_system(world, to_ecs.hub);
+    setup_assets_system(world, to_ecs.reader_backend, to_ecs.hub);
     setup_maps_system(world);
     setup_fullscreen_system(world);
 
@@ -74,8 +77,12 @@ fn init_world(world: &mut World, to_ecs: MainToEcs) {
 }
 
 // 'Make Zaebis' function
-pub fn run_dawn<PH>(sync: WorldSyncMode, bi: BuildInfo, panic_hook: PH)
-where
+pub fn run_dawn<PH>(
+    reader_backend: Arc<dyn ReaderBackend>,
+    sync: WorldSyncMode,
+    bi: BuildInfo,
+    panic_hook: PH,
+) where
     PH: Fn(&PanicHookInfo) + Send + Sync + 'static,
 {
     START_TIME.set(Instant::now()).ok();
@@ -83,10 +90,6 @@ where
     print_build_info(&bi);
 
     info!("Starting Dawn with sync mode: {:?}", sync);
-
-    // We forced to do this here, because Bindings must be initialized passed to
-    // the renderer that is created below. As well as the UI streamer.
-    let mut hub = AssetHub::new();
 
     // Create window configuration
     let window_config = WindowConfig {
@@ -97,36 +100,12 @@ where
         cursor: Some(Cursor::Icon(CursorIcon::Crosshair)),
         dimensions: WINDOW_SIZE,
         resizable: true,
+        #[cfg(feature = "threading")]
         synchronization: match sync {
-            WorldSyncMode::FixedTickRate(tps) => {
-                // I think there's a better places to put this...
-                let panic_hook = Box::leak(Box::new(panic_hook));
-                panic::set_hook(Box::new(|info| {
-                    panic_hook(info);
-                }));
-
-                None
-            }
+            WorldSyncMode::FixedTickRate(tps) => None,
             WorldSyncMode::SynchronizedWithMonitor => {
                 let before_frame = Rendezvous::new(2);
                 let after_frame = Rendezvous::new(2);
-
-                {
-                    // We need to leak the rendezvous points to make sure they
-                    // live for the entire duration of the program.
-                    let before_frame = Box::leak(Box::new(before_frame.clone()));
-                    let after_frame = Box::leak(Box::new(after_frame.clone()));
-                    let panic_hook = Box::leak(Box::new(panic_hook));
-                    panic::set_hook(Box::new(|info| {
-                        panic_hook(info);
-
-                        // TODO: Maybe move this to the library side?
-                        // In case of a panic, we want to make sure that both threads can exit cleanly.
-                        // So we signal both rendezvous points to avoid deadlocks.
-                        before_frame.unlock();
-                        after_frame.unlock();
-                    }));
-                }
 
                 Some(RendererSynchronization {
                     before_frame: before_frame.clone(),
@@ -134,8 +113,34 @@ where
                 })
             }
         },
+        #[cfg(not(feature = "threading"))]
+        synchronization: None,
     };
 
+    // Setup panic hook
+    if let Some(sync) = &window_config.synchronization {
+        // We need to leak the rendezvous points to make sure they
+        // live for the entire duration of the program.
+        let before_frame = Box::leak(Box::new(sync.before_frame.clone()));
+        let after_frame = Box::leak(Box::new(sync.after_frame.clone()));
+        let panic_hook = Box::leak(Box::new(panic_hook));
+        panic::set_hook(Box::new(|info| {
+            panic_hook(info);
+
+            // TODO: Maybe move this to the library side?
+            // In case of a panic, we want to make sure that both threads can exit cleanly.
+            // So we signal both rendezvous points to avoid deadlocks.
+            before_frame.unlock();
+            after_frame.unlock();
+        }));
+    } else {
+        let panic_hook = Box::leak(Box::new(panic_hook));
+        panic::set_hook(Box::new(|info| {
+            panic_hook(info);
+        }))
+    }
+
+    let mut hub = AssetHub::new();
     let backend_config = RendererConfig {
         shader_factory_binding: Some(hub.get_factory_biding(AssetType::Shader)),
         texture_factory_binding: Some(hub.get_factory_biding(AssetType::Texture)),
@@ -153,9 +158,14 @@ where
     let param = SetupRenderingParameters {
         #[cfg(feature = "devtools")]
         connection: renderer_connection,
+        reader_backend: reader_backend.clone(),
         bi,
     };
-    let (dispatcher, custom_renderer) = setup_rendering(param);
+
+    let builder = RendererBuilder::new();
+    let renderer_dispatcher = builder.build_dispatcher();
+    let custom_renderer = builder.build_renderer(param);
+
     let (renderer, proxy) =
         Renderer::new_with_monitoring(window_config.clone(), backend_config, custom_renderer)
             .unwrap();
@@ -164,20 +174,24 @@ where
     // This will spawn a new thread that runs the world loop.
     // The main thread will run the renderer loop.
     let to_ecs = MainToEcs {
+        reader_backend: reader_backend.clone(),
         hub,
         renderer_proxy: proxy,
         #[cfg(feature = "devtools")]
         devtools_connection: world_connection,
-        dispatcher,
+        dispatcher: renderer_dispatcher,
     };
+    #[cfg(feature = "threading")]
     let world_loop = match sync {
         WorldSyncMode::FixedTickRate(tps) => {
+            use dawn_ecs::world::threading::WorldLoopProxy;
             WorldLoopProxy::new_unsynchronized_with_monitoring(tps as f32, |w| {
                 Ok(init_world(w, to_ecs))
             })
         }
         WorldSyncMode::SynchronizedWithMonitor => {
-            let synchronization = window_config.synchronization.unwrap();
+            use dawn_ecs::world::threading::WorldLoopProxy;
+            let synchronization = window_config.synchronization.clone().unwrap();
             WorldLoopProxy::new_synchronized_with_monitoring(
                 synchronization.before_frame,
                 synchronization.after_frame,
@@ -186,13 +200,20 @@ where
         }
     }
     .unwrap();
+    #[cfg(not(feature = "threading"))]
+    let mut world_loop = WorldLoop::new_with_monitoring(|w| Ok(init_world(w, to_ecs))).unwrap();
 
     // Start the rendering loop
     // This will block the main thread until the window is closed.
-    renderer.run();
+    #[cfg(feature = "threading")]
+    renderer.run(Box::new(move || true));
+    #[cfg(not(feature = "threading"))]
+    renderer.run(Box::new(move || match world_loop.tick() {
+        WorldLoopTickResult::Continue => true,
+        WorldLoopTickResult::Exit => false,
+    }));
     info!("Renderer loop has exited");
 
     // Drop the world loop first to make sure it exits cleanly.
-    drop(world_loop);
     info!("World loop has exited");
 }

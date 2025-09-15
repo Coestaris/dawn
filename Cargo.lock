@@ -992,9 +992,11 @@ dependencies = [
 name = "dawn-native"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "build-info",
  "build-info-build",
  "dawn-app",
+ "dawn-assets",
  "dawn-dac",
  "dawn-dacgen",
  "dirs",

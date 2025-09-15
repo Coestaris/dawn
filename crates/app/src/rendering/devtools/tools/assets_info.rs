@@ -1,7 +1,11 @@
+use crate::assets::reader::ReaderBackend;
+use crate::logging::{format, format_system_time};
 use crate::rendering::devtools::tools::row_height;
 use dawn_assets::hub::{AssetInfo, AssetInfoState};
 use dawn_assets::AssetType;
+use dawn_dac::Manifest;
 use egui::Color32;
+use std::sync::Arc;
 
 pub enum ToolAssetsInfoMessage {
     Nothing,
@@ -47,7 +51,11 @@ fn color_state(asset: &AssetInfo) -> Color32 {
     }
 }
 
-pub fn tool_assets_info(ui: &egui::Context, assets: &Vec<AssetInfo>) -> ToolAssetsInfoMessage {
+pub fn tool_assets_info(
+    ui: &egui::Context,
+    assets: &Vec<AssetInfo>,
+    manifest: Option<&Manifest>,
+) -> ToolAssetsInfoMessage {
     let mut result = ToolAssetsInfoMessage::Nothing;
     egui::Window::new("📄 Assets Information")
         .resizable(true)
@@ -58,6 +66,41 @@ pub fn tool_assets_info(ui: &egui::Context, assets: &Vec<AssetInfo>) -> ToolAsse
             if ui.button("Refresh").clicked() {
                 result = ToolAssetsInfoMessage::Refresh;
             };
+
+            if let Some(manifest) = manifest {
+                ui.collapsing("Assets Manifest", |ui| {
+                    if let Some(author) = &manifest.author {
+                        ui.label(format!("Author: {}", author));
+                    }
+                    if let Some(description) = &manifest.description {
+                        ui.label(format!("Description: {}", description));
+                    }
+                    if let Some(version) = &manifest.version {
+                        ui.label(format!("Version: {}", version));
+                    }
+                    if let Some(license) = &manifest.license {
+                        ui.label(format!("License: {}", license));
+                    }
+                    ui.label(format!(
+                        "Tool: {} v{}",
+                        manifest.tool, manifest.tool_version
+                    ));
+                    ui.label(format!(
+                        "Created: {}",
+                        manifest
+                            .created
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| format_system_time(manifest.created).unwrap())
+                            .unwrap_or_else(|_| "Invalid time".to_string())
+                    ));
+                    ui.label(format!("Read mode: {:?}", manifest.read_mode));
+                    ui.label(format!(
+                        "Checksum algorithm: {:?}",
+                        manifest.checksum_algorithm
+                    ));
+                    ui.label(format!("Total assets: {}", manifest.headers.len()));
+                });
+            }
 
             if assets.is_empty() {
                 ui.label("No assets loaded.");
@@ -76,7 +119,7 @@ pub fn tool_assets_info(ui: &egui::Context, assets: &Vec<AssetInfo>) -> ToolAsse
                     .column(egui_extras::Column::remainder().at_least(60.0))
                     .header(text_height, |mut header| {
                         header.col(|ui| {
-                            ui.strong("Name");
+                            ui.strong("Name (hover me)");
                         });
                         header.col(|ui| {
                             ui.strong("Type");
@@ -98,7 +141,19 @@ pub fn tool_assets_info(ui: &egui::Context, assets: &Vec<AssetInfo>) -> ToolAsse
                         for asset in assets {
                             body.row(text_height, |mut row| {
                                 row.col(|ui| {
-                                    ui.label(asset.header.id.as_str());
+                                    ui.label(asset.header.id.as_str()).on_hover_text(
+                                        format!(
+                                            "ID: {}\nType: {}\nChecksum: {:?}\nDependencies: {:?}\nTags: {:?}\nAuthor: {:?}\nLicense: {:?}",
+                                            asset.header.id.as_str(),
+                                            asset.header.asset_type.as_str(),
+                                            asset.header.checksum,
+                                            asset.header.dependencies,
+                                            asset.header.tags,
+                                            asset.header.author,
+                                            asset.header.license,
+                                        )
+                                    );
+                                    // Add tooltip with detailed info
                                 });
                                 row.col(|ui| {
                                     ui.colored_label(
