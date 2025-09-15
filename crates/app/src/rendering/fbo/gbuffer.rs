@@ -3,6 +3,7 @@ use dawn_assets::ir::texture::IRPixelFormat;
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
 use glam::UVec2;
 use log::info;
+use std::sync::Arc;
 
 pub struct GBuffer {
     pub fbo: Framebuffer,
@@ -26,13 +27,29 @@ impl GBuffer {
         self.depth.resize(new_size);
     }
 
-    pub fn new(gl: &'static glow::Context, initial: UVec2) -> Self {
+    pub fn new(gl: Arc<glow::Context>, initial: UVec2) -> Self {
         let buffer = GBuffer {
-            fbo: Framebuffer::new(gl).unwrap(),
-            depth: GTexture::new(gl, IRPixelFormat::DEPTH24, FramebufferAttachment::Depth),
-            albedo_metalic: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color0),
-            normal: GTexture::new(gl, IRPixelFormat::RG16F, FramebufferAttachment::Color1),
-            pbr: GTexture::new(gl, IRPixelFormat::RGBA8, FramebufferAttachment::Color2),
+            fbo: Framebuffer::new(gl.clone()).unwrap(),
+            depth: GTexture::new(
+                gl.clone(),
+                IRPixelFormat::DEPTH24,
+                FramebufferAttachment::Depth,
+            ),
+            albedo_metalic: GTexture::new(
+                gl.clone(),
+                IRPixelFormat::RGBA8,
+                FramebufferAttachment::Color0,
+            ),
+            normal: GTexture::new(
+                gl.clone(),
+                IRPixelFormat::RG16F,
+                FramebufferAttachment::Color1,
+            ),
+            pbr: GTexture::new(
+                gl.clone(),
+                IRPixelFormat::RGBA8,
+                FramebufferAttachment::Color2,
+            ),
         };
 
         buffer.resize(initial);
@@ -43,14 +60,14 @@ impl GBuffer {
         buffer.pbr.attach(&buffer.fbo);
         buffer.depth.attach(&buffer.fbo);
 
-        Framebuffer::bind(gl, &buffer.fbo);
+        Framebuffer::bind(&gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[
             buffer.albedo_metalic.attachment,
             buffer.normal.attachment,
             buffer.pbr.attachment,
         ]);
         assert_eq!(buffer.fbo.is_complete(), true);
-        Framebuffer::unbind(gl);
+        Framebuffer::unbind(&gl);
 
         buffer
     }

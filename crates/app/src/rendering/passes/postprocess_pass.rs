@@ -12,6 +12,7 @@ use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
+use std::sync::Arc;
 
 struct ShaderContainer {
     shader: TypedAsset<Program>,
@@ -22,7 +23,7 @@ struct ShaderContainer {
 }
 
 pub(crate) struct PostProcessPass {
-    gl: &'static glow::Context,
+    gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     config: RenderingConfig,
 
@@ -33,13 +34,13 @@ pub(crate) struct PostProcessPass {
 
 impl PostProcessPass {
     pub fn new(
-        gl: &'static glow::Context,
+        gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         obuffer: Rc<OBuffer>,
         config: RenderingConfig,
     ) -> Self {
         PostProcessPass {
-            gl,
+            gl: gl.clone(),
             id,
             config,
             shader: None,
@@ -78,13 +79,13 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
 
                 if let Some(shader) = self.shader.as_mut() {
                     let program = shader.shader.cast();
-                    Program::bind(self.gl, &program);
+                    Program::bind(&self.gl, &program);
                     program.set_uniform(&shader.texture_location, 0);
                     program.set_uniform_block_binding(
                         shader.ubo_camera_location,
                         CAMERA_UBO_BINDING as u32,
                     );
-                    Program::unbind(self.gl);
+                    Program::unbind(&self.gl);
                 }
             }
             _ => {}
@@ -113,13 +114,13 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
 
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
-        Program::bind(self.gl, program);
+        Program::bind(&self.gl, program);
         program.set_uniform(
             &shader.fxaa_enabled,
             self.config.get_is_fxaa_enabled() as i32,
         );
         Texture::bind(
-            self.gl,
+            &self.gl,
             TextureBind::Texture2D,
             &self.obuffer.texture.texture,
             0,
@@ -130,8 +131,8 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
 
     #[inline(always)]
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
-        Program::unbind(self.gl);
-        Texture::unbind(self.gl, TextureBind::Texture2D, 0);
+        Program::unbind(&self.gl);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
         RenderResult::default()
     }
 }

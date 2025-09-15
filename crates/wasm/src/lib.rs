@@ -1,8 +1,15 @@
+use std::fs::File;
+use std::io::BufReader;
 use dawn_app::{run_dawn, WorldSyncMode};
 use log::{error, info, trace};
 use std::panic;
+use std::sync::Arc;
 pub use wasm_bindgen::prelude::*;
 use web_sys::console::debug;
+use dawn_app::assets::reader::ReaderBackend;
+use dawn_assets::AssetID;
+use dawn_assets::ir::IRAsset;
+use dawn_dac::Manifest;
 
 build_info::build_info!(pub fn dawn_build_info);
 
@@ -61,6 +68,26 @@ impl log::Log for WebLogger {
     fn flush(&self) {}
 }
 
+struct WebReader {
+
+}
+
+impl WebReader {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl ReaderBackend for WebReader {
+    fn enumerate(&self) -> Result<Manifest, anyhow::Error> {
+        todo!()
+    }
+
+    fn load(&self, aid: AssetID) -> Result<IRAsset, anyhow::Error> {
+        todo!()
+    }
+}
+
 #[wasm_bindgen]
 pub fn run() {
     // Bootstrap the panic hook
@@ -80,6 +107,7 @@ pub fn run() {
     info!("Logger initialized");
 
     run_dawn(
+        Arc::new(WebReader::new()),
         WorldSyncMode::SynchronizedWithMonitor,
         dawn_build_info().clone(),
         panic_hook,

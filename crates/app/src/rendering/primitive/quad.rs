@@ -3,6 +3,7 @@ use dawn_graphics::gl::raii::array_buffer::{ArrayBuffer, ArrayBufferUsage};
 use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementArrayBufferUsage};
 use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::result::RenderResult;
+use std::sync::Arc;
 
 pub struct Quad {
     vao: VertexArray,
@@ -11,7 +12,7 @@ pub struct Quad {
 }
 
 impl Quad {
-    pub fn new(gl: &'static glow::Context) -> Self {
+    pub fn new(gl: Arc<glow::Context>) -> Self {
         let vertex: [f32; 16] = [
             // positions   // tex coords
             -1.0, 1.0, 0.0, 1.0, // top left
@@ -24,8 +25,8 @@ impl Quad {
             0, 2, 3, // second triangle
         ];
 
-        let vao = VertexArray::new(gl, IRTopology::Triangles, IRIndexType::U16).unwrap();
-        let mut vbo = ArrayBuffer::new(gl).unwrap();
+        let vao = VertexArray::new(gl.clone(), IRTopology::Triangles, IRIndexType::U16).unwrap();
+        let mut vbo = ArrayBuffer::new(gl.clone()).unwrap();
         let mut ebo = ElementArrayBuffer::new(gl).unwrap();
 
         let vao_binding = vao.bind();

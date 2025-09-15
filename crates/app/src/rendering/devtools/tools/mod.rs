@@ -23,10 +23,10 @@ pub fn row_duration(
         ui.strong(label);
     });
     row.col(|ui| {
-        ui.label(format!("{:.2?}", sample.min()));
+        ui.label(format!("{:?}", sample.min()));
     });
     row.col(|ui| {
-        ui.label(format!("{:.2?}", sample.average()));
+        ui.label(format!("{:?}", sample.average()));
     });
     row.col(|ui| {
         ui.label(format!("{:.2?}", sample.max()));

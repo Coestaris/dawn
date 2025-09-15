@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use dawn_graphics::gl::raii::ubo::UBO;
 
 #[repr(C, align(16))]
@@ -50,18 +51,18 @@ impl CameraUBOPayload {
 }
 
 pub struct CameraUBO {
-    gl: &'static glow::Context,
+    gl: Arc<glow::Context>,
     pub ubo: UBO,
     pub payload: CameraUBOPayload,
     pub binding: usize,
 }
 
 impl CameraUBO {
-    pub(crate) fn new(gl: &'static glow::Context, binding: usize) -> Self {
-        let ubo = UBO::new(gl, Some(size_of::<CameraUBOPayload>())).unwrap();
-        UBO::bind(gl, &ubo);
+    pub(crate) fn new(gl: Arc<glow::Context>, binding: usize) -> Self {
+        let ubo = UBO::new(gl.clone(), Some(size_of::<CameraUBOPayload>())).unwrap();
+        UBO::bind(&gl, &ubo);
         ubo.bind_base(binding as u32);
-        UBO::unbind(gl);
+        UBO::unbind(&gl);
 
         CameraUBO {
             gl,
@@ -92,13 +93,13 @@ impl CameraUBO {
     }
 
     pub fn upload(&self) {
-        UBO::bind(self.gl, &self.ubo);
+        UBO::bind(&self.gl, &self.ubo);
         self.ubo.feed(unsafe {
             std::slice::from_raw_parts(
                 &self.payload as *const CameraUBOPayload as *const u8,
                 size_of::<CameraUBOPayload>(),
             )
         });
-        UBO::unbind(self.gl);
+        UBO::unbind(&self.gl);
     }
 }
