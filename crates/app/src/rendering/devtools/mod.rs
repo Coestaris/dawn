@@ -1,13 +1,15 @@
 mod compositor;
 mod tools;
 
+use crate::assets::reader::ReaderBackend;
 use crate::devtools::DevtoolsRendererConnection;
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::devtools::compositor::Compositor;
 use crate::rendering::event::RenderingEvent;
-use dawn_graphics::renderer::RendererBackend;
-use std::sync::Arc;
 use build_info::BuildInfo;
+use dawn_graphics::renderer::RendererBackend;
+use std::fs::read;
+use std::sync::Arc;
 use winit::window::Window;
 
 pub struct DevToolsGUI {
@@ -17,11 +19,16 @@ pub struct DevToolsGUI {
 }
 
 impl DevToolsGUI {
-    pub(crate) fn new(config: RenderingConfig, connection: DevtoolsRendererConnection, bi: BuildInfo) -> Self {
+    pub(crate) fn new(
+        config: RenderingConfig,
+        connection: DevtoolsRendererConnection,
+        bi: BuildInfo,
+        reader_backend: Arc<dyn ReaderBackend>,
+    ) -> Self {
         DevToolsGUI {
             egui_winit: None,
             egui_glow: None,
-            compositor: Compositor::new(connection, config, bi),
+            compositor: Compositor::new(connection, config, bi, reader_backend),
         }
     }
 

@@ -16,7 +16,6 @@ pub mod fcam;
 pub mod fullscreen;
 pub mod input;
 pub mod maps;
-mod assets;
 
 #[derive(Component)]
 pub struct Rotating;

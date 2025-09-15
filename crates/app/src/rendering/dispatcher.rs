@@ -1,3 +1,4 @@
+use build_info::semver::Op;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_assets::AssetID;
@@ -11,7 +12,9 @@ use evenio::prelude::World;
 use glam::{Mat4, UVec2};
 use log::info;
 use winit::event::WindowEvent;
+use dawn_ecs::world::WorldLoop;
 
+#[derive(Clone)]
 struct PassDescriptor {
     id: RenderPassTargetId,
     events: RenderingEventMask,
@@ -19,6 +22,7 @@ struct PassDescriptor {
 }
 
 #[derive(Component)]
+#[derive(Clone)]
 pub struct RenderDispatcher {
     pub descriptors: Vec<PassDescriptor>,
     pub perspective_projection: Mat4,

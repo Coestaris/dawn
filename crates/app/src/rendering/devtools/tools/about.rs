@@ -13,6 +13,16 @@ pub fn warn_if_debug_build(ui: &mut egui::Ui) {
     }
 }
 
+pub fn warn_if_single_threaded(ui: &mut egui::Ui) {
+    if cfg!(not(feature = "threading")) {
+        ui.label(
+            RichText::new("⚠ Single-threaded build ⚠")
+                .color(ui.visuals().warn_fg_color),
+        )
+            .on_hover_text("Project was compiled without multi-threading support. This may lead to lower performance.");
+    }
+}
+
 pub fn add_row(ui: &mut egui::Ui, label: &str, value: &str) {
     ui.horizontal(|ui| {
         ui.label(RichText::new(label).strong());
@@ -33,6 +43,7 @@ pub fn tool_about(ui: &egui::Context, bi: &BuildInfo, glinfo: Option<&OpenGLInfo
             ui.vertical(|ui| {
                 ui.heading(RichText::new("Dawn"));
                 warn_if_debug_build(ui);
+                warn_if_single_threaded(ui);
                 ui.separator();
 
                 add_row(ui, "Version:", &format!("{}", bi.crate_info.version));

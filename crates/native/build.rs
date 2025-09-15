@@ -2,6 +2,7 @@ fn main() {
     let build_info = build_info_build::build_script().build();
 
     // Set up Windows resources (icon, version info) in release builds
+    #[cfg(target_os = "windows")] // TODO: Cross compilation?
     if std::env::var("PROFILE").unwrap() == "release"
         && std::env::var("CARGO_CFG_TARGET_OS").unwrap() == "windows"
     {

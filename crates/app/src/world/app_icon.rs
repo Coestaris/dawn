@@ -5,7 +5,7 @@ use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
 use log::info;
 use winit::window::Icon;
-use crate::world::assets::blob::Blob;
+use crate::assets::blob::Blob;
 
 pub fn map_app_icon_handler(
     r: Receiver<AssetHubEvent>,
