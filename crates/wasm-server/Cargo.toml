@@ -1,0 +1,11 @@
+[package]
+name = "dawn-wasm-server"
+# The version is derived from git tags by GitHub Actions
+description = "Server for Dawn Application (compiled to wasm)"
+license = "MIT"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.99"
+axum = "0.8.4"
+
