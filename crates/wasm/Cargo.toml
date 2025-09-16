@@ -20,9 +20,12 @@ build-info-build = "0.0.41"
 dawn-app = { path = "../app" }
 dawn-dac = { path = "../../lib/crates/dac" }
 dawn-assets = { path = "../../lib/crates/assets" }
+serde = "1.0.225"
+serde_bytes = "0.11.19"
 anyhow = "1.0.99"
 build-info = "0.0.41"
-wasm-bindgen = "0.2.101"
+wasm-bindgen = { version = "0.2.101" }
+serde-wasm-bindgen = "0.6.5"
 log = "0.4.28"
 web-sys = "0.3.78"
 
