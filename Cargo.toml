@@ -2,8 +2,10 @@
 resolver = "2"
 members = [
     "crates/app",
+    "crates/package",
     "crates/native",
     "crates/wasm",
+    "crates/wasm-server",
     "lib/crates/assets",
     "lib/crates/audio",
     "lib/crates/ecs",

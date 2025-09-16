@@ -1,0 +1,17 @@
+[package]
+name = "dawn-package"
+# The version is derived from git tags by GitHub Actions
+description = "Asset packager for Dawn Application"
+license = "MIT"
+edition = "2021"
+
+[build-dependencies]
+build-info-build = "0.0.41"
+
+[dependencies]
+dawn-dacgen = { path = "../../lib/crates/dacgen" }
+dawn-dac = { path = "../../lib/crates/dac" }
+clap = { version = "4.5.47", features = ["derive"] }
+build-info = "0.0.41"
+dirs = "6.0.0"
+log = "0.4.28"

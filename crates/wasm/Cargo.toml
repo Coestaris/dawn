@@ -9,19 +9,12 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["build_assets", "devtools"]
-build_assets = [
-    "dep:dawn-dacgen",
-    "dep:dawn-dac",
-    "dep:dirs",
-]
+default = ["devtools"]
 devtools = [ "dawn-app/devtools" ]
+# To build with assets, consider using compose.py
 
 [build-dependencies]
 build-info-build = "0.0.41"
-dawn-dacgen = { path = "../../lib/crates/dacgen", optional = true }
-dawn-dac = { path = "../../lib/crates/dac", optional = true }
-dirs = { version = "6.0.0", optional = true }
 
 [dependencies]
 dawn-app = { path = "../app" }
