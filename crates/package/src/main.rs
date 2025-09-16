@@ -1,0 +1,49 @@
+use crate::lib::{package, Compression};
+use clap::Parser;
+use std::path::PathBuf;
+
+mod lib;
+
+#[derive(clap::Parser)]
+struct Args {
+    #[clap(long)]
+    assets_dir: PathBuf,
+    #[clap(long)]
+    output_file: PathBuf,
+    #[clap(long, default_value = "true")]
+    compress: bool,
+}
+
+struct Logger;
+
+impl log::Log for Logger {
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &log::Record) {
+        if self.enabled(record.metadata()) {
+            println!("{} - {}", record.level(), record.args());
+        }
+    }
+
+    fn flush(&self) {}
+}
+
+fn main() {
+    // Setup logging
+    log::set_boxed_logger(Box::new(Logger)).unwrap();
+    log::set_max_level(log::LevelFilter::Debug);
+
+    let args = Args::parse();
+    package(
+        &args.assets_dir,
+        &args.output_file,
+        if args.compress {
+            Compression::Default
+        } else {
+            Compression::None
+        },
+    )
+    .unwrap();
+}
