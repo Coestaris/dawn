@@ -27,7 +27,7 @@ use dawn_graphics::passes::events::RenderPassTargetId;
 use dawn_graphics::renderer::{CustomRenderer, RendererBackend};
 use dawn_graphics::{construct_chain, construct_chain_type};
 use glow::HasContext;
-use log::{info, warn};
+use log::{debug, info, warn};
 use std::rc::Rc;
 use std::sync::Arc;
 use winit::event::WindowEvent;
@@ -180,6 +180,8 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         _backend: &RendererBackend<RenderingEvent>,
         _event: &WindowEvent,
     ) {
+        debug!("Renderer received window event: {:?}", _event);
+
         #[cfg(feature = "devtools")]
         self.devtools_gui.on_window_event(_window, _event);
     }

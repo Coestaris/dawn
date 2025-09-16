@@ -7,5 +7,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.99"
+tokio = { version = "1.0", features = ["full"] }
+clap = { version = "4.3", features = ["derive"] }
+serde = { version = "1.0.225", features = ["derive"] }
 axum = "0.8.4"
+tower-http = { version = "0.6.6", features = ["cors", "fs"] }
+walkdir = "2.5.0"
+sha2 = "0.10.9"
 
