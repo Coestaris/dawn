@@ -1,15 +1,18 @@
-use std::fs::File;
-use std::io::BufReader;
+use dawn_app::assets::reader::ReaderBackend;
 use dawn_app::{run_dawn, WorldSyncMode};
+use dawn_assets::ir::IRAsset;
+use dawn_assets::AssetID;
+use dawn_dac::Manifest;
 use log::{error, info, trace};
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufReader, Cursor};
 use std::panic;
 use std::sync::Arc;
 pub use wasm_bindgen::prelude::*;
 use web_sys::console::debug;
-use dawn_app::assets::reader::ReaderBackend;
-use dawn_assets::AssetID;
-use dawn_assets::ir::IRAsset;
-use dawn_dac::Manifest;
+use dawn_dac::reader::{read_asset, read_manifest};
 
 build_info::build_info!(pub fn dawn_build_info);
 
@@ -69,27 +72,48 @@ impl log::Log for WebLogger {
 }
 
 struct WebReader {
-
+    resources: Resources,
 }
 
+#[derive(Deserialize)]
+struct WebResource {
+    #[serde(with = "serde_bytes")]
+    content: Vec<u8>,
+    hash: String,
+    id: String,
+    name: String,
+    size: u64,
+}
+
+#[derive(Deserialize)]
+struct Resources(Vec<WebResource>);
+
 impl WebReader {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(resources: JsValue) -> Self {
+        let resources: Resources = serde_wasm_bindgen::from_value(resources).unwrap();
+        Self { resources }
     }
 }
 
 impl ReaderBackend for WebReader {
     fn enumerate(&self) -> Result<Manifest, anyhow::Error> {
-        todo!()
+        let resource = self.resources.0.iter().next().unwrap();
+        let mut reader = Cursor::new(&resource.content);
+        let err = read_manifest(&mut reader)?;
+        Ok(err)
     }
 
     fn load(&self, aid: AssetID) -> Result<IRAsset, anyhow::Error> {
-        todo!()
+        let resource = self.resources.0.iter().next().unwrap();
+        let mut reader = Cursor::new(&resource.content);
+        let err = read_asset(&mut reader, aid.clone())?;
+        Ok(err)
     }
 }
 
 #[wasm_bindgen]
-pub fn run() {
+// Takes JS dictionary with resources list
+pub fn run(resources: JsValue) {
     // Bootstrap the panic hook
     // The app will override it later,
     // but we want to catch panics as early as possible
@@ -107,7 +131,7 @@ pub fn run() {
     info!("Logger initialized");
 
     run_dawn(
-        Arc::new(WebReader::new()),
+        Arc::new(WebReader::new(resources)),
         WorldSyncMode::SynchronizedWithMonitor,
         dawn_build_info().clone(),
         panic_hook,
