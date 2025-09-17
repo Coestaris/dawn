@@ -1,4 +1,6 @@
-// Version is specified in the prelude
+#include "inc/prelude.glsl"
+#include "inc/ubo_camera.glsl"
+#include "inc/debug_mode.glsl"
 
 out vec4 FragColor;
 

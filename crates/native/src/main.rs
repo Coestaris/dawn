@@ -53,12 +53,6 @@ pub fn panic_hook(info: &panic::PanicHookInfo) {
     }
 
     error!("Panic: {}", info);
-
-    // Print the backtrace if possible.
-    let capture = std::backtrace::Backtrace::capture();
-    if let BacktraceStatus::Captured = capture.status() {
-        error!("Backtrace:\n{:?}", capture);
-    }
 }
 
 struct Reader {

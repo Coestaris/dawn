@@ -6,15 +6,7 @@ license = "MIT"
 [[properties.Shader.sources]]
 kind = "Vertex"
 origin.External.File = "shaders/lighting.vsh"
-pre_include = [
-    { External.File = "shaders/inc/prelude.glsl" },
-]
 
 [[properties.Shader.sources]]
 kind = "Fragment"
 origin.External.File = "shaders/lighting.fsh"
-pre_include = [
-    { External.File = "shaders/inc/ubo_camera.glsl" },
-    { External.File = "shaders/inc/debug_mode.glsl" },
-    { External.File = "shaders/inc/prelude.glsl" },
-]

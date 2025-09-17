@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::assets::reader::ReaderBackend;
 #[cfg(feature = "devtools")]
 use crate::devtools::DevtoolsRendererConnection;
@@ -90,6 +91,15 @@ fn pre_pipeline_construct(gl: &glow::Context) {
         // gl.cull_face(glow::BACK);
         // gl.front_face(glow::CCW);
     }
+}
+
+pub fn shader_defines() -> HashMap<String, String> {
+    let mut defines = HashMap::new();
+    #[cfg(feature = "devtools")]
+    {
+        defines.insert("ENABLE_DEVTOOLS".to_string(), "1".to_string());
+    }
+    defines
 }
 
 pub struct Renderer {
