@@ -40,9 +40,9 @@ jobs:
           cargo set-version "${{ env.TAG_NO_V }}"
 
       - name: Build assets
-        run: cargo run --package dawn-assets --release -- -i assets -o assets/assets.dac
+        run: cargo run --bin dawn-package --release -- -i assets -o assets/assets.dac
 
-      - name: Upload executable artifact (devtools)
+      - name: Upload assets artifact
         uses: actions/upload-artifact@v4
         with:
           name: assets
