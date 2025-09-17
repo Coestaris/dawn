@@ -67,23 +67,31 @@ struct Reader {
 
 impl Reader {
     fn get_patch() -> PathBuf {
-        // Try to find file with the same name in the current directory
-        let path = std::env::current_dir().unwrap().join("assets.dac");
-        if path.exists() {
-            path
-        } else {
-            let exe_dir = std::env::current_exe()
+        const FILENAME: &str = "assets.dac";
+
+        // Directories to search for the DAC file (in order)
+        let dirs = [
+            // Near the executable
+            std::env::current_exe()
                 .unwrap()
                 .parent()
                 .unwrap()
-                .to_path_buf();
-            let path = exe_dir.join("assets.dac");
-            if path.exists() {
-                path
-            } else {
-                panic!("DAC file not found. Please ensure 'assets.dac' is present in the current directory or the executable directory.");
+                .to_path_buf(),
+            // Current working directory
+            std::env::current_dir().unwrap(),
+        ];
+
+        for dir in &dirs {
+            let candidate = dir.join(FILENAME);
+            if candidate.exists() {
+                return candidate;
             }
         }
+
+        panic!(
+            "Assets file '{}' not found. Searched in: {:?}. Consider putting it next to the executable or running the application from the directory containing the assets file.",
+            FILENAME, dirs
+        );
     }
 
     fn new() -> Self {
@@ -112,10 +120,14 @@ impl ReaderBackend for Reader {
 fn main() {
     use dawn_app::{run_dawn, WorldSyncMode};
 
+    // Bootstrap panic hook. The app will override it later,
+    // but we want to catch panics as early as possible.
+    panic::set_hook(Box::new(panic_hook));
+
     // Disable colors in the release builds to not consume extra resources.
     // It also makes the log files much more readable.
     #[cfg(not(debug_assertions))]
-    setup_logging(log::LevelFilter::Info, Some("dawn_log".into()), false);
+    setup_logging(log::LevelFilter::Info, Some("dawn.log".into()), false);
     #[cfg(debug_assertions)]
     setup_logging(log::LevelFilter::Info, None, true);
 
