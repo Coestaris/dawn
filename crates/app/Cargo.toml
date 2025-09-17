@@ -9,13 +9,11 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["devtools" ]
-
+default = ["devtools"]
 threading = [
     "egui/rayon",
     "evenio/rayon"
 ]
-
 devtools = [
     "dep:egui",
     "dep:egui-winit",

@@ -138,6 +138,26 @@ mod config_impl {
         pub fn get_show_gizmos(&self) -> bool {
             true
         }
+
+        #[inline(always)]
+        pub fn get_sky_color(&self) -> glam::Vec3 {
+            glam::Vec3::new(0.9, 0.95, 1.0)
+        }
+
+        #[inline(always)]
+        pub fn get_ground_color(&self) -> glam::Vec3 {
+            glam::Vec3::new(0.5, 0.45, 0.4)
+        }
+
+        #[inline(always)]
+        pub fn get_diffuse_scale(&self) -> f32 {
+            1.0
+        }
+
+        #[inline(always)]
+        pub fn get_specular_scale(&self) -> f32 {
+            0.2
+        }
     }
 }
 

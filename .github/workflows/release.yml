@@ -9,6 +9,46 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  build-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          profile: minimal
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install global dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+
+      - name: Set TAG env (from pushed tag)
+        shell: bash
+        run: |
+          echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+          echo "TAG_NO_V=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Update version in Cargo.toml
+        run: |
+          cargo install cargo-edit
+          cargo set-version "${{ env.TAG_NO_V }}"
+
+      - name: Build assets
+        run: cargo run --package dawn-assets --release -- -i assets -o assets/assets.dac
+
+      - name: Upload executable artifact (devtools)
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets
+          path: assets/assets.dac
+          retention-days: 5
+
   build-linux:
     runs-on: ubuntu-latest
     steps:
@@ -39,8 +79,18 @@ jobs:
           cargo install cargo-edit
           cargo set-version "${{ env.TAG_NO_V }}"
 
+      - name: Build (devtools)
+        run: cargo build -p dawn-native --verbose --release --no-default-features --features devtools
+
+      - name: Upload executable artifact (devtools)
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-linux-devtools
+          path: target/release/dawn
+          retention-days: 5
+
       - name: Build
-        run: cargo build --verbose --release
+        run: cargo build -p dawn-native --verbose --release --no-default-features
 
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
@@ -49,21 +99,13 @@ jobs:
           path: target/release/dawn
           retention-days: 5
 
-      - name: Upload assets artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: assets
-          path: target/release/assets.dac
-          retention-days: 5
-
   build-windows:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 0
-
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -73,6 +115,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install global dependencies
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+
       - name: Set TAG env (from pushed tag)
         shell: bash
         run: |
@@ -80,35 +125,56 @@ jobs:
           echo "TAG_NO_V=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
 
       - name: Update version in Cargo.toml
-        shell: bash
         run: |
           cargo install cargo-edit
           cargo set-version "${{ env.TAG_NO_V }}"
 
-      - name: Build
-        run: cargo build --verbose --release --no-default-features --features devtools
+      - name: Build (devtools)
+        run: cargo build -p dawn-native --verbose --release --no-default-features --features devtools
 
-      - name: Upload artifact
+      - name: Upload executable artifact (devtools)
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-windows-devtools
+          path: target/release/dawn
+          retention-days: 5
+
+      - name: Build
+        run: cargo build -p dawn-native --verbose --release --no-default-features
+
+      - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-windows
-          path: target/release/dawn.exe
+          path: target/release/dawn
           retention-days: 5
 
   create-release:
     permissions: write-all
     runs-on: ubuntu-latest
-    needs: [build-linux, build-windows]
+    needs: [ build-linux, build-windows, build-assets ]
     steps:
       - name: Set TAG env (from pushed tag)
         shell: bash
         run: echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+
+      - name: Download Linux artifact (devtools)
+        uses: actions/download-artifact@v5
+        with:
+          name: build-linux-devtools
+          path: ./build-linux-devtools
 
       - name: Download Linux artifact
         uses: actions/download-artifact@v5
         with:
           name: build-linux
           path: ./build-linux
+
+      - name: Download Windows artifact (devtools)
+        uses: actions/download-artifact@v5
+        with:
+          name: build-windows-devtools
+          path: ./build-windows-devtools
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v5
@@ -133,6 +199,16 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Upload Linux binary to Release (devtools)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build-linux-devtools/dawn
+          asset_name: dawn-${{ env.TAG }}-linux-devtools
+          asset_content_type: application/octet-stream
+
       - name: Upload Linux binary to Release
         uses: actions/upload-release-asset@v1
         env:
@@ -141,6 +217,16 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./build-linux/dawn
           asset_name: dawn-${{ env.TAG }}-linux
+          asset_content_type: application/octet-stream
+
+      - name: Upload Windows binary to Release (devtools)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build-windows-devtools/dawn.exe
+          asset_name: dawn-${{ env.TAG }}-windows-devtools.exe
           asset_content_type: application/octet-stream
 
       - name: Upload Windows binary to Release

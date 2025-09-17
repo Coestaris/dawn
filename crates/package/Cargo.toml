@@ -14,4 +14,4 @@ dawn-dac = { path = "../../lib/crates/dac" }
 clap = { version = "4.5.47", features = ["derive"] }
 build-info = "0.0.41"
 dirs = "6.0.0"
-log = "0.4.28"
+log = { version = "0.4.28", features = ["std"] }
