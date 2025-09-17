@@ -1,7 +1,7 @@
-use std::sync::Arc;
 use crate::rendering::event::RenderingEvent;
 use dawn_assets::ir::texture::{IRPixelFormat, IRTexture, IRTextureType};
 use dawn_graphics::gl::raii::texture::Texture;
+use std::sync::Arc;
 
 pub struct FallbackTextures {
     pub albedo_texture: Texture,
@@ -14,7 +14,8 @@ impl FallbackTextures {
     pub(crate) fn new(gl: Arc<glow::Context>) -> Self {
         let albedo_texture = Self::create_missing_albedo_texture(gl.clone());
         let normal_texture = Self::create_missing_normal_texture(gl.clone());
-        let metallic_roughness_texture = Self::create_missing_metallic_roughness_texture(gl.clone());
+        let metallic_roughness_texture =
+            Self::create_missing_metallic_roughness_texture(gl.clone());
         let occlusion_texture = Self::create_missing_occlusion_texture(gl.clone());
 
         FallbackTextures {
