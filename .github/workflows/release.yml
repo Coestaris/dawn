@@ -39,13 +39,6 @@ jobs:
           cargo install cargo-edit
           cargo set-version "${{ env.TAG_NO_V }}"
 
-      - name: Cache assets
-        id: cache-assets
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/dawn
-          key: assets
-
       - name: Build assets
         run: cargo run --bin dawn-package -- -i assets -o assets/assets.dac
 
