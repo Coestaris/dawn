@@ -7,8 +7,8 @@ use web_time::{Instant, SystemTime};
 use std::{fmt, mem};
 
 pub fn format_system_time(system_time: SystemTime) -> Option<String> {
-    // TODO: Implement proper formatting
-    Some(format!("{:?}", system_time))
+    let datetime: chrono::DateTime<chrono::Utc> = system_time.into();
+    Some(datetime.format("%Y-%m-%d %H:%M:%S UTC").to_string())
 }
 
 pub fn print_build_info(bi: &BuildInfo) {
@@ -23,10 +23,11 @@ pub fn print_build_info(bi: &BuildInfo) {
         format_system_time(SystemTime::now()).unwrap()
     );
     info!("Build Information:");
+    info!("  Version: {}", bi.crate_info.version);
+    info!("  Features: {:?}", bi.crate_info.enabled_features);
     info!("  Timestamp: {}", bi.timestamp);
     info!("  Profile: {}", bi.profile);
     info!("  Optimizations: {}", bi.optimization_level);
-    info!("  Crate info: {}", bi.crate_info);
     info!("  Target: {}", bi.target);
     info!("  Compiler: {}", bi.compiler);
     if let Some(VersionControl::Git(git)) = &bi.version_control {
@@ -66,7 +67,7 @@ pub fn format_inner<'a, F, const COLORED: bool>(
     let location = format!("{}:{}", base, record.line().unwrap_or(0));
 
     callback(format_args!(
-        "[{cyan}{:^10.3}{reset}][{magenta}{:^30}{reset}][{yellow}{:^10}{reset}][{}{:>5}{reset}]: {}",
+        "[{cyan}{:^10.3}{reset}][{magenta}{:^25}{reset}][{yellow}{:^10}{reset}][{}{:>5}{reset}]: {}",
         elapsed.as_secs_f32(),
         location,
         std::thread::current().name().unwrap_or("main"),

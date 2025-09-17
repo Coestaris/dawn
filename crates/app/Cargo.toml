@@ -40,6 +40,7 @@ bitflags = "2.9.2"
 winit = "0.30.12"
 crossbeam-channel = "0.5.15"
 bytemuck = "1.23.2"
+chrono = "0.4.42"
 
 egui = { version = "0.32.2", features = ["default_fonts", "persistence", "log" ], optional = true }
 egui_extras = { version = "0.32.2", optional = true }
