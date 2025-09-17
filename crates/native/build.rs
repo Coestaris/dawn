@@ -1,4 +1,3 @@
-use dawn_package::Compression;
 use std::path::PathBuf;
 
 fn main() {
@@ -40,6 +39,7 @@ fn main() {
     #[cfg(feature = "build_assets")]
     {
         use dawn_package::package;
+        use dawn_package::Compression;
         let profile = std::env::var("PROFILE").unwrap();
         let assets = std::env::current_dir()
             .unwrap()
