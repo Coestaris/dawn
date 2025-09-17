@@ -1,11 +1,9 @@
-use crate::assets::reader::ReaderBackend;
-use crate::logging::{format, format_system_time};
+use crate::logging::format_system_time;
 use crate::rendering::devtools::tools::row_height;
 use dawn_assets::hub::{AssetInfo, AssetInfoState};
 use dawn_assets::AssetType;
 use dawn_dac::Manifest;
 use egui::Color32;
-use std::sync::Arc;
 
 pub enum ToolAssetsInfoMessage {
     Nothing,

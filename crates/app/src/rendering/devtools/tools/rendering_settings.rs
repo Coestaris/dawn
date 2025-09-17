@@ -216,8 +216,7 @@ pub fn tool_rendering_settings(
                 .ui(ui)
                 .changed();
 
-            if changed
-            {
+            if changed {
                 result = ToolRenderingSettingsMessage::ControlSunlight;
             }
         });

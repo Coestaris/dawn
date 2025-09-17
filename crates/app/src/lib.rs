@@ -22,15 +22,13 @@ use crate::world::maps::setup_maps_system;
 use build_info::BuildInfo;
 use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
-use dawn_ecs::world::{WorldLoop, WorldLoopTickResult};
 use dawn_graphics::renderer::{
     Renderer, RendererConfig, RendererProxy, RendererSynchronization, WindowConfig,
 };
 use dawn_util::rendezvous::Rendezvous;
 use evenio::prelude::World;
 use glam::UVec2;
-use log::{error, info};
-use std::backtrace::BacktraceStatus;
+use log::info;
 use std::panic;
 use std::panic::PanicHookInfo;
 use std::sync::Arc;
@@ -141,7 +139,7 @@ pub fn run_dawn<PH>(
     }
 
     let mut hub = AssetHub::new();
-    
+
     let backend_config = RendererConfig {
         shader_defines: shader_defines(),
         shader_factory_binding: Some(hub.get_factory_biding(AssetType::Shader)),

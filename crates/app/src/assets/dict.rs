@@ -1,3 +1,4 @@
+use crate::assets::map::{parse_entries, MapEntry};
 use dawn_assets::factory::{BasicFactory, FactoryBinding};
 use dawn_assets::ir::IRAsset;
 use dawn_assets::{AssetCastable, AssetMemoryUsage};
@@ -7,7 +8,6 @@ use evenio::event::Receiver;
 use evenio::fetch::Single;
 use evenio::prelude::World;
 use web_time::Duration;
-use crate::assets::map::{parse_entries, MapEntry};
 
 pub enum DictionaryEntry {
     Map(Vec<MapEntry>),

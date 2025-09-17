@@ -7,7 +7,7 @@ use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
 };
-use dawn_graphics::gl::raii::shader_program::{Program, UniformBlockLocation, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;

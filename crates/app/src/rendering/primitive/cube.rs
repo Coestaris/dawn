@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use dawn_assets::ir::mesh::{IRIndexType, IRLayout, IRLayoutField, IRLayoutSampleType, IRTopology};
 use dawn_graphics::gl::raii::array_buffer::{ArrayBuffer, ArrayBufferUsage};
 use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementArrayBufferUsage};
 use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::result::RenderResult;
 use glam::{Mat4, Vec3};
+use std::sync::Arc;
 
 pub struct Cube {
     pub vao: VertexArray,
