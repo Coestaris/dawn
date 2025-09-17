@@ -1,8 +1,8 @@
 # DAWN
 
 Little playground for experimenting with game engine architecture and rendering techniques.
-All the abstractions are stored in the separate [repo](https://github.com/Coestaris/dawnlib), which can be used in
-other projects.
+All the abstractions are stored in the separate [repo](https://github.com/Coestaris/dawnlib), which can be reused in
+other future projects.
 
 Consider downloading the latest release from the [Releases](https://github.com/Coestaris/dawn/releases) page if you just want to try the project.
 If you want to build it from source, follow the instructions below.
