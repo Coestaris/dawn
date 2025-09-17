@@ -75,3 +75,10 @@ cargo run -p dawn-package -- -i ./assets -o ./assets.dac
   It changes the features of the app, defines I/O, panic behavior and other platform-specific stuff.
 - `crates/wasm` - Boostrap code for WebAssembly platform.
 - `crates/wasm-server` - Simple [axum](https://github.com/tokio-rs/axum)-based served along with some JS code to run and host the generated WASM.
+
+### License
+
+All the code in this repo is licensed under the MIT license.
+See the [LICENSE](./LICENSE) file for details.
+All the assets in the `assets` are licensed under their respective licenses.
+Check the appropriate metadata files (`*.toml`) for details.
