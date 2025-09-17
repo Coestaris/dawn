@@ -21,12 +21,6 @@ build_info::build_info!(pub fn dawn_build_info);
 fn panic_hook(info: &panic::PanicHookInfo) {
     // TODO: Display a dialog in the browser if possible.
     WebLogger::error(format!("Panic: {}", info).as_str());
-
-    // Print the backtrace if possible.
-    let capture = std::backtrace::Backtrace::capture();
-    if let std::backtrace::BacktraceStatus::Captured = capture.status() {
-        WebLogger::error(format!("Backtrace:\n{:?}", capture).as_str());
-    }
 }
 
 pub struct WebLogger;

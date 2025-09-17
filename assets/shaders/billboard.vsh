@@ -1,4 +1,5 @@
-// Version is specified in the prelude
+#include "inc/prelude.glsl"
+#include "inc/ubo_camera.glsl"
 
 layout (location = 0) in vec2 in_box;
 layout (location = 1) in vec2 in_tex_coord;

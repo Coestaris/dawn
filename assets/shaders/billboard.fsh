@@ -1,4 +1,4 @@
-// Version is specified in the prelude
+#include "inc/prelude.glsl"
 
 out vec4 FragColor;
 

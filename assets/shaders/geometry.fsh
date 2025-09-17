@@ -1,4 +1,5 @@
-// Version is specified in the prelude
+#include "inc/prelude.glsl"
+#include "inc/ubo_camera.glsl"
 
 // RGBA8. RGB - albedo, A - metallic
 layout (location = 0) out vec4 out_albedo_metalic;
