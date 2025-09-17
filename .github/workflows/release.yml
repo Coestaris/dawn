@@ -55,6 +55,7 @@ jobs:
           name: assets
           path: assets/assets.dac
           retention-days: 5
+          if-no-files-found: error
 
   build-linux:
     runs-on: ubuntu-latest
@@ -87,27 +88,29 @@ jobs:
           cargo set-version "${{ env.TAG_NO_V }}"
 
       - name: Build (devtools)
-        run: cargo build -p dawn-native --verbose --release --no-default-features --features devtools
+        run: cargo build -p dawn-native --release --no-default-features --features devtools
 
       - name: Upload executable artifact (devtools)
         uses: actions/upload-artifact@v4
         with:
           name: build-linux-devtools
-          path: target/release/dawn
+          path: target/release/dawn-native
           retention-days: 5
+          if-no-files-found: error
 
       - name: Build
-        run: cargo build -p dawn-native --verbose --release --no-default-features
+        run: cargo build -p dawn-native --release --no-default-features
 
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-linux
-          path: target/release/dawn
+          path: target/release/dawn-native
           retention-days: 5
+          if-no-files-found: error
 
   build-windows:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -122,9 +125,6 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install global dependencies
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
-
       - name: Set TAG env (from pushed tag)
         shell: bash
         run: |
@@ -132,29 +132,32 @@ jobs:
           echo "TAG_NO_V=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
 
       - name: Update version in Cargo.toml
+        shell: bash
         run: |
           cargo install cargo-edit
           cargo set-version "${{ env.TAG_NO_V }}"
 
       - name: Build (devtools)
-        run: cargo build -p dawn-native --verbose --release --no-default-features --features devtools
+        run: cargo build -p dawn-native --release --no-default-features --features devtools
 
       - name: Upload executable artifact (devtools)
         uses: actions/upload-artifact@v4
         with:
           name: build-windows-devtools
-          path: target/release/dawn
+          path: target/release/dawn-native.exe
           retention-days: 5
+          if-no-files-found: error
 
       - name: Build
-        run: cargo build -p dawn-native --verbose --release --no-default-features
+        run: cargo build -p dawn-native --release --no-default-features
 
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-windows
-          path: target/release/dawn
+          path: target/release/dawn-native.exe
           retention-days: 5
+          if-no-files-found: error
 
   create-release:
     permissions: write-all
@@ -212,7 +215,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build-linux-devtools/dawn
+          asset_path: ./build-linux-devtools/dawn-native
           asset_name: dawn-${{ env.TAG }}-linux-devtools
           asset_content_type: application/octet-stream
 
@@ -222,7 +225,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build-linux/dawn
+          asset_path: ./build-linux/dawn-native
           asset_name: dawn-${{ env.TAG }}-linux
           asset_content_type: application/octet-stream
 
@@ -232,7 +235,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build-windows-devtools/dawn.exe
+          asset_path: ./build-windows-devtools/dawn-native.exe
           asset_name: dawn-${{ env.TAG }}-windows-devtools.exe
           asset_content_type: application/octet-stream
 
@@ -242,7 +245,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./build-windows/dawn.exe
+          asset_path: ./build-windows/dawn-native.exe
           asset_name: dawn-${{ env.TAG }}-windows.exe
           asset_content_type: application/octet-stream
 
