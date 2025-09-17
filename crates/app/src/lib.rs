@@ -166,9 +166,17 @@ pub fn run_dawn<PH>(
     let renderer_dispatcher = builder.build_dispatcher();
     let custom_renderer = builder.build_renderer(param);
 
-    let (renderer, proxy) =
-        Renderer::new_with_monitoring(window_config.clone(), backend_config, custom_renderer)
-            .unwrap();
+    let (renderer, proxy) = {
+        #[cfg(feature = "devtools")]
+        {
+            Renderer::new_with_monitoring(window_config.clone(), backend_config, custom_renderer)
+                .unwrap()
+        }
+        #[cfg(not(feature = "devtools"))]
+        {
+            Renderer::new(window_config.clone(), backend_config, custom_renderer).unwrap()
+        }
+    };
 
     // Run the world loop
     // This will spawn a new thread that runs the world loop.
@@ -185,18 +193,36 @@ pub fn run_dawn<PH>(
     let world_loop = match sync {
         WorldSyncMode::FixedTickRate(tps) => {
             use dawn_ecs::world::threading::WorldLoopProxy;
-            WorldLoopProxy::new_unsynchronized_with_monitoring(tps as f32, |w| {
-                Ok(init_world(w, to_ecs))
-            })
+            #[cfg(feature = "devtools")]
+            {
+                WorldLoopProxy::new_unsynchronized_with_monitoring(tps as f32, |w| {
+                    Ok(init_world(w, to_ecs))
+                })
+            }
+            #[cfg(not(feature = "devtools"))]
+            {
+                WorldLoopProxy::new_unsynchronized(tps as f32, |w| Ok(crate::init_world(w, to_ecs)))
+            }
         }
         WorldSyncMode::SynchronizedWithMonitor => {
             use dawn_ecs::world::threading::WorldLoopProxy;
             let synchronization = window_config.synchronization.clone().unwrap();
-            WorldLoopProxy::new_synchronized_with_monitoring(
-                synchronization.before_frame,
-                synchronization.after_frame,
-                |w| Ok(init_world(w, to_ecs)),
-            )
+            #[cfg(feature = "devtools")]
+            {
+                WorldLoopProxy::new_synchronized_with_monitoring(
+                    synchronization.before_frame,
+                    synchronization.after_frame,
+                    |w| Ok(init_world(w, to_ecs)),
+                )
+            }
+            #[cfg(not(feature = "devtools"))]
+            {
+                WorldLoopProxy::new_synchronized(
+                    synchronization.before_frame,
+                    synchronization.after_frame,
+                    |w| Ok(init_world(w, to_ecs)),
+                )
+            }
         }
     }
     .unwrap();
