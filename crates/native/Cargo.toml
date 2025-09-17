@@ -7,9 +7,7 @@ edition = "2021"
 
 [features]
 default = ["build_assets", "devtools"]
-build_assets = [
-    "dep:dawn-package",
-]
+build_assets = ["dep:dawn-package"]
 devtools = ["dawn-app/devtools"]
 
 [build-dependencies]
@@ -20,7 +18,7 @@ dawn-package = { path = "../package", optional = true }
 winresource = "0.1"
 
 [dependencies]
-dawn-app = { path = "../app", features = [ "threading" ] }
+dawn-app = { path = "../app", default-features = false, features = ["threading"] }
 dawn-dac = { path = "../../lib/crates/dac" }
 dawn-assets = { path = "../../lib/crates/assets" }
 anyhow = "1.0.99"
