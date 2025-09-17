@@ -47,7 +47,7 @@ jobs:
           key: assets
 
       - name: Build assets
-        run: cargo run --bin dawn-package --release -- -i assets -o assets/assets.dac
+        run: cargo run --bin dawn-package -- -i assets -o assets/assets.dac
 
       - name: Upload assets artifact
         uses: actions/upload-artifact@v4
