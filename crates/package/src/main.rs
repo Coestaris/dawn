@@ -6,9 +6,9 @@ mod lib;
 
 #[derive(clap::Parser)]
 struct Args {
-    #[clap(long)]
+    #[clap(long, short = 'i')]
     assets_dir: PathBuf,
-    #[clap(long)]
+    #[clap(long, short = 'o')]
     output_file: PathBuf,
     #[clap(long, default_value = "true")]
     compress: bool,

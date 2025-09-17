@@ -2,17 +2,19 @@ use dawn_app::assets::reader::ReaderBackend;
 use dawn_app::{run_dawn, WorldSyncMode};
 use dawn_assets::ir::IRAsset;
 use dawn_assets::AssetID;
+use dawn_dac::reader::{read_asset, read_manifest};
 use dawn_dac::Manifest;
-use log::{error, info, trace};
+use log::info;
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufReader, Cursor};
+use std::io::Cursor;
 use std::panic;
 use std::sync::Arc;
 pub use wasm_bindgen::prelude::*;
 use web_sys::console::debug;
-use dawn_dac::reader::{read_asset, read_manifest};
+
+// Raise error if compiled not for wasm32
+#[cfg(not(target_arch = "wasm32"))]
+compile_error!("This crate should only be compiled for the wasm32-unknown target.");
 
 build_info::build_info!(pub fn dawn_build_info);
 
