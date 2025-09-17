@@ -1,4 +1,6 @@
-// Version is specified in the prelude
+#include "inc/prelude.glsl"
+#include "inc/ubo_camera.glsl"
+#include "inc/debug_mode.glsl"
 
 out vec4 FragColor;
 
@@ -20,10 +22,21 @@ uniform uvec4 in_packed_lights_header;
 // see inc/debug_mode.glsl
 uniform int in_debug_mode;
 
+#if ENABLE_DEVTOOLS
+
 uniform vec3 ENV_SKY_COLOR;
 uniform vec3 ENV_GROUND_COLOR;
 uniform float ENV_DIFFUSE_SCALE;
 uniform float ENV_SPECULAR_SCALE;
+
+#else
+
+const vec3 ENV_SKY_COLOR    = vec3(0.6, 0.7, 0.9);
+const vec3 ENV_GROUND_COLOR = vec3(0.3, 0.25, 0.2);
+const float ENV_DIFFUSE_SCALE  = 1.0;
+const float ENV_SPECULAR_SCALE = 0.3;
+
+#endif
 
 const vec3 ENV_UP = vec3(0.0, 1.0, 0.0);
 
@@ -238,11 +251,9 @@ vec3 shade_point(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough
 }
 
 vec3 shade_sun(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
-    // Нормализованные базовые векторы
     N = normalize(N);
     V = normalize(V);
 
-    // ===== Прямой солнечный свет (Cook-Torrance) =====
     vec3  Ldir = -get_light_sun_direction(L);
     float NoL  = max(dot(N, Ldir), 0.0);
     if (NoL <= 0.0) {
@@ -311,9 +322,11 @@ vec3 shade_area_rect(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float r
 
 vec4 process() {
     // Check magic and version
+#if ENABLE_DEVTOOLS
     if (in_packed_lights_header.x != 0x4C495445u) {
         return vec4(0.0, 1.0, 1.0, 1.0); // Cyan for invalid lights buffer
     }
+#endif
 
     vec4 albedo_metallic = texture(in_albedo_metallic_texture, tex_coord);
     vec2 nor_oct = texture(in_normal_texture, tex_coord).rg;
@@ -356,6 +369,7 @@ vec4 process() {
 
 void main()
 {
+#if ENABLE_DEVTOOLS
     if (in_debug_mode == DEBUG_MODE_OFF) {
         FragColor = process();
     } else if (in_debug_mode == DEBUG_MODE_ALBEDO) {
@@ -384,4 +398,7 @@ void main()
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0); // Magenta for invalid mode
     }
+#else
+    FragColor = process();
+#endif
 }

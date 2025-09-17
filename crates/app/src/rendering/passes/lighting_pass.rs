@@ -22,18 +22,43 @@ const PBR_INDEX: i32 = 2;
 const DEPTH_INDEX: i32 = 3;
 const PACKED_LIGHTS_INDEX: i32 = 4;
 
-struct ShaderContainer {
-    shader: TypedAsset<Program>,
-
+struct Devtools {
     debug_mode: UniformLocation,
-
-    packed_lights_location: UniformLocation,
-    packed_lights_header_location: UniformLocation,
-
     sky_color_location: UniformLocation,
     ground_color_location: UniformLocation,
     diffuse_scale_location: UniformLocation,
     specular_scale_location: UniformLocation,
+}
+
+impl Devtools {
+    fn new(shader: &TypedAsset<Program>) -> Self {
+        Self {
+            debug_mode: shader.cast().get_uniform_location("in_debug_mode").unwrap(),
+            sky_color_location: shader.cast().get_uniform_location("ENV_SKY_COLOR").unwrap(),
+            ground_color_location: shader
+                .cast()
+                .get_uniform_location("ENV_GROUND_COLOR")
+                .unwrap(),
+            diffuse_scale_location: shader
+                .cast()
+                .get_uniform_location("ENV_DIFFUSE_SCALE")
+                .unwrap(),
+            specular_scale_location: shader
+                .cast()
+                .get_uniform_location("ENV_SPECULAR_SCALE")
+                .unwrap(),
+        }
+    }
+}
+
+struct ShaderContainer {
+    shader: TypedAsset<Program>,
+
+    packed_lights_location: UniformLocation,
+    packed_lights_header_location: UniformLocation,
+
+    #[cfg(feature = "devtools")]
+    devtools: Devtools,
 
     albedo_metallic_texture: UniformLocation,
     normal_texture: UniformLocation,
@@ -98,7 +123,8 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 let clone = shader.clone();
                 self.shader = Some(ShaderContainer {
                     shader: clone,
-                    debug_mode: shader.cast().get_uniform_location("in_debug_mode").unwrap(),
+                    #[cfg(feature = "devtools")]
+                    devtools: Devtools::new(&shader),
                     packed_lights_location: shader
                         .cast()
                         .get_uniform_location("in_packed_lights")
@@ -106,22 +132,6 @@ impl RenderPass<RenderingEvent> for LightingPass {
                     packed_lights_header_location: shader
                         .cast()
                         .get_uniform_location("in_packed_lights_header")
-                        .unwrap(),
-                    sky_color_location: shader
-                        .cast()
-                        .get_uniform_location("ENV_SKY_COLOR")
-                        .unwrap(),
-                    ground_color_location: shader
-                        .cast()
-                        .get_uniform_location("ENV_GROUND_COLOR")
-                        .unwrap(),
-                    diffuse_scale_location: shader
-                        .cast()
-                        .get_uniform_location("ENV_DIFFUSE_SCALE")
-                        .unwrap(),
-                    specular_scale_location: shader
-                        .cast()
-                        .get_uniform_location("ENV_SPECULAR_SCALE")
                         .unwrap(),
                     albedo_metallic_texture: shader
                         .cast()
@@ -197,20 +207,29 @@ impl RenderPass<RenderingEvent> for LightingPass {
         let shader = self.shader.as_ref().unwrap();
         let program = shader.shader.cast();
         Program::bind(&self.gl, program);
-        program.set_uniform(&shader.sky_color_location, self.config.get_sky_color());
-        program.set_uniform(
-            &shader.ground_color_location,
-            self.config.get_ground_color(),
-        );
-        program.set_uniform(
-            &shader.diffuse_scale_location,
-            self.config.get_diffuse_scale(),
-        );
-        program.set_uniform(
-            &shader.specular_scale_location,
-            self.config.get_specular_scale(),
-        );
-        program.set_uniform(&shader.debug_mode, self.config.get_output_mode() as i32);
+        #[cfg(feature = "devtools")]
+        {
+            program.set_uniform(
+                &shader.devtools.sky_color_location,
+                self.config.get_sky_color(),
+            );
+            program.set_uniform(
+                &shader.devtools.ground_color_location,
+                self.config.get_ground_color(),
+            );
+            program.set_uniform(
+                &shader.devtools.diffuse_scale_location,
+                self.config.get_diffuse_scale(),
+            );
+            program.set_uniform(
+                &shader.devtools.specular_scale_location,
+                self.config.get_specular_scale(),
+            );
+            program.set_uniform(
+                &shader.devtools.debug_mode,
+                self.config.get_output_mode() as i32,
+            );
+        }
         program.set_uniform(&shader.packed_lights_header_location, header.as_uvec4());
         Texture::bind(
             &self.gl,
