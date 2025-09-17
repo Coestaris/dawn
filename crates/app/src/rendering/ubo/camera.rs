@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use dawn_graphics::gl::raii::ubo::UBO;
+use std::sync::Arc;
 
 #[repr(C, align(16))]
 #[derive(Clone, Copy)]

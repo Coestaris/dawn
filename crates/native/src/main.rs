@@ -6,7 +6,6 @@ use dawn_assets::ir::IRAsset;
 use dawn_assets::AssetID;
 use dawn_dac::reader::{read_asset, read_manifest};
 use log::{error, LevelFilter};
-use std::backtrace::BacktraceStatus;
 use std::fs::File;
 use std::io::BufReader;
 use std::panic;

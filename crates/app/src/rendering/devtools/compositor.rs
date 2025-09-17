@@ -14,11 +14,11 @@ use crate::rendering::devtools::tools::world_stat::tool_world_stat;
 use crate::world::devtools::WorldStatistics;
 use build_info::BuildInfo;
 use dawn_assets::hub::AssetInfo;
+use dawn_dac::Manifest;
 use dawn_ecs::world::WorldLoopMonitorEvent;
 use dawn_graphics::gl::probe::OpenGLInfo;
 use dawn_graphics::renderer::RendererMonitorEvent;
 use std::sync::Arc;
-use dawn_dac::Manifest;
 
 pub(crate) struct Compositor {
     connection: DevtoolsRendererConnection,

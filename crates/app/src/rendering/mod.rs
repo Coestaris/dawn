@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::assets::reader::ReaderBackend;
 #[cfg(feature = "devtools")]
 use crate::devtools::DevtoolsRendererConnection;
@@ -29,6 +28,7 @@ use dawn_graphics::renderer::{CustomRenderer, RendererBackend};
 use dawn_graphics::{construct_chain, construct_chain_type};
 use glow::HasContext;
 use log::{debug, info, warn};
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 use winit::event::WindowEvent;

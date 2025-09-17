@@ -1,3 +1,5 @@
+use crate::assets::dict::DictionaryEntry;
+use crate::assets::map::{MapEntryData, MapEntryID};
 use crate::world::asset::{DropAllAssetsEvent, CURRENT_MAP};
 use crate::world::{move_light_handler, rotate_handler, MovingByArrowKeys, Rotating};
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
@@ -11,10 +13,7 @@ use evenio::component::Component;
 use evenio::entity::EntityId;
 use evenio::event::{Despawn, Insert, Receiver, Sender, Spawn};
 use evenio::fetch::{Fetcher, Single};
-use glam::{Quat, Vec3};
 use log::{info, warn};
-use crate::assets::dict::DictionaryEntry;
-use crate::assets::map::{MapEntryData, MapEntryID};
 
 #[derive(Component)]
 struct MapLink {
@@ -128,7 +127,14 @@ impl MapDispatcher {
                     } => {
                         sender.insert(id, ObjectColor { color });
                         sender.insert(id, ObjectIntensity { intensity });
-                        sender.insert(id, ObjectSunLight { direction, ambient, shadow });
+                        sender.insert(
+                            id,
+                            ObjectSunLight {
+                                direction,
+                                ambient,
+                                shadow,
+                            },
+                        );
                     }
                     MapEntryData::SpotLight {
                         location,

@@ -42,7 +42,7 @@ fn file_hash(path: &Path) -> anyhow::Result<String> {
     use std::io::Read;
 
     let mut file = File::open(path)?;
-    let mut hasher = sha2::Sha256::new();
+    let hasher = sha2::Sha256::new();
     let mut buffer = [0; 1024];
     loop {
         let n = file.read(&mut buffer)?;

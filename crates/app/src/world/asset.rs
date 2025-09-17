@@ -1,16 +1,11 @@
 use crate::assets::blob::BlobAssetFactory;
 use crate::assets::dict::DictionaryAssetFactory;
 use crate::assets::reader::{Reader, ReaderBackend};
-use crate::logging::format_system_time;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
-use dawn_assets::ir::IRAsset;
-use dawn_assets::reader::{BasicReader, ReaderBinding};
 use dawn_assets::requests::{AssetRequest, AssetRequestID, AssetRequestQuery};
-use dawn_assets::{AssetHeader, AssetID, AssetType};
-use dawn_dac::reader::{read_asset, read_manifest};
-use dawn_dac::{ContainerError, Manifest};
+use dawn_assets::AssetType;
 use dawn_ecs::events::{ExitEvent, TickEvent};
 use dawn_graphics::ecs::{InvalidateRendererCache, ObjectMesh};
 use dawn_graphics::passes::events::RenderPassEvent;
@@ -19,12 +14,8 @@ use evenio::entity::EntityId;
 use evenio::event::{GlobalEvent, Insert, Receiver, Remove, Sender, Spawn};
 use evenio::fetch::{Fetcher, Single};
 use evenio::prelude::World;
-use log::{debug, info};
-use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
+use log::info;
 use std::sync::Arc;
-use std::thread::{Builder, JoinHandle};
-use web_time::Duration;
 
 pub const CURRENT_MAP: &str = "map1";
 

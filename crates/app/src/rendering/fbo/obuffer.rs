@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use crate::rendering::fbo::GTexture;
 use dawn_assets::ir::texture::IRPixelFormat;
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
 use glam::UVec2;
 use log::info;
+use std::sync::Arc;
 
 pub struct OBuffer {
     pub fbo: Framebuffer,
@@ -21,7 +21,11 @@ impl OBuffer {
     pub fn new(gl: Arc<glow::Context>, initial: UVec2) -> Self {
         let buffer = OBuffer {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
-            texture: GTexture::new(gl.clone(), IRPixelFormat::RGBA8, FramebufferAttachment::Color0),
+            texture: GTexture::new(
+                gl.clone(),
+                IRPixelFormat::RGBA8,
+                FramebufferAttachment::Color0,
+            ),
         };
 
         buffer.resize(initial);

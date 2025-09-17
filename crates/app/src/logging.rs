@@ -1,10 +1,9 @@
 use build_info::{BuildInfo, VersionControl};
-use log::{info, Level, LevelFilter};
-use std::path::{Path, PathBuf};
-use std::ptr::addr_of_mut;
+use log::{info, Level};
+use std::fmt;
+use std::path::Path;
 use std::sync::OnceLock;
 use web_time::{Instant, SystemTime};
-use std::{fmt, mem};
 
 pub fn format_system_time(system_time: SystemTime) -> Option<String> {
     let datetime: chrono::DateTime<chrono::Utc> = system_time.into();
@@ -58,7 +57,10 @@ pub fn format_inner<'a, F, const COLORED: bool>(
     let white: &'static str = if COLORED { "\x1B[37m" } else { "" }; // White
     let reset: &'static str = if COLORED { "\x1B[0m" } else { "" }; // Reset
 
-    let elapsed = START_TIME.get().map(|start| start.elapsed()).unwrap_or_default();
+    let elapsed = START_TIME
+        .get()
+        .map(|start| start.elapsed())
+        .unwrap_or_default();
 
     // Keep only the file name, not the full path since that can be very long
     // and filename is really additional info anyway

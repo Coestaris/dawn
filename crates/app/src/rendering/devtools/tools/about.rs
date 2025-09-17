@@ -82,7 +82,11 @@ pub fn tool_about(ui: &egui::Context, bi: &BuildInfo, glinfo: Option<&OpenGLInfo
                             glinfo.version.major,
                             glinfo.version.minor,
                             glinfo.version.revision.unwrap_or(0),
-                            if glinfo.version.is_embedded { "ES" } else { "Core" },
+                            if glinfo.version.is_embedded {
+                                "ES"
+                            } else {
+                                "Core"
+                            },
                             glinfo.version.vendor_info
                         )
                         .as_str(),

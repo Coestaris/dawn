@@ -53,4 +53,5 @@ pub fn package(
     Ok(())
 }
 
+#[allow(dead_code)]
 fn main() {}
