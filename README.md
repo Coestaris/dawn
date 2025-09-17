@@ -24,7 +24,7 @@ And you need to have [Rust](https://www.rust-lang.org/tools/install) toolchain i
 ##### Native
 
 The Windows (using MSVC), Linux and macOS platforms are well tested and has no known issues.
-Then build and run the project using cargo:
+To build the project, run:
 ```bash
 # To run with dev-tools enabled:
 cargo run -p dawn-native
