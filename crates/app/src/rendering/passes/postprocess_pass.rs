@@ -1,7 +1,7 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::obuffer::OBuffer;
-use crate::rendering::primitive::quad::Quad;
+use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::PostprocessShader;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
@@ -20,7 +20,7 @@ pub(crate) struct PostProcessPass {
     config: RenderingConfig,
 
     shader: Option<PostprocessShader>,
-    quad: Quad,
+    quad: Quad2D,
     obuffer: Rc<OBuffer>,
 }
 
@@ -36,7 +36,7 @@ impl PostProcessPass {
             id,
             config,
             shader: None,
-            quad: Quad::new(gl),
+            quad: Quad2D::new(gl),
             obuffer,
         }
     }

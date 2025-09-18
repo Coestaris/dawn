@@ -2,7 +2,8 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::primitive::circle_lines::Circle3DLines;
-use crate::rendering::primitive::quad::Quad;
+use crate::rendering::primitive::quad::Quad2D;
+use crate::rendering::primitive::segment_lines::Segment3DLines;
 use crate::rendering::shaders::{BillboardShader, LineShader, BILLBOARD_SHADER, LINE_SHADER};
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_assets::TypedAsset;
@@ -30,7 +31,8 @@ pub(crate) struct GizmosPass {
     line: Option<LineShader>,
 
     viewport_size: UVec2,
-    quad: Quad,
+    quad: Quad2D,
+    segment: Segment3DLines,
     circle: Circle3DLines,
 
     light_texture: Option<TypedAsset<Texture>>,
@@ -52,7 +54,8 @@ impl GizmosPass {
             billboard: None,
             line: None,
             viewport_size: Default::default(),
-            quad: Quad::new(gl.clone()),
+            quad: Quad2D::new(gl.clone()),
+            segment: Segment3DLines::new(gl.clone()),
             circle: Circle3DLines::new(gl.clone()),
             light_texture: None,
             gbuffer,
@@ -60,7 +63,7 @@ impl GizmosPass {
         }
     }
 
-    fn draw_light_billboards(&self, frame: &DataStreamFrame) -> RenderResult {
+    fn draw_point_light_billboards(&self, frame: &DataStreamFrame) -> RenderResult {
         let shader = self.billboard.as_ref().unwrap();
         let program = shader.asset.cast();
         Program::bind(&self.gl, &program);
@@ -80,7 +83,7 @@ impl GizmosPass {
         result
     }
 
-    fn draw_light_lines(&self, frame: &DataStreamFrame) -> RenderResult {
+    fn draw_point_light_lines(&self, frame: &DataStreamFrame) -> RenderResult {
         static LINE_COLOR: Vec4 = Vec4::new(1.0, 1.0, 0.0, 1.0);
 
         let shader = self.line.as_ref().unwrap();
@@ -122,6 +125,34 @@ impl GizmosPass {
             result += self.circle.draw();
         }
 
+        Program::unbind(&self.gl);
+
+        result
+    }
+
+    fn draw_sun_light_gizmos(&self, frame: &DataStreamFrame) -> RenderResult {
+        static LINE_COLOR: Vec4 = Vec4::new(0.3, 1.0, 0.3, 1.0);
+
+        let shader = self.line.as_ref().unwrap();
+        let program = shader.asset.cast();
+        Program::bind(&self.gl, &program);
+
+        program.set_uniform(&shader.color_location, LINE_COLOR);
+
+        // Draw very long line to represent the sunlight's direction
+        let mut result = RenderResult::default();
+        for sun_light in frame.sun_lights.iter() {
+            let direction = sun_light.direction.normalize();
+
+            // Segment is a 1-unit long line along Z-axis
+            let model = Mat4::from_rotation_translation(
+                Quat::from_rotation_arc(Vec3::Z, direction),
+                -direction * 5000.0,
+            ) * Mat4::from_scale(Vec3::splat(10000.0));
+
+            program.set_uniform(&shader.model_location, model);
+            result += self.segment.draw();
+        }
         Program::unbind(&self.gl);
 
         result
@@ -224,8 +255,9 @@ impl RenderPass<RenderingEvent> for GizmosPass {
         }
 
         let mut result = RenderResult::default();
-        result += self.draw_light_lines(frame);
-        result += self.draw_light_billboards(frame);
+        result += self.draw_point_light_lines(frame);
+        result += self.draw_point_light_billboards(frame);
+        result += self.draw_sun_light_gizmos(frame);
         result
     }
 

@@ -2,7 +2,7 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::obuffer::OBuffer;
-use crate::rendering::primitive::quad::Quad;
+use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::{LightingShader, LightingShaderDevtools};
 use crate::rendering::ubo::packed_light::{LightsHeaderCPU, PackedLights};
 use dawn_assets::TypedAsset;
@@ -29,7 +29,7 @@ pub(crate) struct LightingPass {
     config: RenderingConfig,
 
     shader: Option<LightingShader>,
-    quad: Quad,
+    quad: Quad2D,
     view: glam::Mat4,
     packed_lights: PackedLights,
     gbuffer: Rc<GBuffer>,
@@ -49,7 +49,7 @@ impl LightingPass {
             id,
             config,
             shader: None,
-            quad: Quad::new(gl.clone()),
+            quad: Quad2D::new(gl.clone()),
             view: glam::Mat4::IDENTITY,
             packed_lights: PackedLights::new(gl).unwrap(),
             gbuffer,

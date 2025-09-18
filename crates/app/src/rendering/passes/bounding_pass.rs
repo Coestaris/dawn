@@ -2,7 +2,7 @@ use crate::rendering::config::{BoundingBoxMode, RenderingConfig};
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
-use crate::rendering::primitive::cube_lines::CubeLines;
+use crate::rendering::primitive::cube_lines::Cube3DLines;
 use crate::rendering::shaders::LineShader;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_assets::TypedAsset;
@@ -23,7 +23,7 @@ use std::sync::Arc;
 pub(crate) struct BoundingPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
-    cube: CubeLines,
+    cube: Cube3DLines,
     shader: Option<LineShader>,
     viewport_size: UVec2,
     gbuffer: Rc<GBuffer>,
@@ -41,7 +41,7 @@ impl BoundingPass {
             gl: gl.clone(),
             id,
             shader: None,
-            cube: CubeLines::new(gl),
+            cube: Cube3DLines::new(gl),
             viewport_size: UVec2::ZERO,
             gbuffer,
             config,
