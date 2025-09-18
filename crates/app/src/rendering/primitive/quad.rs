@@ -6,13 +6,13 @@ use dawn_graphics::passes::result::RenderResult;
 use std::sync::Arc;
 
 /// Defines the 2D circle primitive.
-pub struct Quad {
+pub struct Quad2D {
     vao: VertexArray,
     vbo: ArrayBuffer,
     ebo: ElementArrayBuffer,
 }
 
-impl Quad {
+impl Quad2D {
     pub fn new(gl: Arc<glow::Context>) -> Self {
         let vertex: [f32; 16] = [
             // positions   // tex coords
@@ -62,7 +62,7 @@ impl Quad {
         drop(ebo_binding);
         drop(vao_binding);
 
-        Quad { vao, vbo, ebo }
+        Quad2D { vao, vbo, ebo }
     }
 
     pub fn draw(&self) -> RenderResult {
