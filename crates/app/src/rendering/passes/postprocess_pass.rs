@@ -2,8 +2,8 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::obuffer::OBuffer;
 use crate::rendering::primitive::quad::Quad;
+use crate::rendering::shaders::PostprocessShader;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
-use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
@@ -14,20 +14,12 @@ use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
 
-struct ShaderContainer {
-    shader: TypedAsset<Program>,
-
-    fxaa_enabled: UniformLocation,
-    texture_location: UniformLocation,
-    ubo_camera_location: u32,
-}
-
 pub(crate) struct PostProcessPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     config: RenderingConfig,
 
-    shader: Option<ShaderContainer>,
+    shader: Option<PostprocessShader>,
     quad: Quad,
     obuffer: Rc<OBuffer>,
 }
@@ -65,28 +57,20 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
             RenderingEvent::DropAllAssets => {
                 self.shader = None;
             }
-            RenderingEvent::UpdateShader(shader) => {
+            RenderingEvent::UpdateShader(_, shader) => {
                 let clone = shader.clone();
-                self.shader = Some(ShaderContainer {
-                    shader: clone,
-                    fxaa_enabled: shader.cast().get_uniform_location("fxaa_enabled").unwrap(),
-                    texture_location: shader.cast().get_uniform_location("in_texture").unwrap(),
-                    ubo_camera_location: shader
-                        .cast()
-                        .get_uniform_block_location("ubo_camera")
-                        .unwrap(),
-                });
+                self.shader = Some(PostprocessShader::new(shader.clone()).unwrap());
 
-                if let Some(shader) = self.shader.as_mut() {
-                    let program = shader.shader.cast();
-                    Program::bind(&self.gl, &program);
-                    program.set_uniform(&shader.texture_location, 0);
-                    program.set_uniform_block_binding(
-                        shader.ubo_camera_location,
-                        CAMERA_UBO_BINDING as u32,
-                    );
-                    Program::unbind(&self.gl);
-                }
+                // Setup shader static uniforms
+                let shader = self.shader.as_ref().unwrap();
+                let program = shader.asset.cast();
+                Program::bind(&self.gl, &program);
+                program.set_uniform(&shader.texture_location, 0);
+                program.set_uniform_block_binding(
+                    shader.ubo_camera_location,
+                    CAMERA_UBO_BINDING as u32,
+                );
+                Program::unbind(&self.gl);
             }
             _ => {}
         }
@@ -113,7 +97,7 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
         }
 
         let shader = self.shader.as_ref().unwrap();
-        let program = shader.shader.cast();
+        let program = shader.asset.cast();
         Program::bind(&self.gl, program);
         program.set_uniform(
             &shader.fxaa_enabled,

@@ -3,6 +3,7 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::fallback_tex::FallbackTextures;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
+use crate::rendering::shaders::{GeometryShader, LineShader};
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_assets::TypedAsset;
@@ -24,26 +25,12 @@ const NORMAL_INDEX: i32 = 1;
 const METALLIC_ROUGHNESS_INDEX: i32 = 2;
 const OCCLUSION_INDEX: i32 = 3;
 
-struct ShaderContainer {
-    shader: TypedAsset<Program>,
-
-    // Vertex uniforms
-    ubo_camera_location: u32,
-    model_location: UniformLocation,
-
-    // Fragment uniforms
-    albedo: UniformLocation,
-    normal: UniformLocation,
-    metallic_roughness: UniformLocation,
-    occlusion: UniformLocation,
-}
-
 pub(crate) struct GeometryPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     config: RenderingConfig,
 
-    shader: Option<ShaderContainer>,
+    shader: Option<GeometryShader>,
     fallback_textures: FallbackTextures,
 
     frustum: FrustumCulling,
@@ -88,41 +75,31 @@ impl RenderPass<RenderingEvent> for GeometryPass {
             RenderingEvent::DropAllAssets => {
                 self.shader = None;
             }
-            RenderingEvent::UpdateShader(shader) => {
-                let clone = shader.clone();
-                let shader = shader.cast();
-                self.shader = Some(ShaderContainer {
-                    shader: clone,
-                    ubo_camera_location: shader.get_uniform_block_location("ubo_camera").unwrap(),
-                    model_location: shader.get_uniform_location("in_model").unwrap(),
-                    albedo: shader.get_uniform_location("in_albedo").unwrap(),
-                    normal: shader.get_uniform_location("in_normal").unwrap(),
-                    metallic_roughness: shader
-                        .get_uniform_location("in_metallic_roughness")
-                        .unwrap(),
-                    occlusion: shader.get_uniform_location("in_occlusion").unwrap(),
-                });
+            RenderingEvent::UpdateShader(_, shader) => {
+                self.shader = Some(GeometryShader::new(shader.clone()).unwrap());
 
-                if let Some(shader) = self.shader.as_mut() {
-                    let program = shader.shader.cast();
-                    Program::bind(&self.gl, &program);
-                    program.set_uniform_block_binding(
-                        shader.ubo_camera_location,
-                        CAMERA_UBO_BINDING as u32,
-                    );
-                    program.set_uniform(&shader.albedo, ALBEDO_INDEX);
-                    program.set_uniform(&shader.normal, NORMAL_INDEX);
-                    program.set_uniform(&shader.metallic_roughness, METALLIC_ROUGHNESS_INDEX);
-                    program.set_uniform(&shader.occlusion, OCCLUSION_INDEX);
-                    Program::unbind(&self.gl);
-                }
+                // Setup shader static uniforms
+                let shader = self.shader.as_ref().unwrap();
+                let program = shader.asset.cast();
+                Program::bind(&self.gl, &program);
+                program.set_uniform_block_binding(
+                    shader.ubo_camera_location,
+                    CAMERA_UBO_BINDING as u32,
+                );
+                program.set_uniform(&shader.albedo, ALBEDO_INDEX);
+                program.set_uniform(&shader.normal, NORMAL_INDEX);
+                program.set_uniform(&shader.metallic_roughness, METALLIC_ROUGHNESS_INDEX);
+                program.set_uniform(&shader.occlusion, OCCLUSION_INDEX);
+                Program::unbind(&self.gl);
             }
+
             RenderingEvent::ViewportResized(size) => unsafe {
                 self.gl.viewport(0, 0, size.x as i32, size.y as i32);
                 self.gl.scissor(0, 0, size.x as i32, size.y as i32);
                 self.camera_ubo.set_viewport(size.x as f32, size.y as f32);
                 self.camera_ubo.upload();
             },
+
             RenderingEvent::PerspectiveProjectionUpdated(proj) => {
                 self.frustum.set_perspective(proj);
                 self.camera_ubo.set_perspective(proj);
@@ -168,7 +145,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
 
         if let Some(shader) = self.shader.as_mut() {
             // Load view matrix into shader
-            let program = shader.shader.cast();
+            let program = shader.asset.cast();
             Program::bind(&self.gl, &program);
         }
 
@@ -194,7 +171,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
             }
 
             // Load view matrix into shader
-            let program = shader.shader.cast();
+            let program = shader.asset.cast();
             program.set_uniform(&shader.model_location, renderable.model);
 
             mesh.draw(|submesh| {
