@@ -40,6 +40,7 @@ pub struct GeometryShader {
     pub normal: UniformLocation,
     pub metallic_roughness: UniformLocation,
     pub occlusion: UniformLocation,
+    pub tangent_valid: UniformLocation,
 }
 
 impl GeometryShader {
@@ -54,6 +55,7 @@ impl GeometryShader {
             normal: program.get_uniform_location("in_normal")?,
             metallic_roughness: program.get_uniform_location("in_metallic_roughness")?,
             occlusion: program.get_uniform_location("in_occlusion")?,
+            tangent_valid: program.get_uniform_location("in_tangent_valid")?,
         })
     }
 }

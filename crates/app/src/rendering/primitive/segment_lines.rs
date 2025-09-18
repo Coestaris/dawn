@@ -1,4 +1,4 @@
-use dawn_assets::ir::mesh::{IRIndexType, IRLayout, IRLayoutField, IRLayoutSampleType, IRTopology};
+use dawn_assets::ir::mesh::{IRIndexType, IRMeshLayoutItem, IRLayoutField, IRLayoutSampleType, IRTopology};
 use dawn_graphics::gl::raii::array_buffer::{ArrayBuffer, ArrayBufferUsage};
 use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementArrayBufferUsage};
 use dawn_graphics::gl::raii::vertex_array::VertexArray;
@@ -31,7 +31,7 @@ impl Segment3DLines {
 
         vao_binding.setup_attribute(
             0,
-            &IRLayout {
+            &IRMeshLayoutItem {
                 field: IRLayoutField::Position,
                 sample_type: IRLayoutSampleType::Float,
                 samples: 3,
