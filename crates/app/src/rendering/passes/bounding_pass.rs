@@ -2,7 +2,8 @@ use crate::rendering::config::{BoundingBoxMode, RenderingConfig};
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
-use crate::rendering::primitive::cube::Cube;
+use crate::rendering::primitive::cube_lines::CubeLines;
+use crate::rendering::shaders::LineShader;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
@@ -19,18 +20,11 @@ use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
 
-struct ShaderContainer {
-    shader: TypedAsset<Program>,
-    ubo_camera_location: u32,
-    model_location: UniformLocation,
-    color_location: UniformLocation,
-}
-
 pub(crate) struct BoundingPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
-    cube: Cube,
-    shader: Option<ShaderContainer>,
+    cube: CubeLines,
+    shader: Option<LineShader>,
     viewport_size: UVec2,
     gbuffer: Rc<GBuffer>,
     config: RenderingConfig,
@@ -47,7 +41,7 @@ impl BoundingPass {
             gl: gl.clone(),
             id,
             shader: None,
-            cube: Cube::new(gl),
+            cube: CubeLines::new(gl),
             viewport_size: UVec2::ZERO,
             gbuffer,
             config,
@@ -70,26 +64,21 @@ impl RenderPass<RenderingEvent> for BoundingPass {
             RenderingEvent::DropAllAssets => {
                 self.shader = None;
             }
-            RenderingEvent::UpdateShader(shader) => {
-                let clone = shader.clone();
-                let casted = shader.cast();
-                self.shader = Some(ShaderContainer {
-                    shader: clone,
-                    ubo_camera_location: casted.get_uniform_block_location("ubo_camera").unwrap(),
-                    model_location: casted.get_uniform_location("in_model").unwrap(),
-                    color_location: casted.get_uniform_location("in_color").unwrap(),
-                });
 
-                if let Some(shader) = self.shader.as_mut() {
-                    let program = shader.shader.cast();
-                    Program::bind(&self.gl, &program);
-                    program.set_uniform_block_binding(
-                        shader.ubo_camera_location,
-                        CAMERA_UBO_BINDING as u32,
-                    );
-                    Program::unbind(&self.gl);
-                }
+            RenderingEvent::UpdateShader(_, shader) => {
+                self.shader = Some(LineShader::new(shader.clone()).unwrap());
+
+                // Setup shader static uniforms
+                let shader = self.shader.as_ref().unwrap();
+                let program = shader.asset.cast();
+                Program::bind(&self.gl, &program);
+                program.set_uniform_block_binding(
+                    shader.ubo_camera_location,
+                    CAMERA_UBO_BINDING as u32,
+                );
+                Program::unbind(&self.gl);
             }
+
             RenderingEvent::ViewportResized(size) => {
                 self.viewport_size = size;
             }
@@ -136,7 +125,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
 
         // Bind shader
         let shader = self.shader.as_ref().unwrap();
-        let program = shader.shader.cast();
+        let program = shader.asset.cast();
         Program::bind(&self.gl, &program);
 
         RenderResult::default()
@@ -161,7 +150,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
 
         let mesh = renderable.mesh.cast();
         let shader = self.shader.as_ref().unwrap();
-        let program = shader.shader.cast();
+        let program = shader.asset.cast();
         let mut result = RenderResult::default();
 
         static MESH_COLOR: Vec4 = Vec4::new(1.0, 0.0, 0.0, 1.0);
@@ -174,7 +163,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
             max: Vec3,
         ) -> RenderResult {
             let shader = pass.shader.as_ref().unwrap();
-            let program = shader.shader.cast();
+            let program = shader.asset.cast();
             let mode = pass.config.get_bounding_box_mode();
 
             match mode {

@@ -4,6 +4,7 @@ use dawn_assets::AssetID;
 use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::passes::events::{RenderPassEvent, RenderPassTargetId};
 use dawn_graphics::renderer::InputEvent;
+use egui::ahash::HashSet;
 use evenio::component::Component;
 use evenio::event::{Receiver, Sender};
 use evenio::fetch::Single;
@@ -16,7 +17,7 @@ use winit::event::WindowEvent;
 struct PassDescriptor {
     id: RenderPassTargetId,
     events: RenderingEventMask,
-    shader_id: AssetID,
+    shaders: HashSet<AssetID>,
 }
 
 #[derive(Component, Clone)]
@@ -43,12 +44,12 @@ impl RenderDispatcher {
             Mat4::orthographic_rh_gl(0.0, screen.x as f32, screen.y as f32, 0.0, -1.0, 1.0);
     }
 
-    pub fn pass(&mut self, events: RenderingEventMask, shader_id: &str) -> RenderPassTargetId {
+    pub fn pass(&mut self, events: RenderingEventMask, shaders: &[&str]) -> RenderPassTargetId {
         let id = RenderPassTargetId::new();
         self.descriptors.push(PassDescriptor {
             id,
             events,
-            shader_id: shader_id.into(),
+            shaders: shaders.iter().map(|s| s.to_string().into()).collect(),
         });
         id
     }
@@ -60,7 +61,7 @@ impl RenderDispatcher {
     ) {
         let bit = match event {
             RenderingEvent::DropAllAssets => RenderingEventMask::DROP_ALL_ASSETS,
-            RenderingEvent::UpdateShader(_) => RenderingEventMask::UPDATE_SHADER,
+            RenderingEvent::UpdateShader(_, _) => RenderingEventMask::UPDATE_SHADER,
             RenderingEvent::ViewUpdated(_) => RenderingEventMask::UPDATE_SHADER,
             RenderingEvent::PerspectiveProjectionUpdated(_) => {
                 RenderingEventMask::PERSP_PROJECTION_UPDATED
@@ -89,7 +90,7 @@ impl RenderDispatcher {
     ) {
         if let AssetHubEvent::AssetLoaded(aid) = event {
             for descriptor in self.descriptors.iter() {
-                if descriptor.shader_id.as_str() == aid.as_str()
+                if descriptor.shaders.contains(&aid)
                     && descriptor
                         .events
                         .contains(RenderingEventMask::UPDATE_SHADER)
@@ -97,7 +98,7 @@ impl RenderDispatcher {
                     let shader = hub.get_typed::<Program>(aid.clone()).unwrap();
                     sender.send(RenderPassEvent::new(
                         descriptor.id,
-                        RenderingEvent::UpdateShader(shader),
+                        RenderingEvent::UpdateShader(aid.clone(), shader),
                     ));
                 }
             }

@@ -124,8 +124,6 @@ pub fn run_dawn<PH>(
         let panic_hook = Box::leak(Box::new(panic_hook));
         panic::set_hook(Box::new(|info| {
             panic_hook(info);
-
-            // TODO: Maybe move this to the library side?
             // In case of a panic, we want to make sure that both threads can exit cleanly.
             // So we signal both rendezvous points to avoid deadlocks.
             before_frame.unlock();

@@ -15,11 +15,11 @@ use crate::rendering::passes::geometry_pass::GeometryPass;
 use crate::rendering::passes::gizmos_pass::GizmosPass;
 use crate::rendering::passes::lighting_pass::LightingPass;
 use crate::rendering::passes::postprocess_pass::PostProcessPass;
-use crate::rendering::ubo::camera::CameraUBO;
-use crate::rendering::ubo::CAMERA_UBO_BINDING;
-use crate::world::asset::{
+use crate::rendering::shaders::{
     BILLBOARD_SHADER, GEOMETRY_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER,
 };
+use crate::rendering::ubo::camera::CameraUBO;
+use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::WINDOW_SIZE;
 use build_info::BuildInfo;
 use dawn_graphics::gl::probe::OpenGLInfo;
@@ -44,7 +44,8 @@ pub mod fbo;
 pub mod frustum;
 pub mod passes;
 pub mod primitive;
-mod ubo;
+pub mod shaders;
+pub mod ubo;
 
 fn log_info(info: &OpenGLInfo) {
     info!("OpenGL information:");
@@ -242,18 +243,18 @@ impl RendererBuilder {
                 | RenderingEventMask::VIEW_UPDATED
                 | RenderingEventMask::VIEWPORT_RESIZED
                 | RenderingEventMask::PERSP_PROJECTION_UPDATED,
-            GEOMETRY_SHADER,
+            &[GEOMETRY_SHADER],
         );
         let lighting_id = dispatcher.pass(
             RenderingEventMask::DROP_ALL_ASSETS
                 | RenderingEventMask::UPDATE_SHADER
                 | RenderingEventMask::VIEWPORT_RESIZED
                 | RenderingEventMask::VIEW_UPDATED,
-            LIGHTING_SHADER,
+            &[LIGHTING_SHADER],
         );
         let postprocess_id = dispatcher.pass(
             RenderingEventMask::DROP_ALL_ASSETS | RenderingEventMask::UPDATE_SHADER,
-            POSTPROCESS_SHADER,
+            &[POSTPROCESS_SHADER],
         );
 
         #[cfg(feature = "devtools")]
@@ -261,7 +262,7 @@ impl RendererBuilder {
             RenderingEventMask::DROP_ALL_ASSETS
                 | RenderingEventMask::UPDATE_SHADER
                 | RenderingEventMask::VIEWPORT_RESIZED,
-            LINE_SHADER,
+            &[LINE_SHADER],
         );
         #[cfg(feature = "devtools")]
         let gizmos_id = dispatcher.pass(
@@ -269,7 +270,7 @@ impl RendererBuilder {
                 | RenderingEventMask::UPDATE_SHADER
                 | RenderingEventMask::VIEWPORT_RESIZED
                 | RenderingEventMask::SET_LIGHT_TEXTURE,
-            BILLBOARD_SHADER,
+            &[BILLBOARD_SHADER, LINE_SHADER],
         );
 
         let config = RenderingConfig::new();

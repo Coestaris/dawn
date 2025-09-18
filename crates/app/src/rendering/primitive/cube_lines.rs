@@ -6,14 +6,15 @@ use dawn_graphics::passes::result::RenderResult;
 use glam::{Mat4, Vec3};
 use std::sync::Arc;
 
-pub struct Cube {
+/// Defines the 3D cube primitive as a line loop.
+pub struct CubeLines {
     pub vao: VertexArray,
     pub vbo: ArrayBuffer,
     pub ebo: ElementArrayBuffer,
     pub indices_count: usize,
 }
 
-impl Cube {
+impl CubeLines {
     pub fn new(gl: Arc<glow::Context>) -> Self {
         let vertex = [
             // Top face
@@ -59,7 +60,7 @@ impl Cube {
         drop(ebo_binding);
         drop(vao_binding);
 
-        Cube {
+        CubeLines {
             vao,
             vbo,
             ebo,

@@ -14,9 +14,14 @@ in vec3 tangent;
 in vec3 bitangent;
 
 uniform mat4 in_model;
+
+// RGB or RGBA
 uniform sampler2D in_albedo;
+// RGB
 uniform sampler2D in_normal;
+// R - metallic, G - roughness
 uniform sampler2D in_metallic_roughness;
+// R - occlusion
 uniform sampler2D in_occlusion;
 
 // Encode a normal into an octahedral encoded vector
@@ -32,8 +37,8 @@ vec2 encode_oct(vec3 n) {
 void main()
 {
     vec3 albedo = texture(in_albedo, tex_coord).rgb;
-    float metallic = texture(in_metallic_roughness, tex_coord).b;
-    float roughness = texture(in_metallic_roughness, tex_coord).g;
+    float roughness = texture(in_metallic_roughness, tex_coord).r;
+    float metallic = texture(in_metallic_roughness, tex_coord).g;
     float occlusion = texture(in_occlusion, tex_coord).r;
 
     vec3 n_model_geo = normalize(normal);

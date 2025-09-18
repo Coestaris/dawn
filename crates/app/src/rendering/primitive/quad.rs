@@ -5,6 +5,7 @@ use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::result::RenderResult;
 use std::sync::Arc;
 
+/// Defines the 2D circle primitive.
 pub struct Quad {
     vao: VertexArray,
     vbo: ArrayBuffer,

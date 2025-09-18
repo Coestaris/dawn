@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use dawn_assets::TypedAsset;
+use dawn_assets::{Asset, AssetID, TypedAsset};
 use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::gl::raii::texture::Texture;
 use glam::{Mat4, UVec2};
@@ -8,7 +8,7 @@ use glam::{Mat4, UVec2};
 pub enum RenderingEvent {
     // Generic events
     DropAllAssets,
-    UpdateShader(TypedAsset<Program>),
+    UpdateShader(AssetID, TypedAsset<Program>),
     ViewUpdated(Mat4),
     PerspectiveProjectionUpdated(Mat4),
     OrthographicProjectionUpdated(Mat4),

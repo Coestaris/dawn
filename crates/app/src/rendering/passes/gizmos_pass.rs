@@ -2,6 +2,7 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::primitive::quad::Quad;
+use crate::rendering::shaders::{BillboardShader, LineShader, BILLBOARD_SHADER, LINE_SHADER};
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
@@ -18,18 +19,12 @@ use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
 
-struct ShaderContainer {
-    shader: TypedAsset<Program>,
-    ubo_camera_location: u32,
-    texture_location: UniformLocation,
-    size_location: UniformLocation,
-    position_location: UniformLocation,
-}
-
 pub(crate) struct GizmosPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
-    shader: Option<ShaderContainer>,
+
+    billboard: Option<BillboardShader>,
+    line: Option<LineShader>,
 
     viewport_size: UVec2,
     quad: Quad,
@@ -49,7 +44,8 @@ impl GizmosPass {
         GizmosPass {
             gl: gl.clone(),
             id,
-            shader: None,
+            billboard: None,
+            line: None,
             viewport_size: Default::default(),
             quad: Quad::new(gl),
             light_texture: None,
@@ -72,35 +68,42 @@ impl RenderPass<RenderingEvent> for GizmosPass {
     fn dispatch(&mut self, event: RenderingEvent) {
         match event {
             RenderingEvent::DropAllAssets => {
-                self.shader = None;
+                self.billboard = None;
+                self.line = None;
                 self.light_texture = None;
             }
             RenderingEvent::ViewportResized(size) => {
                 self.viewport_size = size;
             }
-            RenderingEvent::UpdateShader(shader) => {
-                let clone = shader.clone();
-                let casted = shader.cast();
-                self.shader = Some(ShaderContainer {
-                    shader: clone,
-                    ubo_camera_location: casted.get_uniform_block_location("ubo_camera").unwrap(),
-                    texture_location: casted.get_uniform_location("in_sprite").unwrap(),
-                    size_location: casted.get_uniform_location("in_size").unwrap(),
-                    position_location: casted.get_uniform_location("in_position").unwrap(),
-                });
+            RenderingEvent::UpdateShader(name, shader) if name == BILLBOARD_SHADER.into() => {
+                self.billboard = Some(BillboardShader::new(shader.clone()).unwrap());
 
-                if let Some(shader) = self.shader.as_mut() {
-                    let program = shader.shader.cast();
-                    Program::bind(&self.gl, &program);
-                    program.set_uniform_block_binding(
-                        shader.ubo_camera_location,
-                        CAMERA_UBO_BINDING as u32,
-                    );
-                    program.set_uniform(&shader.texture_location, 0);
-                    program.set_uniform(&shader.size_location, Vec2::new(0.7, 0.7));
-                    Program::unbind(&self.gl);
-                }
+                let shader = self.billboard.as_ref().unwrap();
+                let program = shader.asset.cast();
+                Program::bind(&self.gl, &program);
+                program.set_uniform_block_binding(
+                    shader.ubo_camera_location,
+                    CAMERA_UBO_BINDING as u32,
+                );
+                program.set_uniform(&shader.texture_location, 0);
+                program.set_uniform(&shader.size_location, Vec2::new(0.7, 0.7));
+                Program::unbind(&self.gl);
             }
+
+            RenderingEvent::UpdateShader(name, shader) if name == LINE_SHADER.into() => {
+                self.line = Some(LineShader::new(shader.clone()).unwrap());
+
+                // Setup shader static uniforms
+                let shader = self.line.as_ref().unwrap();
+                let program = shader.asset.cast();
+                Program::bind(&self.gl, &program);
+                program.set_uniform_block_binding(
+                    shader.ubo_camera_location,
+                    CAMERA_UBO_BINDING as u32,
+                );
+                Program::unbind(&self.gl);
+            }
+
             RenderingEvent::SetLightTexture(texture) => {
                 self.light_texture = Some(texture);
             }
@@ -118,7 +121,7 @@ impl RenderPass<RenderingEvent> for GizmosPass {
         _backend: &RendererBackend<RenderingEvent>,
         frame: &DataStreamFrame,
     ) -> RenderResult {
-        if self.shader.is_none() {
+        if self.billboard.is_none() {
             return RenderResult::default();
         }
         if self.light_texture.is_none() {
@@ -144,8 +147,8 @@ impl RenderPass<RenderingEvent> for GizmosPass {
             self.gl.enable(glow::DEPTH_TEST);
         }
 
-        let shader = self.shader.as_ref().unwrap();
-        let program = shader.shader.cast();
+        let shader = self.billboard.as_ref().unwrap();
+        let program = shader.asset.cast();
         Program::bind(&self.gl, &program);
 
         let light_texture = self.light_texture.as_ref().unwrap().cast();

@@ -22,12 +22,6 @@ pub const CURRENT_MAP: &str = "map1";
 pub const APPLICATION_ICON_BLOB_ID: &str = "icon_blob";
 pub const LIGHT_TEXTURE: &str = "light_texture";
 
-pub const GEOMETRY_SHADER: &str = "geometry_shader";
-pub const LINE_SHADER: &str = "line_shader";
-pub const BILLBOARD_SHADER: &str = "billboard_shader";
-pub const LIGHTING_SHADER: &str = "lighting_shader";
-pub const POSTPROCESS_SHADER: &str = "postprocess_shader";
-
 fn assets_failed_handler(r: Receiver<AssetHubEvent>, sender: Sender<ExitEvent>) {
     match r.event {
         AssetHubEvent::RequestFinished(request, Err(message)) => {
