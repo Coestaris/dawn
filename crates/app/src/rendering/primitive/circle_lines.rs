@@ -6,13 +6,14 @@ use dawn_graphics::passes::result::RenderResult;
 use std::sync::Arc;
 
 /// Defines the 2D circle primitive as a line loop.
-pub struct CircleLines {
+pub struct Circle3DLines {
     vao: VertexArray,
     vbo: ArrayBuffer,
     ebo: ElementArrayBuffer,
+    index_count: usize,
 }
 
-impl CircleLines {
+impl Circle3DLines {
     pub fn new(gl: Arc<glow::Context>) -> Self {
         const NUM_SEGMENTS: usize = 32;
         let mut vertex: Vec<f32> = Vec::new();
@@ -26,6 +27,7 @@ impl CircleLines {
 
             vertex.push(x); // position x
             vertex.push(y); // position y
+            vertex.push(0.0);
 
             if i > 0 {
                 indices_edges.push(i as u16);
@@ -54,8 +56,8 @@ impl CircleLines {
             &IRLayout {
                 field: IRLayoutField::Position,
                 sample_type: IRLayoutSampleType::Float,
-                samples: 2,
-                stride_bytes: 8,
+                samples: 3,
+                stride_bytes: 12,
                 offset_bytes: 0,
             },
         );
@@ -64,11 +66,16 @@ impl CircleLines {
         drop(ebo_binding);
         drop(vao_binding);
 
-        CircleLines { vao, vbo, ebo }
+        Circle3DLines {
+            vao,
+            vbo,
+            ebo,
+            index_count: indices_edges.len(),
+        }
     }
 
     pub fn draw(&self) -> RenderResult {
         let binding = self.vao.bind();
-        binding.draw_elements(6, 0)
+        binding.draw_elements(self.index_count, 0)
     }
 }

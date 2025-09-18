@@ -1,6 +1,7 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
+use crate::rendering::primitive::circle_lines::Circle3DLines;
 use crate::rendering::primitive::quad::Quad;
 use crate::rendering::shaders::{BillboardShader, LineShader, BILLBOARD_SHADER, LINE_SHADER};
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
@@ -14,8 +15,10 @@ use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
-use glam::{UVec2, Vec2};
+use glam::{Mat4, Quat, UVec2, Vec2, Vec3, Vec4};
 use glow::HasContext;
+use std::f32::consts::FRAC_PI_2;
+use std::panic::resume_unwind;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -28,6 +31,8 @@ pub(crate) struct GizmosPass {
 
     viewport_size: UVec2,
     quad: Quad,
+    circle: Circle3DLines,
+
     light_texture: Option<TypedAsset<Texture>>,
 
     gbuffer: Rc<GBuffer>,
@@ -47,11 +52,79 @@ impl GizmosPass {
             billboard: None,
             line: None,
             viewport_size: Default::default(),
-            quad: Quad::new(gl),
+            quad: Quad::new(gl.clone()),
+            circle: Circle3DLines::new(gl.clone()),
             light_texture: None,
             gbuffer,
             config,
         }
+    }
+
+    fn draw_light_billboards(&self, frame: &DataStreamFrame) -> RenderResult {
+        let shader = self.billboard.as_ref().unwrap();
+        let program = shader.asset.cast();
+        Program::bind(&self.gl, &program);
+
+        let light_texture = self.light_texture.as_ref().unwrap().cast();
+        Texture::bind(&self.gl, TextureBind::Texture2D, light_texture, 0);
+
+        let mut result = RenderResult::default();
+
+        for point_light in frame.point_lights.iter() {
+            let position = point_light.position;
+            program.set_uniform(&shader.position_location, position);
+            result += self.quad.draw();
+        }
+        Program::unbind(&self.gl);
+
+        result
+    }
+
+    fn draw_light_lines(&self, frame: &DataStreamFrame) -> RenderResult {
+        static LINE_COLOR: Vec4 = Vec4::new(1.0, 1.0, 0.0, 1.0);
+
+        let shader = self.line.as_ref().unwrap();
+        let program = shader.asset.cast();
+        Program::bind(&self.gl, &program);
+
+        program.set_uniform(&shader.color_location, LINE_COLOR);
+
+        // Draw 3 circles for each point light to represent the light's range
+        let mut result = RenderResult::default();
+        for point_light in frame.point_lights.iter() {
+            let position = point_light.position;
+
+            let range = if point_light.linear_falloff {
+                point_light.range * 0.5
+            } else {
+                point_light.range * 0.5 * 0.5
+            };
+            let scale = Mat4::from_scale(Vec3::splat(range));
+
+            let model1 = Mat4::from_rotation_translation(
+                Quat::from_axis_angle(Vec3::X, FRAC_PI_2),
+                position,
+            ) * scale;
+            let model2 = Mat4::from_rotation_translation(
+                Quat::from_axis_angle(Vec3::Y, FRAC_PI_2),
+                position,
+            ) * scale;
+            let model3 = Mat4::from_rotation_translation(
+                Quat::from_axis_angle(Vec3::Z, FRAC_PI_2),
+                position,
+            ) * scale;
+
+            program.set_uniform(&shader.model_location, model1);
+            result += self.circle.draw();
+            program.set_uniform(&shader.model_location, model2);
+            result += self.circle.draw();
+            program.set_uniform(&shader.model_location, model3);
+            result += self.circle.draw();
+        }
+
+        Program::unbind(&self.gl);
+
+        result
     }
 }
 
@@ -124,6 +197,9 @@ impl RenderPass<RenderingEvent> for GizmosPass {
         if self.billboard.is_none() {
             return RenderResult::default();
         }
+        if self.line.is_none() {
+            return RenderResult::default();
+        }
         if self.light_texture.is_none() {
             return RenderResult::default();
         }
@@ -147,21 +223,9 @@ impl RenderPass<RenderingEvent> for GizmosPass {
             self.gl.enable(glow::DEPTH_TEST);
         }
 
-        let shader = self.billboard.as_ref().unwrap();
-        let program = shader.asset.cast();
-        Program::bind(&self.gl, &program);
-
-        let light_texture = self.light_texture.as_ref().unwrap().cast();
-        Texture::bind(&self.gl, TextureBind::Texture2D, light_texture, 0);
-
         let mut result = RenderResult::default();
-
-        for point_light in frame.point_lights.iter() {
-            let position = point_light.position;
-            program.set_uniform(&shader.position_location, position);
-            result += self.quad.draw();
-        }
-
+        result += self.draw_light_lines(frame);
+        result += self.draw_light_billboards(frame);
         result
     }
 
@@ -169,8 +233,6 @@ impl RenderPass<RenderingEvent> for GizmosPass {
         if !self.config.get_show_gizmos() {
             return RenderResult::default();
         }
-
-        Program::unbind(&self.gl);
 
         RenderResult::default()
     }
