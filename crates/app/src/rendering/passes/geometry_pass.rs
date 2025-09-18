@@ -174,63 +174,69 @@ impl RenderPass<RenderingEvent> for GeometryPass {
             let program = shader.asset.cast();
             program.set_uniform(&shader.model_location, renderable.model);
 
-            mesh.draw(|submesh| {
-                // Check if the submesh at the camera frustum
-                // otherwise, skip rendering
-                // TODO: Is it worth to do frustum culling per submesh?
-                if !self
-                    .frustum
-                    .is_visible(submesh.min, submesh.max, renderable.model)
-                {
-                    return (true, RenderResult::default());
-                }
+            mesh.draw(
+                |bucket| {
+                    program.set_uniform(&shader.tangent_valid, bucket.key.tangent_valid);
+                    (false, RenderResult::default())
+                },
+                |submesh| {
+                    // Check if the submesh at the camera frustum
+                    // otherwise, skip rendering
+                    // TODO: Is it worth to do frustum culling per submesh?
+                    if !self
+                        .frustum
+                        .is_visible(submesh.min, submesh.max, renderable.model)
+                    {
+                        return (true, RenderResult::default());
+                    }
 
-                let (albedo, normal, metallic_roughness, occlusion) =
-                    if let Some(material) = &submesh.material {
-                        let material = material.cast::<Material>();
+                    let (albedo, normal, metallic_roughness, occlusion) =
+                        if let Some(material) = &submesh.material {
+                            let material = material.cast::<Material>();
 
-                        let albedo = material.albedo.cast();
-                        let normal = material.normal.cast();
-                        let metallic_roughness = material.metallic_roughness.cast();
-                        let occlusion = material.occlusion.cast();
+                            let albedo = material.albedo.cast();
+                            let normal = material.normal.cast();
+                            let metallic_roughness = material.metallic_roughness.cast();
+                            let occlusion = material.occlusion.cast();
 
-                        (albedo, normal, metallic_roughness, occlusion)
-                    } else {
-                        (
-                            &self.fallback_textures.albedo_texture,
-                            &self.fallback_textures.normal_texture,
-                            &self.fallback_textures.metallic_roughness_texture,
-                            &self.fallback_textures.occlusion_texture,
-                        )
-                    };
+                            (albedo, normal, metallic_roughness, occlusion)
+                        } else {
+                            (
+                                &self.fallback_textures.albedo_texture,
+                                &self.fallback_textures.normal_texture,
+                                &self.fallback_textures.metallic_roughness_texture,
+                                &self.fallback_textures.occlusion_texture,
+                            )
+                        };
 
-                Texture::bind(
-                    &self.gl,
-                    TextureBind::Texture2D,
-                    albedo,
-                    ALBEDO_INDEX as u32,
-                );
-                Texture::bind(
-                    &self.gl,
-                    TextureBind::Texture2D,
-                    normal,
-                    NORMAL_INDEX as u32,
-                );
-                Texture::bind(
-                    &self.gl,
-                    TextureBind::Texture2D,
-                    metallic_roughness,
-                    METALLIC_ROUGHNESS_INDEX as u32,
-                );
-                Texture::bind(
-                    &self.gl,
-                    TextureBind::Texture2D,
-                    occlusion,
-                    OCCLUSION_INDEX as u32,
-                );
+                    Texture::bind(
+                        &self.gl,
+                        TextureBind::Texture2D,
+                        albedo,
+                        ALBEDO_INDEX as u32,
+                    );
+                    Texture::bind(
+                        &self.gl,
+                        TextureBind::Texture2D,
+                        normal,
+                        NORMAL_INDEX as u32,
+                    );
+                    Texture::bind(
+                        &self.gl,
+                        TextureBind::Texture2D,
+                        metallic_roughness,
+                        METALLIC_ROUGHNESS_INDEX as u32,
+                    );
+                    Texture::bind(
+                        &self.gl,
+                        TextureBind::Texture2D,
+                        occlusion,
+                        OCCLUSION_INDEX as u32,
+                    );
 
-                (false, RenderResult::default())
-            })
+                    (false, RenderResult::default())
+                },
+            )
         } else {
             RenderResult::default()
         }
