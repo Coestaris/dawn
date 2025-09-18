@@ -3,6 +3,7 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::obuffer::OBuffer;
 use crate::rendering::primitive::quad::Quad;
+use crate::rendering::shaders::{LightingShader, LightingShaderDevtools};
 use crate::rendering::ubo::packed_light::{LightsHeaderCPU, PackedLights};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
@@ -22,56 +23,12 @@ const PBR_INDEX: i32 = 2;
 const DEPTH_INDEX: i32 = 3;
 const PACKED_LIGHTS_INDEX: i32 = 4;
 
-struct Devtools {
-    debug_mode: UniformLocation,
-    sky_color_location: UniformLocation,
-    ground_color_location: UniformLocation,
-    diffuse_scale_location: UniformLocation,
-    specular_scale_location: UniformLocation,
-}
-
-impl Devtools {
-    fn new(shader: &TypedAsset<Program>) -> Self {
-        Self {
-            debug_mode: shader.cast().get_uniform_location("in_debug_mode").unwrap(),
-            sky_color_location: shader.cast().get_uniform_location("ENV_SKY_COLOR").unwrap(),
-            ground_color_location: shader
-                .cast()
-                .get_uniform_location("ENV_GROUND_COLOR")
-                .unwrap(),
-            diffuse_scale_location: shader
-                .cast()
-                .get_uniform_location("ENV_DIFFUSE_SCALE")
-                .unwrap(),
-            specular_scale_location: shader
-                .cast()
-                .get_uniform_location("ENV_SPECULAR_SCALE")
-                .unwrap(),
-        }
-    }
-}
-
-struct ShaderContainer {
-    shader: TypedAsset<Program>,
-
-    packed_lights_location: UniformLocation,
-    packed_lights_header_location: UniformLocation,
-
-    #[cfg(feature = "devtools")]
-    devtools: Devtools,
-
-    albedo_metallic_texture: UniformLocation,
-    normal_texture: UniformLocation,
-    pbr_texture: UniformLocation,
-    depth_texture: UniformLocation,
-}
-
 pub(crate) struct LightingPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     config: RenderingConfig,
 
-    shader: Option<ShaderContainer>,
+    shader: Option<LightingShader>,
     quad: Quad,
     view: glam::Mat4,
     packed_lights: PackedLights,
@@ -119,48 +76,18 @@ impl RenderPass<RenderingEvent> for LightingPass {
             RenderingEvent::ViewUpdated(view) => {
                 self.view = view;
             }
-            RenderingEvent::UpdateShader(shader) => {
-                let clone = shader.clone();
-                self.shader = Some(ShaderContainer {
-                    shader: clone,
-                    #[cfg(feature = "devtools")]
-                    devtools: Devtools::new(&shader),
-                    packed_lights_location: shader
-                        .cast()
-                        .get_uniform_location("in_packed_lights")
-                        .unwrap(),
-                    packed_lights_header_location: shader
-                        .cast()
-                        .get_uniform_location("in_packed_lights_header")
-                        .unwrap(),
-                    albedo_metallic_texture: shader
-                        .cast()
-                        .get_uniform_location("in_albedo_metallic_texture")
-                        .unwrap(),
-                    normal_texture: shader
-                        .cast()
-                        .get_uniform_location("in_normal_texture")
-                        .unwrap(),
-                    pbr_texture: shader
-                        .cast()
-                        .get_uniform_location("in_pbr_texture")
-                        .unwrap(),
-                    depth_texture: shader
-                        .cast()
-                        .get_uniform_location("in_depth_texture")
-                        .unwrap(),
-                });
+            RenderingEvent::UpdateShader(_, shader) => {
+                self.shader = Some(LightingShader::new(shader.clone()).unwrap());
 
-                if let Some(shader) = self.shader.as_mut() {
-                    let program = shader.shader.cast();
-                    Program::bind(&self.gl, &program);
-                    program.set_uniform(&shader.albedo_metallic_texture, ALBEDO_METALLIC_INDEX);
-                    program.set_uniform(&shader.normal_texture, NORMAL_INDEX);
-                    program.set_uniform(&shader.pbr_texture, PBR_INDEX);
-                    program.set_uniform(&shader.depth_texture, DEPTH_INDEX);
-                    program.set_uniform(&shader.packed_lights_location, PACKED_LIGHTS_INDEX);
-                    Program::unbind(&self.gl);
-                }
+                let shader = self.shader.as_ref().unwrap();
+                let program = shader.asset.cast();
+                Program::bind(&self.gl, &program);
+                program.set_uniform(&shader.albedo_metallic_texture, ALBEDO_METALLIC_INDEX);
+                program.set_uniform(&shader.normal_texture, NORMAL_INDEX);
+                program.set_uniform(&shader.pbr_texture, PBR_INDEX);
+                program.set_uniform(&shader.depth_texture, DEPTH_INDEX);
+                program.set_uniform(&shader.packed_lights_location, PACKED_LIGHTS_INDEX);
+                Program::unbind(&self.gl);
             }
             RenderingEvent::ViewportResized(size) => {
                 self.gbuffer.resize(size);
@@ -205,7 +132,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
         Framebuffer::bind(&self.gl, &self.obuffer.fbo);
 
         let shader = self.shader.as_ref().unwrap();
-        let program = shader.shader.cast();
+        let program = shader.asset.cast();
         Program::bind(&self.gl, program);
         #[cfg(feature = "devtools")]
         {

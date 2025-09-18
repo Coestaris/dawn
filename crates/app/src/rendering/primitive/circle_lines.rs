@@ -5,28 +5,40 @@ use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::result::RenderResult;
 use std::sync::Arc;
 
-/// Defines the 2D circle primitive.
-pub struct Quad {
+/// Defines the 2D circle primitive as a line loop.
+pub struct CircleLines {
     vao: VertexArray,
     vbo: ArrayBuffer,
     ebo: ElementArrayBuffer,
 }
 
-impl Quad {
+impl CircleLines {
     pub fn new(gl: Arc<glow::Context>) -> Self {
-        let vertex: [f32; 16] = [
-            // positions   // tex coords
-            -1.0, 1.0, 0.0, 1.0, // top left
-            -1.0, -1.0, 0.0, 0.0, // bottom left
-            1.0, -1.0, 1.0, 0.0, // bottom right
-            1.0, 1.0, 1.0, 1.0, // top right
-        ];
-        let indices_edges: [u16; 6] = [
-            0, 1, 2, // first triangle
-            0, 2, 3, // second triangle
-        ];
+        const NUM_SEGMENTS: usize = 32;
+        let mut vertex: Vec<f32> = Vec::new();
+        let mut indices_edges: Vec<u16> = Vec::new();
 
-        let vao = VertexArray::new(gl.clone(), IRTopology::Triangles, IRIndexType::U16).unwrap();
+        let step = 2.0 * std::f32::consts::PI / NUM_SEGMENTS as f32;
+        let mut angle: f32 = 0.0;
+        for i in 0..NUM_SEGMENTS {
+            let x = angle.cos();
+            let y = angle.sin();
+
+            vertex.push(x); // position x
+            vertex.push(y); // position y
+
+            if i > 0 {
+                indices_edges.push(i as u16);
+                indices_edges.push((i - 1) as u16);
+            }
+
+            angle += step;
+        }
+
+        indices_edges.push(0);
+        indices_edges.push((NUM_SEGMENTS - 1) as u16);
+
+        let vao = VertexArray::new(gl.clone(), IRTopology::Lines, IRIndexType::U16).unwrap();
         let mut vbo = ArrayBuffer::new(gl.clone()).unwrap();
         let mut ebo = ElementArrayBuffer::new(gl).unwrap();
 
@@ -43,18 +55,8 @@ impl Quad {
                 field: IRLayoutField::Position,
                 sample_type: IRLayoutSampleType::Float,
                 samples: 2,
-                stride_bytes: 16,
+                stride_bytes: 8,
                 offset_bytes: 0,
-            },
-        );
-        vao_binding.setup_attribute(
-            1,
-            &IRLayout {
-                field: IRLayoutField::TexCoord,
-                sample_type: IRLayoutSampleType::Float,
-                samples: 2,
-                stride_bytes: 16,
-                offset_bytes: 8,
             },
         );
 
@@ -62,7 +64,7 @@ impl Quad {
         drop(ebo_binding);
         drop(vao_binding);
 
-        Quad { vao, vbo, ebo }
+        CircleLines { vao, vbo, ebo }
     }
 
     pub fn draw(&self) -> RenderResult {
