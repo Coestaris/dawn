@@ -48,10 +48,18 @@ pub fn tool_rendering_stat(ui: &egui::Context, stat: &RendererMonitorEvent) {
                         row_duration(&mut row, "Events Time", stat.events);
                     });
                     body.row(text_height, |mut row| {
-                        row_f32_s(&mut row, "Primitives (per sec)", stat.drawn_primitives);
+                        row_f32_s(
+                            &mut row,
+                            "Primitives (per frame)",
+                            mul_sample(stat.drawn_primitives, 1.0 / stat.fps.average()),
+                        );
                     });
                     body.row(text_height, |mut row| {
-                        row_f32_s(&mut row, "Draw calls (per sec)", stat.draw_calls);
+                        row_f32_s(
+                            &mut row,
+                            "Draw calls (per frame)",
+                            mul_sample(stat.draw_calls, 1.0 / stat.fps.average()),
+                        );
                     });
                     for (i, (pass, time)) in stat.passes.iter().enumerate() {
                         body.row(text_height, |mut row| {

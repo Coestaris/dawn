@@ -83,8 +83,8 @@ impl FallbackTextures {
 
     fn create_missing_metallic_roughness_texture(gl: Arc<glow::Context>) -> Texture {
         let data = [
-            255u8, 255, 255, 255, // Row 1
-            255u8, 255, 255, 255, // Row 2
+            0u8, 255, 0, 255, // Row 1
+            0u8, 255, 0, 255, // Row 2
         ];
 
         let texture_ir = IRTexture {
@@ -93,7 +93,7 @@ impl FallbackTextures {
                 width: 2,
                 height: 2,
             },
-            pixel_format: IRPixelFormat::R8,
+            pixel_format: IRPixelFormat::RG8,
             use_mipmaps: false,
             min_filter: Default::default(),
             mag_filter: Default::default(),
@@ -109,8 +109,8 @@ impl FallbackTextures {
 
     fn create_missing_occlusion_texture(gl: Arc<glow::Context>) -> Texture {
         let data = [
-            255u8, 255, 255, 255, // Row 1
-            255u8, 255, 255, 255, // Row 2
+            255u8, 255, // Row 1
+            255u8, 255, // Row 2
         ];
 
         let texture_ir = IRTexture {

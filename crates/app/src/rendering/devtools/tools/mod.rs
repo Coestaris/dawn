@@ -23,13 +23,13 @@ pub fn row_duration(
         ui.strong(label);
     });
     row.col(|ui| {
-        ui.label(format!("{:?}", sample.min()));
+        ui.label(format!("{:.0?}", sample.min()));
     });
     row.col(|ui| {
-        ui.label(format!("{:?}", sample.average()));
+        ui.label(format!("{:.0?}", sample.average()));
     });
     row.col(|ui| {
-        ui.label(format!("{:.2?}", sample.max()));
+        ui.label(format!("{:.0?}", sample.max()));
     });
 }
 
@@ -53,13 +53,13 @@ pub fn row_f32_s(row: &mut egui_extras::TableRow, label: &str, sample: MonitorSa
         ui.strong(label);
     });
     row.col(|ui| {
-        ui.label(format!("{:.2e}", sample.min()));
+        ui.label(format!("{:.0}", sample.min()));
     });
     row.col(|ui| {
-        ui.label(format!("{:.2e}", sample.average()));
+        ui.label(format!("{:.0}", sample.average()));
     });
     row.col(|ui| {
-        ui.label(format!("{:.2e}", sample.max()));
+        ui.label(format!("{:.0}", sample.max()));
     });
 }
 
