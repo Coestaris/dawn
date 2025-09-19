@@ -176,7 +176,16 @@ impl RenderPass<RenderingEvent> for GeometryPass {
 
             mesh.draw(
                 |bucket| {
-                    program.set_uniform(&shader.tangent_valid, bucket.key.tangent_valid);
+                    #[cfg(feature = "devtools")]
+                    let tangents = if self.config.get_force_no_tangents() {
+                        false
+                    } else {
+                        bucket.key.tangent_valid
+                    };
+                    #[cfg(not(feature = "devtools"))]
+                    let tangents = bucket.key.tangent_valid;
+
+                    program.set_uniform(&shader.tangent_valid, tangents);
                     (false, RenderResult::default())
                 },
                 |submesh| {
