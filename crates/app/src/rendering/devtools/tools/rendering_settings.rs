@@ -125,9 +125,6 @@ pub fn tool_rendering_settings(
         .fade_out(true)
         .collapsible(true)
         .show(ui, |ui| {
-            ui.checkbox(&mut config.0.borrow_mut().wireframe, "Wireframe");
-
-            ui.checkbox(&mut config.0.borrow_mut().fxaa_enabled, "FXAA");
 
             let mut output_mode = config.0.borrow().output_mode as usize;
             egui::ComboBox::from_label("Output Mode")
@@ -148,81 +145,82 @@ pub fn tool_rendering_settings(
                     }
                 });
             config.set_bounding_box_mode(BoundingBoxMode::from(bbox_mode));
-
             ui.checkbox(&mut config.0.borrow_mut().show_gizmos, "Show Gizmos");
+            ui.checkbox(&mut config.0.borrow_mut().wireframe, "Wireframe");
+
+            ui.checkbox(&mut config.0.borrow_mut().fxaa_enabled, "FXAA");
+
             ui.checkbox(
                 &mut config.0.borrow_mut().force_no_tangents,
                 "Force No Tangents",
             );
 
-            ui.separator();
+            ui.collapsing("Lighting Settings", |ui| {
+                egui::Slider::new(&mut config.0.borrow_mut().sky_color.x, 0.0..=1.0)
+                    .text("Sky Color R")
+                    .ui(ui);
+                egui::Slider::new(&mut config.0.borrow_mut().sky_color.y, 0.0..=1.0)
+                    .text("Sky Color G")
+                    .ui(ui);
+                egui::Slider::new(&mut config.0.borrow_mut().sky_color.z, 0.0..=1.0)
+                    .text("Sky Color B")
+                    .ui(ui);
+                egui::Slider::new(&mut config.0.borrow_mut().ground_color.x, 0.0..=1.0)
+                    .text("Ground Color R")
+                    .ui(ui);
+                egui::Slider::new(&mut config.0.borrow_mut().ground_color.y, 0.0..=1.0)
+                    .text("Ground Color G")
+                    .ui(ui);
+                egui::Slider::new(&mut config.0.borrow_mut().ground_color.z, 0.0..=1.0)
+                    .text("Ground Color B")
+                    .ui(ui);
+                egui::Slider::new(&mut config.0.borrow_mut().diffuse_scale, 0.0..=10.0)
+                    .text("Diffuse Scale")
+                    .ui(ui);
+                egui::Slider::new(&mut config.0.borrow_mut().specular_scale, 0.0..=10.0)
+                    .text("Specular Scale")
+                    .ui(ui);
+            });
 
-            ui.label("Env controls");
+            ui.collapsing("Sunlight Settings", |ui| {
+                let mut changed = false;
+                changed |= egui::Slider::new(&mut sunlight_control.intensity, 0.0..=10.0)
+                    .text("Intensity")
+                    .ui(ui)
+                    .changed();
+                changed |= egui::Slider::new(&mut sunlight_control.ambient, 0.0..=1.0)
+                    .text("Ambient")
+                    .ui(ui)
+                    .changed();
+                changed |= egui::Slider::new(&mut sunlight_control.color.x, 0.0..=1.0)
+                    .text("Color R")
+                    .ui(ui)
+                    .changed();
+                changed |= egui::Slider::new(&mut sunlight_control.color.y, 0.0..=1.0)
+                    .text("Color G")
+                    .ui(ui)
+                    .changed();
+                changed |= egui::Slider::new(&mut sunlight_control.color.z, 0.0..=1.0)
+                    .text("Color B")
+                    .ui(ui)
+                    .changed();
+                changed |= egui::Slider::new(&mut sunlight_control.direction.x, -1.0..=1.0)
+                    .text("Direction X")
+                    .ui(ui)
+                    .changed();
+                changed |= egui::Slider::new(&mut sunlight_control.direction.y, -1.0..=1.0)
+                    .text("Direction Y")
+                    .ui(ui)
+                    .changed();
+                changed |= egui::Slider::new(&mut sunlight_control.direction.z, -1.0..=1.0)
+                    .text("Direction Z")
+                    .ui(ui)
+                    .changed();
 
-            egui::Slider::new(&mut config.0.borrow_mut().sky_color.x, 0.0..=1.0)
-                .text("Sky Color R")
-                .ui(ui);
-            egui::Slider::new(&mut config.0.borrow_mut().sky_color.y, 0.0..=1.0)
-                .text("Sky Color G")
-                .ui(ui);
-            egui::Slider::new(&mut config.0.borrow_mut().sky_color.z, 0.0..=1.0)
-                .text("Sky Color B")
-                .ui(ui);
-            egui::Slider::new(&mut config.0.borrow_mut().ground_color.x, 0.0..=1.0)
-                .text("Ground Color R")
-                .ui(ui);
-            egui::Slider::new(&mut config.0.borrow_mut().ground_color.y, 0.0..=1.0)
-                .text("Ground Color G")
-                .ui(ui);
-            egui::Slider::new(&mut config.0.borrow_mut().ground_color.z, 0.0..=1.0)
-                .text("Ground Color B")
-                .ui(ui);
-            egui::Slider::new(&mut config.0.borrow_mut().diffuse_scale, 0.0..=10.0)
-                .text("Diffuse Scale")
-                .ui(ui);
-            egui::Slider::new(&mut config.0.borrow_mut().specular_scale, 0.0..=10.0)
-                .text("Specular Scale")
-                .ui(ui);
-
-            ui.separator();
-            ui.label("Sunlight Controls");
-            let mut changed = false;
-            changed |= egui::Slider::new(&mut sunlight_control.intensity, 0.0..=10.0)
-                .text("Intensity")
-                .ui(ui)
-                .changed();
-            changed |= egui::Slider::new(&mut sunlight_control.ambient, 0.0..=1.0)
-                .text("Ambient")
-                .ui(ui)
-                .changed();
-            changed |= egui::Slider::new(&mut sunlight_control.color.x, 0.0..=1.0)
-                .text("Color R")
-                .ui(ui)
-                .changed();
-            changed |= egui::Slider::new(&mut sunlight_control.color.y, 0.0..=1.0)
-                .text("Color G")
-                .ui(ui)
-                .changed();
-            changed |= egui::Slider::new(&mut sunlight_control.color.z, 0.0..=1.0)
-                .text("Color B")
-                .ui(ui)
-                .changed();
-            changed |= egui::Slider::new(&mut sunlight_control.direction.x, -1.0..=1.0)
-                .text("Direction X")
-                .ui(ui)
-                .changed();
-            changed |= egui::Slider::new(&mut sunlight_control.direction.y, -1.0..=1.0)
-                .text("Direction Y")
-                .ui(ui)
-                .changed();
-            changed |= egui::Slider::new(&mut sunlight_control.direction.z, -1.0..=1.0)
-                .text("Direction Z")
-                .ui(ui)
-                .changed();
-
-            if changed {
-                result = ToolRenderingSettingsMessage::ControlSunlight;
-            }
+                if changed {
+                    result = ToolRenderingSettingsMessage::ControlSunlight;
+                }
+            });
         });
 
     result
