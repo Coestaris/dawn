@@ -150,6 +150,10 @@ pub fn tool_rendering_settings(
             config.set_bounding_box_mode(BoundingBoxMode::from(bbox_mode));
 
             ui.checkbox(&mut config.0.borrow_mut().show_gizmos, "Show Gizmos");
+            ui.checkbox(
+                &mut config.0.borrow_mut().force_no_tangents,
+                "Force No Tangents",
+            );
 
             ui.separator();
 

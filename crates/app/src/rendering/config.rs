@@ -39,6 +39,7 @@ mod config_impl {
         pub ground_color: Vec3,
         pub diffuse_scale: f32,
         pub specular_scale: f32,
+        pub force_no_tangents: bool,
     }
 
     pub struct RenderingConfig(pub(crate) Rc<RefCell<RenderingConfigInner>>);
@@ -61,6 +62,7 @@ mod config_impl {
                 ground_color: Vec3::new(0.5, 0.45, 0.4),
                 diffuse_scale: 1.0,
                 specular_scale: 0.2,
+                force_no_tangents: false,
             })))
         }
 
@@ -98,6 +100,9 @@ mod config_impl {
 
         pub fn get_specular_scale(&self) -> f32 {
             self.0.borrow().specular_scale
+        }
+        pub fn get_force_no_tangents(&self) -> bool {
+            self.0.borrow().force_no_tangents
         }
     }
 }
@@ -157,6 +162,11 @@ mod config_impl {
         #[inline(always)]
         pub fn get_specular_scale(&self) -> f32 {
             0.2
+        }
+
+        #[inline(always)]
+        pub fn get_force_no_tangents(&self) -> bool {
+            false
         }
     }
 }
