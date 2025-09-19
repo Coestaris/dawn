@@ -63,7 +63,7 @@ struct PackedLight {
     // spot: dir.xyz, w=inner angle (cosine)
     // point: unused
     vec4 v1;
-    
+
     // rough, metallic, falloff(0 phys / 1 lin), shadow
     vec4 brdf;
 };
@@ -257,8 +257,6 @@ vec3 shade_sun(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, 
     vec3  Ldir = -get_light_sun_direction(L);
     float NoL  = max(dot(N, Ldir), 0.0);
     if (NoL <= 0.0) {
-        // Солнце за горизонтом — только окружение (ниже)
-        // но не выходим — вернем ниже полный ambient
     }
 
     vec3 light_color = get_light_color(L);
@@ -266,46 +264,32 @@ vec3 shade_sun(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, 
 
     float a = max(rough * rough, 1e-4);
     vec3  H = normalize(V + Ldir);
-    float NoV = max(dot(N, V),   1e-4);
-    float NoH = max(dot(N, H),   1e-4);
-    float HoV = max(dot(H, V),   1e-4);
+    float NoV = max(dot(N, V), 1e-4);
+    float NoH = max(dot(N, H), 1e-4);
+    float HoV = max(dot(H, V), 1e-4);
 
     vec3 F0  = mix(vec3(0.04), albedo, metallic);
 
     float D   = D_GGX(NoH, a);
     float Vg  = V_SmithGGXCorrelated(NoV, NoL, a);
     vec3  F   = F_Schlick(F0, HoV);
-    float ao  = 1.0; // TODO: get from texture
+    float ao  = 1.0;// TODO: get from texture
 
     vec3  diff = brdf_lambert(albedo, metallic);
     vec3  spec = (D * Vg) * F;
 
     vec3 Lo_direct = (NoL > 0.0) ? (diff + spec) * Lc * NoL : vec3(0.0);
 
-    // ===== Псевдо-IBL: диффузный hemi-ambient =====
-    // скаляр «окружающего» от солнца (НЕ смешиваем с Lc и НЕ умножаем на NoL)
     float ambSun = get_light_sun_ambient(L);
-
-    // 0..1 — насколько нормаль направлена "к небу"
     float NoUp = clamp(dot(N, normalize(ENV_UP)) * 0.5 + 0.5, 0.0, 1.0);
-
-    // Небо ярче/холоднее, "земля" темнее/теплее
     vec3 hemiIrradiance = mix(ENV_GROUND_COLOR, ENV_SKY_COLOR, NoUp) * ambSun * ENV_DIFFUSE_SCALE;
-
-    // На металлах глушим диффуз (иначе «меловые» металлы)
     vec3 ambientDiffuse = albedo * hemiIrradiance * (1.0 - metallic) * ao;
 
-    // (Опционально) немного уменьшаем диффузный ambient,
-    // если материал с высоким F0 (чтобы не было двойного счёта энергии)
     float avgF0 = clamp((F0.x + F0.y + F0.z) * (1.0 / 3.0), 0.0, 1.0);
-    ambientDiffuse *= (1.0 - 0.25 * avgF0); // мягкая компенсация
+    ambientDiffuse *= (1.0 - 0.25 * avgF0);
 
-    // ===== Псевдо-IBL: спекулярный ambient =====
-    // Используем Френель от направления взгляда, roughness можно чуть «размягчить».
-    // Это не физично как prefiltered IBL, но дешево и визуально работает.
     vec3 F_amb = F_Schlick(F0, NoV);
-    // Чем шероховатее, тем больше "размазка" и меньше энергия блика от мира:
-    float roughAtten = mix(1.0, 0.5, clamp(rough, 0.0, 1.0));  // эмпирически
+    float roughAtten = mix(1.0, 0.5, clamp(rough, 0.0, 1.0));
     vec3 specAmb = F_amb * ambSun * ENV_SPECULAR_SCALE * roughAtten * ao;
 
     // Итог
@@ -313,20 +297,20 @@ vec3 shade_sun(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, 
 }
 
 vec3 shade_spot(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
-    return vec3(0.0, 0.2, 0.0); // Placeholder
+    return vec3(0.0, 0.2, 0.0);// Placeholder
 }
 
 vec3 shade_area_rect(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic) {
-    return vec3(0.0, 1.0, 0.0); // Placeholder
+    return vec3(0.0, 1.0, 0.0);// Placeholder
 }
 
 vec4 process() {
     // Check magic and version
-#if ENABLE_DEVTOOLS
+    #if ENABLE_DEVTOOLS
     if (in_packed_lights_header.x != 0x4C495445u) {
-        return vec4(0.0, 1.0, 1.0, 1.0); // Cyan for invalid lights buffer
+        return vec4(0.0, 1.0, 1.0, 1.0);// Cyan for invalid lights buffer
     }
-#endif
+    #endif
 
     vec4 albedo_metallic = texture(in_albedo_metallic_texture, tex_coord);
     vec2 nor_oct = texture(in_normal_texture, tex_coord).rg;
@@ -338,7 +322,7 @@ vec4 process() {
     float metallic = albedo_metallic.a;
     float ao = pbr.g;
     vec3 albedo = albedo_metallic.rgb;
-    vec3 P = reconstruct_view_pos(depth, tex_coord, in_inv_proj, in_viewport); // view-space
+    vec3 P = reconstruct_view_pos(depth, tex_coord, in_inv_proj, in_viewport);// view-space
     vec3 V = normalize(-P);
 
     vec3 Lo = vec3(0);
@@ -396,7 +380,7 @@ void main()
         vec3 pos = reconstruct_view_pos(depth, tex_coord, in_inv_proj, in_viewport);
         FragColor = vec4(pos * 0.5 + 0.5, 1.0);
     } else {
-        FragColor = vec4(1.0, 0.0, 1.0, 1.0); // Magenta for invalid mode
+        FragColor = vec4(1.0, 0.0, 1.0, 1.0);// Magenta for invalid mode
     }
 #else
     FragColor = process();
