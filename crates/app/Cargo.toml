@@ -41,8 +41,10 @@ winit = "0.30.12"
 crossbeam-channel = "0.5.15"
 bytemuck = "1.23.2"
 chrono = "0.4.42"
+getrandom = { version = "0.3" }
+rand = "0.8.5"
 
-egui = { version = "0.32.2", features = ["default_fonts", "persistence", "log" ], optional = true }
+egui = { version = "0.32.2", features = ["default_fonts", "persistence", "log"], optional = true }
 egui_extras = { version = "0.32.2", optional = true }
 egui_glow = { version = "0.32.2", optional = true }
 web-time = "1.1.0"
