@@ -1029,6 +1029,7 @@ dependencies = [
  "ico",
  "log",
  "native-dialog",
+ "rand",
  "wasm-bindgen",
  "web-time",
  "winit",

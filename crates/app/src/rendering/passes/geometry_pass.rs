@@ -3,13 +3,11 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::fallback_tex::FallbackTextures;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
-use crate::rendering::shaders::{GeometryShader, LineShader};
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
-use dawn_assets::TypedAsset;
 use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
-use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
@@ -19,6 +17,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
+use crate::rendering::shaders::geometry::GeometryShader;
 
 const ALBEDO_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
@@ -100,9 +99,9 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                 self.camera_ubo.upload();
             },
 
-            RenderingEvent::PerspectiveProjectionUpdated(proj) => {
+            RenderingEvent::PerspectiveProjectionUpdated(proj, near, far) => {
                 self.frustum.set_perspective(proj);
-                self.camera_ubo.set_perspective(proj);
+                self.camera_ubo.set_perspective(proj, near, far);
                 self.camera_ubo.upload();
             }
             RenderingEvent::ViewUpdated(view) => {
