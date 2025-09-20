@@ -8,8 +8,8 @@ pub struct CameraUBOPayload {
     pub in_projection: [[f32; 4]; 4],
     pub in_inv_proj: [[f32; 4]; 4],
     pub in_inv_view: [[f32; 4]; 4],
-    pub in_viewport: [f32; 2], // w, h
-    pub _pad_cam: [f32; 2],    // std140: pad to 16 bytes
+    pub in_viewport: [f32; 2],    // w, h
+    pub in_clip_planes: [f32; 2], // near, far
 }
 
 impl CameraUBOPayload {
@@ -19,6 +19,7 @@ impl CameraUBOPayload {
         inv_proj: [[f32; 4]; 4],
         inv_view: [[f32; 4]; 4],
         viewport_wh: [f32; 2],
+        planes: [f32; 2],
     ) -> Self {
         Self {
             in_view: view,
@@ -26,7 +27,7 @@ impl CameraUBOPayload {
             in_inv_proj: inv_proj,
             in_inv_view: inv_view,
             in_viewport: viewport_wh,
-            _pad_cam: [0.0; 2],
+            in_clip_planes: planes,
         }
     }
 
@@ -34,9 +35,10 @@ impl CameraUBOPayload {
         view: glam::Mat4,
         proj: glam::Mat4,
         viewport_wh: [f32; 2],
-        // если None — посчитаем внутри
         inv_view: Option<glam::Mat4>,
         inv_proj: Option<glam::Mat4>,
+        near: f32,
+        far: f32,
     ) -> Self {
         let inv_v = inv_view.unwrap_or_else(|| view.inverse());
         let inv_p = inv_proj.unwrap_or_else(|| proj.inverse());
@@ -46,6 +48,7 @@ impl CameraUBOPayload {
             inv_p.to_cols_array_2d(),
             inv_v.to_cols_array_2d(),
             viewport_wh,
+            [near, far],
         )
     }
 }
@@ -73,6 +76,8 @@ impl CameraUBO {
                 [1.0, 1.0],
                 None,
                 None,
+                0.1,
+                100.0,
             ),
             binding,
         }
@@ -87,9 +92,10 @@ impl CameraUBO {
         self.payload.in_inv_view = view.inverse().to_cols_array_2d();
     }
 
-    pub fn set_perspective(&mut self, proj: glam::Mat4) {
+    pub fn set_perspective(&mut self, proj: glam::Mat4, near: f32, far: f32) {
         self.payload.in_projection = proj.to_cols_array_2d();
         self.payload.in_inv_proj = proj.inverse().to_cols_array_2d();
+        self.payload.in_clip_planes = [near, far];
     }
 
     pub fn upload(&self) {

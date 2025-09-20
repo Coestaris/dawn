@@ -24,6 +24,8 @@ struct PassDescriptor {
 pub struct RenderDispatcher {
     pub descriptors: Vec<PassDescriptor>,
     pub perspective_projection: Mat4,
+    pub perspective_near: f32,
+    pub perspective_far: f32,
     pub ortho_projection: Mat4,
 }
 
@@ -32,14 +34,28 @@ impl RenderDispatcher {
         Self {
             descriptors: Vec::new(),
             perspective_projection: Mat4::IDENTITY,
+            perspective_near: 0.0,
+            perspective_far: 0.0,
             ortho_projection: Mat4::IDENTITY,
         }
     }
 
     fn recalculate_projection(&mut self, screen: UVec2) {
         let aspect = screen.x as f32 / screen.y as f32;
-        self.perspective_projection =
-            Mat4::perspective_rh_gl(std::f32::consts::FRAC_PI_3, aspect, 0.1, 100.0);
+
+        // Setup the perspective projection matrix
+        // used to render the 3D scene
+        self.perspective_near = 0.1;
+        self.perspective_far = 100.0;
+        self.perspective_projection = Mat4::perspective_rh_gl(
+            std::f32::consts::FRAC_PI_3,
+            aspect,
+            self.perspective_near,
+            self.perspective_far,
+        );
+
+        // Setup the orthographic projection matrix
+        // used to render 2D elements like UI
         self.ortho_projection =
             Mat4::orthographic_rh_gl(0.0, screen.x as f32, screen.y as f32, 0.0, -1.0, 1.0);
     }
@@ -63,7 +79,7 @@ impl RenderDispatcher {
             RenderingEvent::DropAllAssets => RenderingEventMask::DROP_ALL_ASSETS,
             RenderingEvent::UpdateShader(_, _) => RenderingEventMask::UPDATE_SHADER,
             RenderingEvent::ViewUpdated(_) => RenderingEventMask::UPDATE_SHADER,
-            RenderingEvent::PerspectiveProjectionUpdated(_) => {
+            RenderingEvent::PerspectiveProjectionUpdated(_, _, _) => {
                 RenderingEventMask::PERSP_PROJECTION_UPDATED
             }
             RenderingEvent::OrthographicProjectionUpdated(_) => {
@@ -130,7 +146,11 @@ impl RenderDispatcher {
                 let size = UVec2::new(size.width as u32, size.height as u32);
                 self.recalculate_projection(size);
                 self.dispatch(
-                    RenderingEvent::PerspectiveProjectionUpdated(self.perspective_projection),
+                    RenderingEvent::PerspectiveProjectionUpdated(
+                        self.perspective_projection,
+                        self.perspective_near,
+                        self.perspective_far,
+                    ),
                     &mut sender,
                 );
                 self.dispatch(

@@ -4,10 +4,9 @@
 
 out vec4 FragColor;
 
-in vec2 TexCoords;
+in vec2 tex_coord;
 
-uniform float gamma;
-uniform bool fxaa_enabled;
+uniform bool in_fxaa_enabled;
 uniform sampler2D in_texture;
 
 vec3 FxaaPixelShader(vec4 uv, sampler2D tex, vec2 rcpFrame) {
@@ -64,11 +63,11 @@ vec3 FxaaPixelShader(vec4 uv, sampler2D tex, vec2 rcpFrame) {
 
 void main()
 {
-    if (fxaa_enabled) {
+    if (in_fxaa_enabled) {
         vec2 rcp_frame = 1.0 / vec2(textureSize(in_texture, 0));
-        vec4 uv = vec4(TexCoords.xy, TexCoords.xy - (rcp_frame * (0.5 + FXAA_SUBPIX_SHIFT)));
+        vec4 uv = vec4(tex_coord.xy, tex_coord.xy - (rcp_frame * (0.5 + FXAA_SUBPIX_SHIFT)));
         FragColor = vec4(FxaaPixelShader(uv, in_texture, rcp_frame), 1.0);
     } else {
-        FragColor = texture(in_texture, TexCoords);
+        FragColor = texture(in_texture, tex_coord);
     }
 }

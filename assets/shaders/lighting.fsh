@@ -1,6 +1,8 @@
 #include "inc/prelude.glsl"
 #include "inc/ubo_camera.glsl"
 #include "inc/debug_mode.glsl"
+#include "inc/normal.glsl"
+#include "inc/depth.glsl"
 
 out vec4 FragColor;
 
@@ -146,22 +148,6 @@ float get_light_spot_inner_cone(in PackedLight L) {
 }
 float get_light_spot_outer_cone(in PackedLight L) {
     return L.color_rgba.a;
-}
-
-// Decode a normal from an octahedral encoded vector
-vec3 decode_oct(vec2 e) {
-    vec3 v = vec3(e*2.0-1.0, 1.0 - abs(e.x*2.0-1.0) - abs(e.y*2.0-1.0));
-    float t = clamp(-v.z, 0.0, 1.0);
-    v.x += v.x >= 0.0 ? -t : t;
-    v.y += v.y >= 0.0 ? -t : t;
-    return normalize(v);
-}
-
-vec3 reconstruct_view_pos(float depth, vec2 uv, mat4 invProj, vec2 viewportSize) {
-    float z = depth * 2.0 - 1.0;
-    vec4 clip = vec4(uv*2.0-1.0, z, 1.0);
-    vec4 view = invProj * clip;
-    return view.xyz / view.w;
 }
 
 // Simple helpers
@@ -322,7 +308,7 @@ vec4 process() {
     float metallic = albedo_metallic.a;
     float ao = pbr.g;
     vec3 albedo = albedo_metallic.rgb;
-    vec3 P = reconstruct_view_pos(depth, tex_coord, in_inv_proj, in_viewport);// view-space
+    vec3 P = reconstruct_view_pos(depth, tex_coord, in_inv_proj);// view-space
     vec3 V = normalize(-P);
 
     vec3 Lo = vec3(0);
@@ -374,10 +360,11 @@ void main()
     } else if (in_debug_mode == DEBUG_MODE_DEPTH) {
         // Reconstruct linear depth [0..1]
         float depth = texture(in_depth_texture, tex_coord).r;
-        FragColor = vec4(vec3(depth), 1.0);
+        float linear = linearize_depth(depth, in_clip_planes.x, in_clip_planes.y) / in_clip_planes.y;
+        FragColor = vec4(vec3(linear), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_POSITION) {
         float depth = texture(in_depth_texture, tex_coord).r;
-        vec3 pos = reconstruct_view_pos(depth, tex_coord, in_inv_proj, in_viewport);
+        vec3 pos = reconstruct_view_pos(depth, tex_coord, in_inv_proj);
         FragColor = vec4(pos * 0.5 + 0.5, 1.0);
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0);// Magenta for invalid mode

@@ -3,9 +3,7 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::primitive::cube_lines::Cube3DLines;
-use crate::rendering::shaders::LineShader;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
-use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
 };
@@ -19,6 +17,7 @@ use glam::{Mat4, UVec2, Vec3, Vec4};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
+use crate::rendering::shaders::line::LineShader;
 
 pub(crate) struct BoundingPass {
     gl: Arc<glow::Context>,

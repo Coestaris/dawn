@@ -4,13 +4,15 @@ use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::primitive::circle_lines::Circle3DLines;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::primitive::segment_lines::Segment3DLines;
-use crate::rendering::shaders::{BillboardShader, LineShader, BILLBOARD_SHADER, LINE_SHADER};
+use crate::rendering::shaders::billboard::BillboardShader;
+use crate::rendering::shaders::line::LineShader;
+use crate::rendering::shaders::{BILLBOARD_SHADER, LINE_SHADER};
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
 };
-use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
@@ -19,7 +21,6 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::{Mat4, Quat, UVec2, Vec2, Vec3, Vec4};
 use glow::HasContext;
 use std::f32::consts::FRAC_PI_2;
-use std::panic::resume_unwind;
 use std::rc::Rc;
 use std::sync::Arc;
 
