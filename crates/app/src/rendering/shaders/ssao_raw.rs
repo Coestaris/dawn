@@ -10,7 +10,6 @@ pub struct SSAORawShader {
     pub depth_location: UniformLocation,
     pub normal_location: UniformLocation,
     pub noise_location: UniformLocation,
-    pub albedo_location: UniformLocation,
 }
 
 impl SSAORawShader {
@@ -25,7 +24,6 @@ impl SSAORawShader {
             depth_location: program.get_uniform_location("in_depth")?,
             normal_location: program.get_uniform_location("in_normal")?,
             noise_location: program.get_uniform_location("in_noise")?,
-            albedo_location: program.get_uniform_location("in_albedo")?,
         })
     }
 }

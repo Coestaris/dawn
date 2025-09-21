@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 pub mod gbuffer;
 pub mod obuffer;
+pub mod ssao_raw;
 
 pub struct GTexture {
     gl: Arc<glow::Context>,
@@ -73,7 +74,7 @@ impl GTexture {
     fn resize(&self, new_size: UVec2) {
         Texture::bind(&self.gl, TextureBind::Texture2D, &self.texture, 0);
         self.texture
-            .feed_2d(
+            .feed_2d::<()>(
                 0,
                 new_size.x as usize,
                 new_size.y as usize,

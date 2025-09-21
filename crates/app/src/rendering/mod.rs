@@ -7,7 +7,7 @@ use crate::rendering::devtools::DevToolsGUI;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
 use crate::rendering::fbo::gbuffer::GBuffer;
-use crate::rendering::fbo::obuffer::OBuffer;
+use crate::rendering::fbo::obuffer::LightningTarget;
 #[cfg(feature = "devtools")]
 use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
@@ -15,11 +15,15 @@ use crate::rendering::passes::geometry_pass::GeometryPass;
 use crate::rendering::passes::gizmos_pass::GizmosPass;
 use crate::rendering::passes::lighting_pass::LightingPass;
 use crate::rendering::passes::postprocess_pass::PostProcessPass;
+use crate::rendering::passes::ssao_blur::SSAOBlurPass;
+use crate::rendering::passes::ssao_raw::SSAORawPass;
 use crate::rendering::shaders::{
     BILLBOARD_SHADER, GEOMETRY_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER,
+    SSAO_BLUR_SHADER, SSAO_RAW_SHADER,
 };
 use crate::rendering::ubo::camera::CameraUBO;
-use crate::rendering::ubo::CAMERA_UBO_BINDING;
+use crate::rendering::ubo::ssao_raw::SSAORawParametersUBO;
+use crate::rendering::ubo::{CAMERA_UBO_BINDING, SSAO_RAW_PARAMS_UBO_BINDING};
 use crate::WINDOW_SIZE;
 use build_info::BuildInfo;
 use dawn_graphics::gl::probe::OpenGLInfo;
@@ -33,18 +37,19 @@ use std::rc::Rc;
 use std::sync::Arc;
 use winit::event::WindowEvent;
 use winit::window::Window;
+use crate::rendering::fbo::ssao_raw::SSAORawTarget;
 
 mod config;
 #[cfg(feature = "devtools")]
 pub mod devtools;
 pub mod dispatcher;
 pub mod event;
-pub mod fallback_tex;
 pub mod fbo;
 pub mod frustum;
 pub mod passes;
 pub mod primitive;
 pub mod shaders;
+pub mod textures;
 pub mod ubo;
 
 fn log_info(info: &OpenGLInfo) {
@@ -111,9 +116,9 @@ pub struct Renderer {
 }
 
 #[cfg(feature = "devtools")]
-type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, LightingPass, PostProcessPass, BoundingPass, GizmosPass);
+type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass, BoundingPass, GizmosPass);
 #[cfg(not(feature = "devtools"))]
-type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, LightingPass, PostProcessPass);
+type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass);
 
 impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
     fn spawn_chain(
@@ -128,8 +133,11 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         pre_pipeline_construct(&r.gl);
 
         let gbuffer = Rc::new(GBuffer::new(r.gl.clone(), WINDOW_SIZE));
-        let obuffer = Rc::new(OBuffer::new(r.gl.clone(), WINDOW_SIZE));
+        let lighting_taget = Rc::new(LightningTarget::new(r.gl.clone(), WINDOW_SIZE));
+        let ssao_raw_target = Rc::new(SSAORawTarget::new(r.gl.clone(), WINDOW_SIZE));
+
         let camera_ubo = CameraUBO::new(r.gl.clone(), CAMERA_UBO_BINDING);
+
         let geometry_pass = GeometryPass::new(
             r.gl.clone(),
             self.ids.geometry_id,
@@ -137,17 +145,25 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             camera_ubo,
             self.config.clone(),
         );
+        let ssao_raw = SSAORawPass::new(
+            r.gl.clone(),
+            self.ids.ssao_raw,
+            gbuffer.clone(),
+            ssao_raw_target.clone(),
+            self.config.clone(),
+        );
+        let ssao_blur = SSAOBlurPass::new(r.gl.clone(), self.ids.ssao_blur, self.config.clone());
         let lighting_pass = LightingPass::new(
             r.gl.clone(),
             self.ids.lighting_id,
             gbuffer.clone(),
-            obuffer.clone(),
+            lighting_taget.clone(),
             self.config.clone(),
         );
         let postprocess_pass = PostProcessPass::new(
             r.gl.clone(),
             self.ids.postprocess_id,
-            obuffer.clone(),
+            lighting_taget.clone(),
             self.config.clone(),
         );
 
@@ -168,6 +184,8 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
 
             Ok(construct_chain!(
                 geometry_pass,
+                ssao_raw,
+                ssao_blur,
                 lighting_pass,
                 postprocess_pass,
                 bounding_pass,
@@ -179,6 +197,8 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         {
             Ok(construct_chain!(
                 geometry_pass,
+                ssao_raw,
+                ssao_blur,
                 lighting_pass,
                 postprocess_pass
             ))
@@ -217,6 +237,8 @@ pub struct SetupRenderingParameters {
 
 pub struct PassIDs {
     pub geometry_id: RenderPassTargetId,
+    pub ssao_raw: RenderPassTargetId,
+    pub ssao_blur: RenderPassTargetId,
     pub lighting_id: RenderPassTargetId,
     pub postprocess_id: RenderPassTargetId,
     #[cfg(feature = "devtools")]
@@ -244,6 +266,14 @@ impl RendererBuilder {
                 | RenderingEventMask::VIEWPORT_RESIZED
                 | RenderingEventMask::PERSP_PROJECTION_UPDATED,
             &[GEOMETRY_SHADER],
+        );
+        let ssao_raw = dispatcher.pass(
+            RenderingEventMask::DROP_ALL_ASSETS | RenderingEventMask::UPDATE_SHADER,
+            &[SSAO_RAW_SHADER],
+        );
+        let ssao_blur = dispatcher.pass(
+            RenderingEventMask::DROP_ALL_ASSETS | RenderingEventMask::UPDATE_SHADER,
+            &[SSAO_BLUR_SHADER],
         );
         let lighting_id = dispatcher.pass(
             RenderingEventMask::DROP_ALL_ASSETS
@@ -277,6 +307,8 @@ impl RendererBuilder {
         Self {
             ids: PassIDs {
                 geometry_id,
+                ssao_raw,
+                ssao_blur,
                 lighting_id,
                 postprocess_id,
                 #[cfg(feature = "devtools")]
