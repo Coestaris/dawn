@@ -1,11 +1,12 @@
 use dawn_graphics::gl::raii::ubo::UBO;
 use glam::Vec4;
 use std::sync::Arc;
+use log::info;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct SSAORawParametersUBOPayload {
-    kernel_size: u32, // up to 64
+    kernel_size: f32, // up to 64
     radius: f32,
     bias: f32,
     intensity: f32,
@@ -24,6 +25,7 @@ pub struct SSAORawParametersUBO {
     pub ubo: UBO,
     pub payload: SSAORawParametersUBOPayload,
     pub binding: usize,
+    pub fresh: bool,
 }
 
 pub struct SSAORawKernelUBO {
@@ -31,6 +33,7 @@ pub struct SSAORawKernelUBO {
     pub ubo: UBO,
     pub payload: SSAORawKernelUBOPayload,
     pub binding: usize,
+    pub fresh: bool,
 }
 
 impl SSAORawKernelUBO {
@@ -51,6 +54,7 @@ impl SSAORawKernelUBO {
                 samples: [[0.0; 4]; 64],
             },
             binding,
+            fresh: false,
         }
     }
 
@@ -74,9 +78,15 @@ impl SSAORawKernelUBO {
                 * scale;
             self.payload.samples[i] = sample.to_array();
         }
+
+        self.fresh = false;
     }
 
-    pub fn upload(&self) {
+    pub fn upload(&mut self) -> bool {
+        if self.fresh {
+            return false;
+        }
+
         UBO::bind(&self.gl, &self.ubo);
         self.ubo.feed(unsafe {
             std::slice::from_raw_parts(
@@ -85,6 +95,8 @@ impl SSAORawKernelUBO {
             )
         });
         UBO::unbind(&self.gl);
+        self.fresh = true;
+        true
     }
 }
 
@@ -103,7 +115,7 @@ impl SSAORawParametersUBO {
             gl,
             ubo,
             payload: SSAORawParametersUBOPayload {
-                kernel_size: 16,
+                kernel_size: 16.0,
                 radius: 0.5,
                 bias: 0.025,
                 intensity: 1.0,
@@ -111,31 +123,52 @@ impl SSAORawParametersUBO {
                 _padding: [0; 3],
             },
             binding,
+            fresh: false,
         }
     }
 
     pub fn set_kernel_size(&mut self, size: u32) {
         assert!(size <= 64);
-        self.payload.kernel_size = size;
+        if self.payload.kernel_size as u32 != size {
+            self.payload.kernel_size = size as f32;
+            self.fresh = false;
+        }
     }
 
     pub fn set_radius(&mut self, radius: f32) {
-        self.payload.radius = radius;
+        if self.payload.radius != radius {
+            self.payload.radius = radius;
+            self.fresh = false;
+        }
     }
 
     pub fn set_bias(&mut self, bias: f32) {
-        self.payload.bias = bias;
+        if self.payload.bias != bias {
+            self.payload.bias = bias;
+            self.fresh = false;
+        }
     }
 
     pub fn set_intensity(&mut self, intensity: f32) {
-        self.payload.intensity = intensity;
+        if self.payload.intensity != intensity {
+            self.payload.intensity = intensity;
+            self.fresh = false;
+        }
     }
 
     pub fn set_power(&mut self, power: f32) {
-        self.payload.power = power;
+        if self.payload.power != power {
+            self.payload.power = power;
+            self.fresh = false;
+        }
     }
 
-    pub fn upload(&self) {
+    pub fn upload(&mut self) -> bool {
+        if self.fresh {
+            return false;
+        }
+
+        info!("Uploading SSAO Raw Parameters UBO");
         UBO::bind(&self.gl, &self.ubo);
         self.ubo.feed(unsafe {
             std::slice::from_raw_parts(
@@ -144,5 +177,7 @@ impl SSAORawParametersUBO {
             )
         });
         UBO::unbind(&self.gl);
+        self.fresh = true;
+        true
     }
 }

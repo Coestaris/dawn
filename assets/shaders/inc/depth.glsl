@@ -10,5 +10,5 @@ vec3 reconstruct_view_pos(float depth, vec2 uv, mat4 invProj) {
 // Linearize depth value (0..1) to view space Z coordinate
 float linearize_depth(float depth, float near, float far) {
     float z_ndc = depth * 2.0 - 1.0;
-    return (2.0 * near * far) / (far + near - z_ndc * (far - near));
+    return -(2.0 * near * far) / (far + near - z_ndc * (far - near));
 }

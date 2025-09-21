@@ -8,6 +8,7 @@ use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::obuffer::LightningTarget;
+use crate::rendering::fbo::ssao::SSAOTarget;
 #[cfg(feature = "devtools")]
 use crate::rendering::passes::bounding_pass::BoundingPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
@@ -37,7 +38,6 @@ use std::rc::Rc;
 use std::sync::Arc;
 use winit::event::WindowEvent;
 use winit::window::Window;
-use crate::rendering::fbo::ssao_raw::SSAORawTarget;
 
 mod config;
 #[cfg(feature = "devtools")]
@@ -134,7 +134,8 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
 
         let gbuffer = Rc::new(GBuffer::new(r.gl.clone(), WINDOW_SIZE));
         let lighting_taget = Rc::new(LightningTarget::new(r.gl.clone(), WINDOW_SIZE));
-        let ssao_raw_target = Rc::new(SSAORawTarget::new(r.gl.clone(), WINDOW_SIZE));
+        let ssao_raw_target = Rc::new(SSAOTarget::new(r.gl.clone(), WINDOW_SIZE));
+        let ssao_blur_target = Rc::new(SSAOTarget::new(r.gl.clone(), WINDOW_SIZE));
 
         let camera_ubo = CameraUBO::new(r.gl.clone(), CAMERA_UBO_BINDING);
 
@@ -152,11 +153,19 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             ssao_raw_target.clone(),
             self.config.clone(),
         );
-        let ssao_blur = SSAOBlurPass::new(r.gl.clone(), self.ids.ssao_blur, self.config.clone());
+        let ssao_blur = SSAOBlurPass::new(
+            r.gl.clone(),
+            self.ids.ssao_blur,
+            gbuffer.clone(),
+            ssao_raw_target.clone(),
+            ssao_blur_target.clone(),
+            self.config.clone(),
+        );
         let lighting_pass = LightingPass::new(
             r.gl.clone(),
             self.ids.lighting_id,
             gbuffer.clone(),
+            ssao_raw_target.clone(),
             lighting_taget.clone(),
             self.config.clone(),
         );
@@ -268,11 +277,15 @@ impl RendererBuilder {
             &[GEOMETRY_SHADER],
         );
         let ssao_raw = dispatcher.pass(
-            RenderingEventMask::DROP_ALL_ASSETS | RenderingEventMask::UPDATE_SHADER,
+            RenderingEventMask::DROP_ALL_ASSETS
+                | RenderingEventMask::UPDATE_SHADER
+                | RenderingEventMask::VIEWPORT_RESIZED,
             &[SSAO_RAW_SHADER],
         );
         let ssao_blur = dispatcher.pass(
-            RenderingEventMask::DROP_ALL_ASSETS | RenderingEventMask::UPDATE_SHADER,
+            RenderingEventMask::DROP_ALL_ASSETS
+                | RenderingEventMask::UPDATE_SHADER
+                | RenderingEventMask::VIEWPORT_RESIZED,
             &[SSAO_BLUR_SHADER],
         );
         let lighting_id = dispatcher.pass(
