@@ -15,12 +15,14 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
+use crate::rendering::fbo::ssao::SSAOTarget;
 
 const ALBEDO_METALLIC_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
 const PBR_INDEX: i32 = 2;
 const DEPTH_INDEX: i32 = 3;
 const PACKED_LIGHTS_INDEX: i32 = 4;
+const SSAO_INDEX: i32 = 5;
 
 pub(crate) struct LightingPass {
     gl: Arc<glow::Context>,
@@ -31,6 +33,7 @@ pub(crate) struct LightingPass {
     quad: Quad2D,
     view: glam::Mat4,
     packed_lights: PackedLights,
+    ssao_blurred: Rc<SSAOTarget>,
     gbuffer: Rc<GBuffer>,
     target: Rc<LightningTarget>,
 }
@@ -40,6 +43,7 @@ impl LightingPass {
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
+        ssao_blurred: Rc<SSAOTarget>,
         target: Rc<LightningTarget>,
         config: RenderingConfig,
     ) -> Self {
@@ -51,6 +55,7 @@ impl LightingPass {
             quad: Quad2D::new(gl.clone()),
             view: glam::Mat4::IDENTITY,
             packed_lights: PackedLights::new(gl).unwrap(),
+            ssao_blurred,
             gbuffer,
             target,
         }
@@ -86,6 +91,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 program.set_uniform(&shader.pbr_texture, PBR_INDEX);
                 program.set_uniform(&shader.depth_texture, DEPTH_INDEX);
                 program.set_uniform(&shader.packed_lights_location, PACKED_LIGHTS_INDEX);
+                program.set_uniform(&shader.ssao_texture, SSAO_INDEX);
                 Program::unbind(&self.gl);
             }
             RenderingEvent::ViewportResized(size) => {
@@ -187,6 +193,13 @@ impl RenderPass<RenderingEvent> for LightingPass {
             &self.packed_lights.texture,
             PACKED_LIGHTS_INDEX as u32,
         );
+        Texture::bind(
+            &self.gl,
+            TextureBind::Texture2D,
+            &self.ssao_blurred.texture.texture,
+            SSAO_INDEX as u32,
+        );
+
         self.quad.draw()
     }
 
