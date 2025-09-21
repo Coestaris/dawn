@@ -1,7 +1,7 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
-use crate::rendering::fbo::obuffer::OBuffer;
+use crate::rendering::fbo::obuffer::LightningTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::lighting::LightingShader;
 use crate::rendering::ubo::packed_light::{LightsHeaderCPU, PackedLights};
@@ -32,7 +32,7 @@ pub(crate) struct LightingPass {
     view: glam::Mat4,
     packed_lights: PackedLights,
     gbuffer: Rc<GBuffer>,
-    obuffer: Rc<OBuffer>,
+    target: Rc<LightningTarget>,
 }
 
 impl LightingPass {
@@ -40,7 +40,7 @@ impl LightingPass {
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
-        obuffer: Rc<OBuffer>,
+        target: Rc<LightningTarget>,
         config: RenderingConfig,
     ) -> Self {
         LightingPass {
@@ -52,7 +52,7 @@ impl LightingPass {
             view: glam::Mat4::IDENTITY,
             packed_lights: PackedLights::new(gl).unwrap(),
             gbuffer,
-            obuffer,
+            target,
         }
     }
 }
@@ -90,7 +90,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
             }
             RenderingEvent::ViewportResized(size) => {
                 self.gbuffer.resize(size);
-                self.obuffer.resize(size);
+                self.target.resize(size);
             }
 
             _ => {}
@@ -128,7 +128,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
         self.packed_lights.upload();
         let header = LightsHeaderCPU::new(lights_count as u32);
 
-        Framebuffer::bind(&self.gl, &self.obuffer.fbo);
+        Framebuffer::bind(&self.gl, &self.target.fbo);
 
         let shader = self.shader.as_ref().unwrap();
         let program = shader.asset.cast();

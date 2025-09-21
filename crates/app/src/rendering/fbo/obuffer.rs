@@ -5,21 +5,21 @@ use glam::UVec2;
 use log::info;
 use std::sync::Arc;
 
-pub struct OBuffer {
+pub struct LightningTarget {
     pub fbo: Framebuffer,
 
     // Output texture. RGBA8
     pub texture: GTexture,
 }
 
-impl OBuffer {
+impl LightningTarget {
     pub(crate) fn resize(&self, new_size: UVec2) {
         info!("Resizing OBuffer to {:?}", new_size);
         self.texture.resize(new_size);
     }
 
     pub fn new(gl: Arc<glow::Context>, initial: UVec2) -> Self {
-        let buffer = OBuffer {
+        let buffer = LightningTarget {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
             texture: GTexture::new(
                 gl.clone(),

@@ -165,7 +165,7 @@ impl PackedLights {
         if needed_texels > self.capacity_texels {
             self.capacity_texels = (needed_texels * 2).max(16);
             self.texture
-                .feed_2d(
+                .feed_2d::<()>(
                     0,
                     self.capacity_texels as usize,
                     1,
@@ -183,7 +183,7 @@ impl PackedLights {
                 1,
                 false,
                 IRPixelFormat::RGBA32UI,
-                Some(bytemuck::cast_slice(&self.vec)),
+                Some(self.vec.as_slice()),
             )
             .ok();
         Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
