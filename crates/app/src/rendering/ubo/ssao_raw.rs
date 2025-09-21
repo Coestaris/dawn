@@ -54,14 +54,14 @@ impl SSAORawKernelUBO {
         }
     }
 
-    pub fn set_samples<const N: usize>(&mut self) {
-        assert!(N <= 64);
+    pub fn set_samples(&mut self, n: usize) {
+        assert!(n <= 64);
 
         use rand::Rng;
         let mut rng = rand::thread_rng();
 
-        for i in 0..N {
-            let scale = (i as f32) / (N as f32);
+        for i in 0..n {
+            let scale = (i as f32) / (n as f32);
             let scale = 0.1 + 0.9 * scale * scale;
             let sample = Vec4::new(
                 rng.gen_range(-1.0..1.0),

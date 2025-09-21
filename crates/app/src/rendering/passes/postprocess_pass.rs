@@ -1,6 +1,6 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
-use crate::rendering::fbo::obuffer::OBuffer;
+use crate::rendering::fbo::obuffer::LightningTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::postprocess::PostprocessShader;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
@@ -21,14 +21,14 @@ pub(crate) struct PostProcessPass {
 
     shader: Option<PostprocessShader>,
     quad: Quad2D,
-    obuffer: Rc<OBuffer>,
+    lightning_target: Rc<LightningTarget>,
 }
 
 impl PostProcessPass {
     pub fn new(
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
-        obuffer: Rc<OBuffer>,
+        lightning_target: Rc<LightningTarget>,
         config: RenderingConfig,
     ) -> Self {
         PostProcessPass {
@@ -37,7 +37,7 @@ impl PostProcessPass {
             config,
             shader: None,
             quad: Quad2D::new(gl),
-            obuffer,
+            lightning_target,
         }
     }
 }
@@ -106,7 +106,7 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
-            &self.obuffer.texture.texture,
+            &self.lightning_target.texture.texture,
             0,
         );
 

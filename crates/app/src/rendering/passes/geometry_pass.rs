@@ -1,6 +1,5 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
-use crate::rendering::fallback_tex::FallbackTextures;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::ubo::camera::CameraUBO;
@@ -18,6 +17,7 @@ use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
 use crate::rendering::shaders::geometry::GeometryShader;
+use crate::rendering::textures::fallback_tex::FallbackTextures;
 
 const ALBEDO_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
