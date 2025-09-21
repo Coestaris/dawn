@@ -1,6 +1,7 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
+use crate::rendering::fbo::ssao::SSAOTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::ssao_raw::SSAORawShader;
 use crate::rendering::textures::noise::white_noise_f32;
@@ -8,6 +9,7 @@ use crate::rendering::ubo::ssao_raw::{SSAORawKernelUBO, SSAORawParametersUBO};
 use crate::rendering::ubo::{
     CAMERA_UBO_BINDING, SSAO_RAW_KERNEL_UBO_BINDING, SSAO_RAW_PARAMS_UBO_BINDING,
 };
+use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
@@ -17,20 +19,15 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
-use dawn_graphics::gl::raii::framebuffer::Framebuffer;
-use crate::rendering::fbo::ssao_raw::SSAORawTarget;
 
 const DEPTH_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
 const NOISE_INDEX: i32 = 2;
-
-const KERNEL_SIZE: usize = 32;
-
 pub(crate) struct SSAORawPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     shader: Option<SSAORawShader>,
-    target: Rc<SSAORawTarget>,
+    target: Rc<SSAOTarget>,
 
     config: RenderingConfig,
     gbuffer: Rc<GBuffer>,
@@ -47,7 +44,7 @@ impl SSAORawPass {
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
-        target: Rc<SSAORawTarget>,
+        target: Rc<SSAOTarget>,
         config: RenderingConfig,
     ) -> Self {
         SSAORawPass {
@@ -80,6 +77,9 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
             RenderingEvent::DropAllAssets => {
                 self.shader = None;
             }
+            RenderingEvent::ViewportResized(size) => {
+                self.target.resize(size);
+            }
             RenderingEvent::UpdateShader(_, shader) => {
                 let clone = shader.clone();
                 self.shader = Some(SSAORawShader::new(shader.clone()).unwrap());
@@ -104,11 +104,6 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
                 program.set_uniform(&shader.normal_location, NORMAL_INDEX);
                 program.set_uniform(&shader.noise_location, NOISE_INDEX);
                 Program::unbind(&self.gl);
-
-                self.kernel_ubo.set_samples(KERNEL_SIZE);
-                self.kernel_ubo.upload();
-
-                self.params_ubo.set_kernel_size(KERNEL_SIZE as u32);
             }
             _ => {}
         }
@@ -118,7 +113,6 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         "SSAORaw"
     }
 
-    #[inline(always)]
     fn begin(
         &mut self,
         _: &RendererBackend<RenderingEvent>,
@@ -134,10 +128,22 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         unsafe {
             self.gl.disable(glow::DEPTH_TEST);
             self.gl.clear(glow::COLOR_BUFFER_BIT);
+            self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
         }
 
         // Update params UBO
-        self.params_ubo.upload();
+        self.params_ubo
+            .set_kernel_size(self.config.get_ssao_kernel_size());
+        self.params_ubo.set_radius(self.config.get_ssao_radius());
+        self.params_ubo.set_bias(self.config.get_ssao_bias());
+        self.params_ubo
+            .set_intensity(self.config.get_ssao_intensity());
+        self.params_ubo.set_power(self.config.get_ssao_power());
+        if self.params_ubo.upload() {
+            self.kernel_ubo
+                .set_samples(self.config.get_ssao_kernel_size() as usize);
+            self.kernel_ubo.upload();
+        }
 
         let shader = self.shader.as_ref().unwrap();
         let program = shader.asset.cast();

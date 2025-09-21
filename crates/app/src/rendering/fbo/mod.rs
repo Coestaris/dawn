@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 pub mod gbuffer;
 pub mod obuffer;
-pub mod ssao_raw;
+pub mod ssao;
 
 pub struct GTexture {
     gl: Arc<glow::Context>,

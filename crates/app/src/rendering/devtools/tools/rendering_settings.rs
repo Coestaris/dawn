@@ -45,7 +45,7 @@ impl From<usize> for BoundingBoxMode {
 }
 
 impl OutputMode {
-    pub fn items() -> [&'static str; 8] {
+    pub fn items() -> [&'static str; 9] {
         [
             OutputMode::Default.as_str(),
             OutputMode::AlbedoOnly.as_str(),
@@ -55,6 +55,7 @@ impl OutputMode {
             OutputMode::OcclusionOnly.as_str(),
             OutputMode::DepthOnly.as_str(),
             OutputMode::Position.as_str(),
+            OutputMode::SSAOOnly.as_str(),
         ]
     }
 
@@ -68,6 +69,7 @@ impl OutputMode {
             OutputMode::OcclusionOnly => "Occlusion Only",
             OutputMode::DepthOnly => "Depth Only",
             OutputMode::Position => "Position",
+            OutputMode::SSAOOnly => "SSAO Only",
         }
     }
 }
@@ -83,33 +85,12 @@ impl From<usize> for OutputMode {
             5 => OutputMode::OcclusionOnly,
             6 => OutputMode::DepthOnly,
             7 => OutputMode::Position,
+            8 => OutputMode::SSAOOnly,
 
             _ => {
                 panic!("Unknown output texture index {}", value);
             }
         }
-    }
-}
-
-impl RenderingConfig {
-    fn set_wireframe(&mut self, enabled: bool) {
-        self.0.borrow_mut().wireframe = enabled;
-    }
-
-    fn set_fxaa_enabled(&mut self, enabled: bool) {
-        self.0.borrow_mut().fxaa_enabled = enabled;
-    }
-
-    fn set_output_mode(&mut self, mode: OutputMode) {
-        self.0.borrow_mut().output_mode = mode;
-    }
-
-    fn set_bounding_box_mode(&mut self, mode: BoundingBoxMode) {
-        self.0.borrow_mut().bounding_box_mode = mode;
-    }
-
-    fn set_show_gizmos(&mut self, enabled: bool) {
-        self.0.borrow_mut().show_gizmos = enabled;
     }
 }
 
@@ -119,65 +100,67 @@ pub fn tool_rendering_settings(
     sunlight_control: &mut SunlightControl,
 ) -> ToolRenderingSettingsMessage {
     let mut result = ToolRenderingSettingsMessage::Nothing;
+    let mut config = config.0.borrow_mut();
+
     egui::Window::new("🔧 Rendering settings")
         .resizable(true)
         .fade_in(true)
         .fade_out(true)
         .collapsible(true)
         .show(ui, |ui| {
-
-            let mut output_mode = config.0.borrow().output_mode as usize;
+            let output_mode = &mut config.general.output_mode;
+            let mut output_mode_code = *output_mode as usize;
             egui::ComboBox::from_label("Output Mode")
-                .selected_text(OutputMode::from(output_mode).as_str())
+                .selected_text(OutputMode::from(output_mode_code).as_str())
                 .show_ui(ui, |ui| {
                     for (i, item) in OutputMode::items().iter().enumerate() {
-                        ui.selectable_value(&mut output_mode, i, *item);
+                        ui.selectable_value(&mut output_mode_code, i, *item);
                     }
                 });
-            config.set_output_mode(OutputMode::from(output_mode));
+            *output_mode = OutputMode::from(output_mode_code);
 
-            let mut bbox_mode = config.0.borrow().bounding_box_mode as usize;
+            let bbox_mode = &mut config.general.bounding_box_mode;
+            let mut bbox_mode_code = *bbox_mode as usize;
             egui::ComboBox::from_label("Bounding Box Mode")
-                .selected_text(BoundingBoxMode::from(bbox_mode).as_str())
+                .selected_text(BoundingBoxMode::from(bbox_mode_code).as_str())
                 .show_ui(ui, |ui| {
                     for (i, item) in BoundingBoxMode::items().iter().enumerate() {
-                        ui.selectable_value(&mut bbox_mode, i, *item);
+                        ui.selectable_value(&mut bbox_mode_code, i, *item);
                     }
                 });
-            config.set_bounding_box_mode(BoundingBoxMode::from(bbox_mode));
-            ui.checkbox(&mut config.0.borrow_mut().show_gizmos, "Show Gizmos");
-            ui.checkbox(&mut config.0.borrow_mut().wireframe, "Wireframe");
+            *bbox_mode = BoundingBoxMode::from(bbox_mode_code);
 
-            ui.checkbox(&mut config.0.borrow_mut().fxaa_enabled, "FXAA");
+            ui.checkbox(&mut config.general.show_gizmos, "Show Gizmos");
+            ui.checkbox(&mut config.general.wireframe, "Wireframe");
 
-            ui.checkbox(
-                &mut config.0.borrow_mut().force_no_tangents,
-                "Force No Tangents",
-            );
+            ui.checkbox(&mut config.general.fxaa_enabled, "FXAA");
+            ui.checkbox(&mut config.general.ssao_enabled, "SSAO");
+
+            ui.checkbox(&mut config.lighting.force_no_tangents, "Force No Tangents");
 
             ui.collapsing("Lighting Settings", |ui| {
-                egui::Slider::new(&mut config.0.borrow_mut().sky_color.x, 0.0..=1.0)
+                egui::Slider::new(&mut config.lighting.sky_color.x, 0.0..=1.0)
                     .text("Sky Color R")
                     .ui(ui);
-                egui::Slider::new(&mut config.0.borrow_mut().sky_color.y, 0.0..=1.0)
+                egui::Slider::new(&mut config.lighting.sky_color.y, 0.0..=1.0)
                     .text("Sky Color G")
                     .ui(ui);
-                egui::Slider::new(&mut config.0.borrow_mut().sky_color.z, 0.0..=1.0)
+                egui::Slider::new(&mut config.lighting.sky_color.z, 0.0..=1.0)
                     .text("Sky Color B")
                     .ui(ui);
-                egui::Slider::new(&mut config.0.borrow_mut().ground_color.x, 0.0..=1.0)
+                egui::Slider::new(&mut config.lighting.ground_color.x, 0.0..=1.0)
                     .text("Ground Color R")
                     .ui(ui);
-                egui::Slider::new(&mut config.0.borrow_mut().ground_color.y, 0.0..=1.0)
+                egui::Slider::new(&mut config.lighting.ground_color.y, 0.0..=1.0)
                     .text("Ground Color G")
                     .ui(ui);
-                egui::Slider::new(&mut config.0.borrow_mut().ground_color.z, 0.0..=1.0)
+                egui::Slider::new(&mut config.lighting.ground_color.z, 0.0..=1.0)
                     .text("Ground Color B")
                     .ui(ui);
-                egui::Slider::new(&mut config.0.borrow_mut().diffuse_scale, 0.0..=10.0)
+                egui::Slider::new(&mut config.lighting.diffuse_scale, 0.0..=10.0)
                     .text("Diffuse Scale")
                     .ui(ui);
-                egui::Slider::new(&mut config.0.borrow_mut().specular_scale, 0.0..=10.0)
+                egui::Slider::new(&mut config.lighting.specular_scale, 0.0..=10.0)
                     .text("Specular Scale")
                     .ui(ui);
             });
@@ -220,6 +203,36 @@ pub fn tool_rendering_settings(
                 if changed {
                     result = ToolRenderingSettingsMessage::ControlSunlight;
                 }
+            });
+
+            ui.collapsing("SSAO Raw", |ui| {
+                egui::Slider::new(&mut config.ssao_raw.kernel_size, 1..=64)
+                    .text("Kernel Size")
+                    .ui(ui);
+                egui::Slider::new(&mut config.ssao_raw.radius, 0.01..=5.0)
+                    .text("Radius")
+                    .ui(ui);
+                egui::Slider::new(&mut config.ssao_raw.bias, 0.0..=0.5)
+                    .text("Bias")
+                    .ui(ui);
+                egui::Slider::new(&mut config.ssao_raw.intensity, 0.0..=10.0)
+                    .text("Intensity")
+                    .ui(ui);
+                egui::Slider::new(&mut config.ssao_raw.power, 0.1..=5.0)
+                    .text("Power")
+                    .ui(ui);
+            });
+
+            ui.collapsing("SSAO Blur", |ui| {
+                egui::Slider::new(&mut config.ssao_blur.sigma_spatial, 0.1..=10.0)
+                    .text("Sigma Spatial")
+                    .ui(ui);
+                egui::Slider::new(&mut config.ssao_blur.sigma_depth, 0.1..=10.0)
+                    .text("Sigma Depth")
+                    .ui(ui);
+                egui::Slider::new(&mut config.ssao_blur.sigma_normal, 32.0..=64.0)
+                    .text("Sigma Normal")
+                    .ui(ui);
             });
         });
 
