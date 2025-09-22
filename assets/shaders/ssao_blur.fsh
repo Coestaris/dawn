@@ -1,7 +1,6 @@
 #include "inc/prelude.glsl"
 #include "inc/ubo_camera.glsl"
 #include "inc/debug_mode.glsl"
-#include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
 out float out_ssao_blur;
@@ -27,12 +26,6 @@ const float in_sigma_normal  = 16.0;
 
 float gauss(float x, float s) {
     return exp(-0.5*(x*x)/(s*s));
-}
-
-vec3 normal(vec2 uv) {
-    vec2 oct_normal = texture(in_normal, tex_coord).rg;
-    vec3 normal = decode_oct(oct_normal);
-    return normalize(normal);
 }
 
 void main()
@@ -68,7 +61,7 @@ void main()
                 zi = linearize_depth(di, in_clip_planes.x, in_clip_planes.y);
             }
 
-            vec3 Ni = normal(uvn);
+            vec3 Ni = normalize(texture(in_normal, uvn).xyz);
 
             float w_spatial = gauss(length(vec2(i, j)), in_sigma_spatial);
             float w_depth   = gauss(abs(zi - z0), in_sigma_depth);
