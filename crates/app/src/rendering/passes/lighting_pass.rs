@@ -17,12 +17,13 @@ use std::rc::Rc;
 use std::sync::Arc;
 use crate::rendering::fbo::ssao::SSAOTarget;
 
-const ALBEDO_METALLIC_INDEX: i32 = 0;
-const NORMAL_INDEX: i32 = 1;
-const PBR_INDEX: i32 = 2;
-const DEPTH_INDEX: i32 = 3;
-const PACKED_LIGHTS_INDEX: i32 = 4;
-const SSAO_INDEX: i32 = 5;
+const POSITION_INDEX: i32 = 0;
+const ALBEDO_METALLIC_INDEX: i32 = 1;
+const NORMAL_INDEX: i32 = 2;
+const PBR_INDEX: i32 = 3;
+const DEPTH_INDEX: i32 = 4;
+const PACKED_LIGHTS_INDEX: i32 = 5;
+const SSAO_INDEX: i32 = 6;
 
 pub(crate) struct LightingPass {
     gl: Arc<glow::Context>,
@@ -86,6 +87,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 let shader = self.shader.as_ref().unwrap();
                 let program = shader.asset.cast();
                 Program::bind(&self.gl, &program);
+                program.set_uniform(&shader.position_texture, POSITION_INDEX);
                 program.set_uniform(&shader.albedo_metallic_texture, ALBEDO_METALLIC_INDEX);
                 program.set_uniform(&shader.normal_texture, NORMAL_INDEX);
                 program.set_uniform(&shader.pbr_texture, PBR_INDEX);
@@ -166,7 +168,13 @@ impl RenderPass<RenderingEvent> for LightingPass {
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.albedo_metalic.texture,
+            &self.gbuffer.position.texture,
+            POSITION_INDEX as u32,
+        );
+        Texture::bind(
+            &self.gl,
+            TextureBind::Texture2D,
+            &self.gbuffer.albedo_metallic.texture,
             ALBEDO_METALLIC_INDEX as u32,
         );
         Texture::bind(
@@ -207,7 +215,13 @@ impl RenderPass<RenderingEvent> for LightingPass {
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Framebuffer::unbind(&self.gl);
         Program::unbind(&self.gl);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, POSITION_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, ALBEDO_METALLIC_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, PBR_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, PACKED_LIGHTS_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, SSAO_INDEX as u32);
         RenderResult::default()
     }
 }

@@ -1,7 +1,6 @@
 #include "inc/prelude.glsl"
 #include "inc/ubo_camera.glsl"
 #include "inc/debug_mode.glsl"
-#include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
 out vec4 FragColor;
@@ -10,13 +9,15 @@ in vec2 tex_coord;
 
 uniform sampler2D in_depth_texture;
 
+// RGBA16F
+uniform sampler2D in_position_texture;
 // RGBA8. RGB - albedo, A - metallic
 uniform sampler2D in_albedo_metallic_texture;
-// RG16F. View space, Octa-encoded normal
+// RGB16F. View space
 uniform sampler2D in_normal_texture;
 // RGBA8. R - roughness, G - occlusion, BA - reserved
 uniform sampler2D in_pbr_texture;
-// R32F
+// R16F
 uniform sampler2D in_ssao_texture;
 // RGBA32, height 1
 uniform usampler2D in_packed_lights;
@@ -301,17 +302,16 @@ vec4 process() {
     #endif
 
     vec4 albedo_metallic = texture(in_albedo_metallic_texture, tex_coord);
-    vec2 nor_oct = texture(in_normal_texture, tex_coord).rg;
     vec4 pbr = texture(in_pbr_texture, tex_coord);
     float ssao = texture(in_ssao_texture, tex_coord).r;
     float depth = texture(in_depth_texture, tex_coord).r;
 
-    vec3 N = decode_oct(nor_oct);
+    vec3 N = texture(in_normal_texture, tex_coord).rgb;
     float rough = max(pbr.r, 1.0/255.0);
     float metallic = albedo_metallic.a;
     float ao = pbr.g * ssao;
     vec3 albedo = albedo_metallic.rgb;
-    vec3 P = reconstruct_view_pos(depth, tex_coord, in_inv_proj);// view-space
+    vec3 P = texture(in_position_texture, tex_coord).xyz;
     vec3 V = normalize(-P);
 
     vec3 Lo = vec3(0);
@@ -351,8 +351,7 @@ void main()
         float metallic = texture(in_albedo_metallic_texture, tex_coord).a;
         FragColor = vec4(vec3(metallic), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_NORMAL) {
-        vec2 oct_normal = texture(in_normal_texture, tex_coord).rg;
-        vec3 normal = decode_oct(oct_normal);
+        vec3 normal = texture(in_normal_texture, tex_coord).rgb;
         FragColor = vec4(normal * 0.5 + 0.5, 1.0);
     } else if (in_debug_mode == DEBUG_MODE_ROUGHNESS) {
         float roughness = texture(in_pbr_texture, tex_coord).r;
@@ -366,9 +365,8 @@ void main()
         float linear = linearize_depth(depth, in_clip_planes.x, in_clip_planes.y) / in_clip_planes.y;
         FragColor = vec4(vec3(linear), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_POSITION) {
-        float depth = texture(in_depth_texture, tex_coord).r;
-        vec3 pos = reconstruct_view_pos(depth, tex_coord, in_inv_proj);
-        FragColor = vec4(pos * 0.5 + 0.5, 1.0);
+        vec3 pos = texture(in_position_texture, tex_coord).xyz;
+        FragColor = vec4(pos, 1.0);
     } else if (in_debug_mode == DEBUG_MODE_SSAO) {
         float ao = texture(in_ssao_texture, tex_coord).r;
         FragColor = vec4(vec3(ao), 1.0);

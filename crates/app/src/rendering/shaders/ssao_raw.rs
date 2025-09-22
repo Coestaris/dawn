@@ -7,7 +7,8 @@ pub struct SSAORawShader {
     pub ubo_ssao_raw_params_location: u32,
     pub ubo_ssao_raw_kernel_location: u32,
 
-    pub depth_location: UniformLocation,
+    pub position_location: UniformLocation,
+    // pub depth_location: UniformLocation,
     pub normal_location: UniformLocation,
     pub noise_location: UniformLocation,
 }
@@ -21,7 +22,8 @@ impl SSAORawShader {
             ubo_camera_location: program.get_uniform_block_location("ubo_camera")?,
             ubo_ssao_raw_params_location: program.get_uniform_block_location("ubo_ssao_raw_params")?,
             ubo_ssao_raw_kernel_location: program.get_uniform_block_location("ubo_ssao_raw_kernel")?,
-            depth_location: program.get_uniform_location("in_depth")?,
+            position_location: program.get_uniform_location("in_position")?,
+            // depth_location: program.get_uniform_location("in_depth")?,
             normal_location: program.get_uniform_location("in_normal")?,
             noise_location: program.get_uniform_location("in_noise")?,
         })
