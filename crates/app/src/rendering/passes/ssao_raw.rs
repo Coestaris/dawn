@@ -20,9 +20,10 @@ use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
 
-const DEPTH_INDEX: i32 = 0;
+const POSITION_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
 const NOISE_INDEX: i32 = 2;
+
 pub(crate) struct SSAORawPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
@@ -100,7 +101,8 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
                     shader.ubo_camera_location,
                     CAMERA_UBO_BINDING as u32,
                 );
-                program.set_uniform(&shader.depth_location, DEPTH_INDEX);
+                program.set_uniform(&shader.position_location, POSITION_INDEX);
+                // program.set_uniform(&shader.depth_location, DEPTH_INDEX);
                 program.set_uniform(&shader.normal_location, NORMAL_INDEX);
                 program.set_uniform(&shader.noise_location, NOISE_INDEX);
                 Program::unbind(&self.gl);
@@ -152,8 +154,8 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.depth.texture,
-            DEPTH_INDEX as u32,
+            &self.gbuffer.position.texture,
+            POSITION_INDEX as u32,
         );
         Texture::bind(
             &self.gl,
@@ -175,7 +177,7 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, POSITION_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, NOISE_INDEX as u32);
         RenderResult::default()
