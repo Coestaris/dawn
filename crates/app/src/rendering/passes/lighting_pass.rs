@@ -21,9 +21,8 @@ const POSITION_INDEX: i32 = 0;
 const ALBEDO_METALLIC_INDEX: i32 = 1;
 const NORMAL_INDEX: i32 = 2;
 const PBR_INDEX: i32 = 3;
-const DEPTH_INDEX: i32 = 4;
-const PACKED_LIGHTS_INDEX: i32 = 5;
-const SSAO_INDEX: i32 = 6;
+const PACKED_LIGHTS_INDEX: i32 = 4;
+const SSAO_INDEX: i32 = 5;
 
 pub(crate) struct LightingPass {
     gl: Arc<glow::Context>,
@@ -91,7 +90,6 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 program.set_uniform(&shader.albedo_metallic_texture, ALBEDO_METALLIC_INDEX);
                 program.set_uniform(&shader.normal_texture, NORMAL_INDEX);
                 program.set_uniform(&shader.pbr_texture, PBR_INDEX);
-                program.set_uniform(&shader.depth_texture, DEPTH_INDEX);
                 program.set_uniform(&shader.packed_lights_location, PACKED_LIGHTS_INDEX);
                 program.set_uniform(&shader.ssao_texture, SSAO_INDEX);
                 Program::unbind(&self.gl);
@@ -192,12 +190,6 @@ impl RenderPass<RenderingEvent> for LightingPass {
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.depth.texture,
-            DEPTH_INDEX as u32,
-        );
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
             &self.packed_lights.texture,
             PACKED_LIGHTS_INDEX as u32,
         );
@@ -219,7 +211,6 @@ impl RenderPass<RenderingEvent> for LightingPass {
         Texture::unbind(&self.gl, TextureBind::Texture2D, ALBEDO_METALLIC_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, PBR_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, PACKED_LIGHTS_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, SSAO_INDEX as u32);
         RenderResult::default()
