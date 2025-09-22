@@ -14,7 +14,7 @@ pub struct SSAOTarget {
 
 impl SSAOTarget {
     pub(crate) fn resize(&self, new_size: UVec2) {
-        self.texture.resize(new_size);
+        self.texture.resize(UVec2::new(new_size.x, new_size.y));
     }
 
     pub fn new(gl: Arc<glow::Context>, size: UVec2) -> Self {

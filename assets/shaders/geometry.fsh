@@ -35,27 +35,23 @@ void main()
     float metallic = texture(in_metallic_roughness, tex_coord).g;
     float occlusion = texture(in_occlusion, tex_coord).r;
 
-    vec3 n_world_or_modelfixed;
+    vec3 n_view;
+    vec3 n_model_geo = normalize(normal);
+    mat3 n_matrix = transpose(inverse(mat3(in_view * in_model)));
     if (in_tangent_valid)
     {
-        vec3 n_model_geo = normalize(normal);
         vec3 n_tangent = texture(in_normal, tex_coord).rgb * 2.0 - 1.0;
         vec3 T = normalize(tangent);
         vec3 B = normalize(bitangent);
         vec3 N = normalize(n_model_geo);
         mat3 TBN = mat3(T, B, N);
         vec3 n_model = normalize(TBN * n_tangent);
-        mat3 N_model = transpose(inverse(mat3(in_model)));
-        n_world_or_modelfixed = normalize(N_model * n_model);
+        n_view = normalize(n_matrix * n_model);
     }
     else
     {
-        vec3 n_model_geo = normalize(normal);
-        mat3 N_model = transpose(inverse(mat3(in_model)));
-        n_world_or_modelfixed = normalize(N_model * n_model_geo);
+        n_view = normalize(n_matrix * n_model_geo);
     }
-
-    vec3 n_view = normalize(mat3(in_view) * n_world_or_modelfixed);
 
     out_position = frag_pos;
     out_albedo_metalic = vec4(albedo, metallic);
