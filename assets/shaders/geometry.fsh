@@ -2,7 +2,7 @@
 #include "inc/ubo_camera.glsl"
 
 // RGBA16F. Frag view-space position
-layout (location = 0) out vec4 out_position;
+layout (location = 0) out vec3 out_position;
 // RGBA8. RGB - albedo, A - metallic
 layout (location = 1) out vec4 out_albedo_metalic;
 // RGB16F. View space
@@ -10,7 +10,7 @@ layout (location = 2) out vec3 out_normal_texture;
 // RGBA8. R - roughness, G - occlusion, BA - reserved
 layout (location = 3) out vec4 out_pbr;
 
-in vec4 frag_pos;
+in vec3 frag_pos;
 in vec2 tex_coord;
 in vec3 normal;
 in vec3 tangent;

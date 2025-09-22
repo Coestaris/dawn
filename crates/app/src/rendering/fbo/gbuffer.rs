@@ -9,7 +9,7 @@ pub struct GBuffer {
     pub fbo: Framebuffer,
     // Depth buffer
     pub depth: GTexture,
-    // RGBA16F
+    // RGB16F
     pub position: GTexture,
     // RGBA8. RGB - albedo, A - metallic
     pub albedo_metallic: GTexture,
@@ -39,7 +39,7 @@ impl GBuffer {
             ),
             position: GTexture::new(
                 gl.clone(),
-                IRPixelFormat::RGBA16F,
+                IRPixelFormat::RGB16F,
                 FramebufferAttachment::Color0,
             ),
             albedo_metallic: GTexture::new(

@@ -7,8 +7,6 @@ out vec4 FragColor;
 
 in vec2 tex_coord;
 
-uniform sampler2D in_depth_texture;
-
 // RGBA16F
 uniform sampler2D in_position_texture;
 // RGBA8. RGB - albedo, A - metallic
@@ -304,14 +302,13 @@ vec4 process() {
     vec4 albedo_metallic = texture(in_albedo_metallic_texture, tex_coord);
     vec4 pbr = texture(in_pbr_texture, tex_coord);
     float ssao = texture(in_ssao_texture, tex_coord).r;
-    float depth = texture(in_depth_texture, tex_coord).r;
+    vec3 P = texture(in_position_texture, tex_coord).xyz;
 
     vec3 N = texture(in_normal_texture, tex_coord).rgb;
     float rough = max(pbr.r, 1.0/255.0);
     float metallic = albedo_metallic.a;
     float ao = pbr.g * ssao;
     vec3 albedo = albedo_metallic.rgb;
-    vec3 P = texture(in_position_texture, tex_coord).xyz;
     vec3 V = normalize(-P);
 
     vec3 Lo = vec3(0);
@@ -360,9 +357,8 @@ void main()
         float ao = texture(in_pbr_texture, tex_coord).g;
         FragColor = vec4(vec3(ao), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_DEPTH) {
-        // Reconstruct linear depth [0..1]
-        float depth = texture(in_depth_texture, tex_coord).r;
-        float linear = linearize_depth(depth, in_clip_planes.x, in_clip_planes.y) / in_clip_planes.y;
+        float depth = 1.0 - texture(in_position_texture, tex_coord).z;
+        float linear = linearize_depth(depth, in_clip_planes.x, in_clip_planes.y);
         FragColor = vec4(vec3(linear), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_POSITION) {
         vec3 pos = texture(in_position_texture, tex_coord).xyz;

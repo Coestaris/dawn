@@ -38,7 +38,6 @@ pub struct LightingShader {
     pub albedo_metallic_texture: UniformLocation,
     pub normal_texture: UniformLocation,
     pub pbr_texture: UniformLocation,
-    pub depth_texture: UniformLocation,
     pub ssao_texture: UniformLocation,
 }
 
@@ -59,7 +58,6 @@ impl LightingShader {
             albedo_metallic_texture: program.get_uniform_location("in_albedo_metallic_texture")?,
             normal_texture: program.get_uniform_location("in_normal_texture")?,
             pbr_texture: program.get_uniform_location("in_pbr_texture")?,
-            depth_texture: program.get_uniform_location("in_depth_texture")?,
             ssao_texture: program.get_uniform_location("in_ssao_texture")?,
         })
     }
