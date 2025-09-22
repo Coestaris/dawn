@@ -4,7 +4,7 @@ use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::ssao::SSAOTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::ssao_raw::SSAORawShader;
-use crate::rendering::textures::noise::white_noise_f32;
+use crate::rendering::textures::noise::{white_noise_tangent_space_f32};
 use crate::rendering::ubo::ssao_raw::{SSAORawKernelUBO, SSAORawParametersUBO};
 use crate::rendering::ubo::{
     CAMERA_UBO_BINDING, SSAO_RAW_KERNEL_UBO_BINDING, SSAO_RAW_PARAMS_UBO_BINDING,
@@ -52,7 +52,7 @@ impl SSAORawPass {
             id,
             config,
             shader: None,
-            noise_texture: white_noise_f32(gl.clone(), 128, 128),
+            noise_texture: white_noise_tangent_space_f32(gl.clone(), 4, 4),
             quad: Quad2D::new(gl.clone()),
             params_ubo: SSAORawParametersUBO::new(gl.clone(), SSAO_RAW_PARAMS_UBO_BINDING),
             kernel_ubo: SSAORawKernelUBO::new(gl.clone(), SSAO_RAW_KERNEL_UBO_BINDING),

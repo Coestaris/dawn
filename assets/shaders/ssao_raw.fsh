@@ -46,6 +46,7 @@ void main()
     vec2 uv = tex_coord;
     vec2 texel = in_viewport;
     int kernel_size = int(in_kernel_size);
+    vec2 noise_scale = vec2(ivec2(in_viewport) / textureSize(in_noise, 0));
 
     float depth = texture(in_depth, uv).r;
 
@@ -56,11 +57,12 @@ void main()
     }
 
     vec3 P = reconstruct_view_pos(depth, uv, in_inv_proj);// view-space
-    vec3 N = normal(uv);// view-space
-    vec3 R = normalize(texture(in_noise, uv * NOIZE_SCALE).xyz * 2.0 - 1.0);
+    vec3 N = normal(uv); // view-space
+    vec3 R = normalize(texture(in_noise, uv * noise_scale).xyz);
 
     vec3 Vdir = normalize(-P);
     float NoV = clamp(dot(N, Vdir), 0.0, 1.0);
+    float fresnel = mix(0.35, 1.0, NoV);
 
     vec3 T, B;
     n2tbn(N, R, T, B);
@@ -96,13 +98,13 @@ void main()
             continue;
         }
 
-        vec2 nrg = texture(in_normal, Quv).rg;
-        vec3 Ns  = decode_oct(nrg);                  // view-space
-        float nDot = clamp(dot(N, Ns), 0.0, 1.0);
-        if (nDot < 0.2) {
-            continue;
-        }
-        float nWeight = nDot * nDot;
+//        vec2 nrg = texture(in_normal, Quv).rg;
+//        vec3 Ns  = decode_oct(nrg);                  // view-space
+//        float nDot = clamp(dot(N, Ns), 0.0, 1.0);
+//        if (nDot < 0.2) {
+//            continue;
+//        }
+//        float nWeight = nDot * nDot;
 
         float d01 = texture(in_depth, Quv).r;
         if (d01 >= 1.0) {
@@ -121,11 +123,9 @@ void main()
 
         float distVS = length(sampVS);
         float range  = 1.0 - clamp(dz / (distVS + 1e-4), 0.0, 1.0);
-        range = range * range;
+        range = range * range * fresnel;
 
-        float contrib = range * nWeight;
-        contrib *= mix(0.35, 1.0, NoV);
-        occlusion += contrib;
+        occlusion += range;
         weight    += 1.0;
     }
 
