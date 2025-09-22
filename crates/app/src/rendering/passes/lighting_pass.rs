@@ -4,7 +4,7 @@ use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::obuffer::LightningTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::lighting::LightingShader;
-use crate::rendering::ubo::packed_light::{LightsHeaderCPU, PackedLights};
+use crate::rendering::ubo::packed_light::{LightsHeaderPayload, PackedLights};
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
@@ -132,7 +132,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
             lights_count += 1;
         }
         self.packed_lights.upload();
-        let header = LightsHeaderCPU::new(lights_count as u32);
+        let header = LightsHeaderPayload::new(lights_count as u32);
 
         Framebuffer::bind(&self.gl, &self.target.fbo);
 
