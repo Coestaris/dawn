@@ -51,7 +51,7 @@ void main()
     float sum = 0.0;
     float wsum = 0.0;
 
-    const int R = 4;// filter radius
+    const int R = 1;// filter radius
     for (int i = -R; i <= R; i++) {
         for (int j = -R; j <= R; j++) {
             if (i == 0 && j == 0) continue;

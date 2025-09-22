@@ -5,13 +5,14 @@ use glam::UVec4;
 use std::sync::Arc;
 
 #[repr(C)]
+#[repr(packed)]
 #[derive(Clone, Copy, Default)]
-pub struct LightsHeaderCPU {
+pub struct LightsHeaderPayload {
     // magic 'LITE' (0x4C495445), version, num_lights, reserved
     pub meta0: [u32; 4],
 }
 
-impl LightsHeaderCPU {
+impl LightsHeaderPayload {
     pub fn new(num_lights: u32) -> Self {
         Self {
             meta0: [0x4C495445, 1, num_lights, 0],
@@ -29,8 +30,9 @@ const LIGHT_KIND_POINT: u32 = 3;
 const LIGHT_KIND_AREA_RECT: u32 = 4;
 
 #[repr(C)]
+#[repr(packed)]
 #[derive(Clone, Copy, Default)]
-struct LightPackedCPU {
+struct LightPackedPayload {
     pub kind: u32,
     pub flags: u32,
     pub reserved: u32,
@@ -94,18 +96,18 @@ impl PackedLights {
         self.vec.clear();
     }
 
-    fn push_packed(&mut self, l: &LightPackedCPU) {
+    fn push_packed(&mut self, l: &LightPackedPayload) {
         self.vec.push(l.kind);
         self.vec.push(l.flags);
         self.vec.push(l.reserved);
         self.vec.push(l.intensity.to_bits());
-        for c in &l.color_rgba {
+        for c in l.color_rgba {
             self.vec.push(c.to_bits());
         }
-        for v in &l.v0 {
+        for v in l.v0 {
             self.vec.push(v.to_bits());
         }
-        for v in &l.v1 {
+        for v in l.v1 {
             self.vec.push(v.to_bits());
         }
         self.vec.push(l.rough.to_bits());
@@ -115,7 +117,7 @@ impl PackedLights {
     }
 
     pub fn push_point_light(&mut self, l: &RenderablePointLight, view_mat: &glam::Mat4) {
-        let mut packed = LightPackedCPU::default();
+        let mut packed = LightPackedPayload::default();
         packed.kind = LIGHT_KIND_POINT;
         packed.flags = 0;
         packed.reserved = 0;
@@ -137,7 +139,7 @@ impl PackedLights {
     }
 
     pub fn push_sun_light(&mut self, l: &RenderableSunLight, view_mat: &glam::Mat4) {
-        let mut packed = LightPackedCPU::default();
+        let mut packed = LightPackedPayload::default();
         packed.kind = LIGHT_KIND_SUN;
         packed.flags = 0;
         packed.reserved = 0;

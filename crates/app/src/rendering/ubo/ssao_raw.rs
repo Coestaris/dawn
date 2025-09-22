@@ -1,9 +1,10 @@
 use dawn_graphics::gl::raii::ubo::UBO;
-use glam::Vec4;
+use glam::{FloatExt, Vec4};
 use std::sync::Arc;
 use log::info;
 
 #[repr(C)]
+#[repr(packed)]
 #[derive(Clone, Copy)]
 struct SSAORawParametersUBOPayload {
     kernel_size: f32, // up to 64
@@ -15,6 +16,7 @@ struct SSAORawParametersUBOPayload {
 }
 
 #[repr(C)]
+#[repr(packed)]
 #[derive(Clone, Copy)]
 struct SSAORawKernelUBOPayload {
     samples: [[f32; 4]; 64],
@@ -64,9 +66,12 @@ impl SSAORawKernelUBO {
         use rand::Rng;
         let mut rng = rand::thread_rng();
 
+        // Vectors of Normal-oriented hemisphere
         for i in 0..n {
+            // Make samples at the center more dense
             let scale = (i as f32) / (n as f32);
-            let scale = 0.1 + 0.9 * scale * scale;
+            let scale = f32::lerp(0.1, 1.0, scale * scale);
+
             let sample = Vec4::new(
                 rng.gen_range(-1.0..1.0),
                 rng.gen_range(-1.0..1.0),
