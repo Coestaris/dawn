@@ -15,6 +15,7 @@ use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
 
+const POSITION_INDEX: i32 = 0;
 const SSAO_RAW_INDEX: i32 = 1;
 const NORMAL_INDEX: i32 = 2;
 
@@ -82,6 +83,7 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
                     crate::rendering::CAMERA_UBO_BINDING as u32,
                 );
                 program.set_uniform(&shader.ssao_raw_location, SSAO_RAW_INDEX);
+                program.set_uniform(&shader.position_location, POSITION_INDEX);
                 program.set_uniform(&shader.normal_location, NORMAL_INDEX);
 
                 Program::unbind(&self.gl);
@@ -119,6 +121,14 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
         #[cfg(feature = "devtools")]
         {
             program.set_uniform(
+                &shader.radius,
+                self.config.get_ssao_blur_radius() as f32,
+            );
+            program.set_uniform(
+                &shader.ssao_enabled,
+                self.config.get_is_ssao_enabled() as i32,
+            );
+            program.set_uniform(
                 &shader.sigma_spatial_location,
                 self.config.get_ssao_blur_sigma_spatial(),
             );
@@ -141,6 +151,12 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
+            &self.gbuffer.position.texture,
+            POSITION_INDEX as u32,
+        );
+        Texture::bind(
+            &self.gl,
+            TextureBind::Texture2D,
             &self.gbuffer.normal.texture,
             NORMAL_INDEX as u32,
         );
@@ -152,6 +168,7 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, POSITION_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, SSAO_RAW_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
         RenderResult::default()

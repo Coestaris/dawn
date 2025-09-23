@@ -46,15 +46,15 @@ void main()
         vec3 N = normalize(n_model_geo);
         mat3 TBN = mat3(T, B, N);
         vec3 n_model = normalize(TBN * n_tangent);
-        n_view = normalize(n_matrix * n_model);
+        n_view = n_matrix * n_model;
     }
     else
     {
-        n_view = normalize(n_matrix * n_model_geo);
+        n_view = n_matrix * n_model_geo;
     }
 
     out_position = frag_pos;
     out_albedo_metalic = vec4(albedo, metallic);
-    out_normal_texture = n_view;
+    out_normal_texture = normalize(n_view);
     out_pbr = vec4(roughness, occlusion, 0.0, 0.0);
 }

@@ -6,21 +6,25 @@
 out float out_ssao_blur;
 in vec2 tex_coord;
 
+uniform sampler2D in_position;
 uniform sampler2D in_ssao_raw;
-uniform sampler2D in_depth;
 uniform sampler2D in_normal;
 
 #if ENABLE_DEVTOOLS
 
+uniform float in_radius;
 uniform float in_sigma_spatial;
 uniform float in_sigma_depth;
 uniform float in_sigma_normal;
+uniform int in_ssao_enabled;
 
 #else
 
+const float in_radius = 3.0;
 const float in_sigma_spatial = 2.0;
 const float in_sigma_depth   = 0.1;
 const float in_sigma_normal  = 16.0;
+const int in_ssao_enabled = 1;
 
 #endif
 
@@ -30,42 +34,35 @@ float gauss(float x, float s) {
 
 void main()
 {
-    vec2 uv = tex_coord;
-    vec2 texel = in_viewport;
-
-    vec3 N0 = texture(in_normal, uv).xyz * 2.0 - 1.0;
-    float d0 = texture(in_depth, uv).r;
-    if (d0 >= 1.0) {
+    if (in_ssao_enabled != 1) {
         out_ssao_blur = 1.0;
         return;
     }
-    float z0 = linearize_depth(d0, in_clip_planes.x, in_clip_planes.y);
+
+    vec2 uv = tex_coord;
+    vec2 texel = vec2(1.0) / vec2(in_viewport);
+
+    vec3 N = texture(in_normal, uv).xyz;
+    float Z = texture(in_position, uv).z;
 
     float sum = 0.0;
     float wsum = 0.0;
 
-    const int R = 1;// filter radius
+    int R = int(in_radius);
     for (int i = -R; i <= R; i++) {
         for (int j = -R; j <= R; j++) {
             if (i == 0 && j == 0) continue;
 
-            vec2 uvn = uv + vec2(i, j) * texel;
+            vec2 vector = vec2(i, j);
+            vec2 uvn = uv + vector * texel;
             float ao = texture(in_ssao_raw, uvn).r;
 
-            float di = texture(in_depth, uvn).r;
-            float zi;
-            if (di >= 1.0) {
-                ao = 1.0;
-                zi = z0;// ignore depth difference
-            } else {
-                zi = linearize_depth(di, in_clip_planes.x, in_clip_planes.y);
-            }
+            float Zi = texture(in_position, uvn).z;
+            vec3 Ni = texture(in_normal, uvn).xyz;
 
-            vec3 Ni = normalize(texture(in_normal, uvn).xyz);
-
-            float w_spatial = gauss(length(vec2(i, j)), in_sigma_spatial);
-            float w_depth   = gauss(abs(zi - z0), in_sigma_depth);
-            float w_normal  = pow(max(dot(N0, Ni), 0.0), in_sigma_normal);
+            float w_spatial = gauss(length(vector), in_sigma_spatial);
+            float w_depth   = gauss(abs(Zi - Z), in_sigma_depth);
+            float w_normal  = pow(max(dot(N, Ni), 0.0), in_sigma_normal);
 
             float w = w_spatial * w_depth * w_normal;
             sum += ao * w;

@@ -127,6 +127,11 @@ pub(crate) mod config_static {
         pub fn get_ssao_blur_sigma_normal(&self) -> f32 {
             0.1
         }
+
+        #[inline(always)]
+        pub fn get_ssao_blur_radius(&self) -> u32 {
+            3
+        }
     }
 }
 
@@ -206,6 +211,7 @@ mod config_impl {
         pub sigma_spatial: f32,
         pub sigma_depth: f32,
         pub sigma_normal: f32,
+        pub radius: u32,
     }
 
     impl SSAOBlurConfig {
@@ -215,6 +221,7 @@ mod config_impl {
                 sigma_spatial: stat.get_ssao_blur_sigma_spatial(),
                 sigma_depth: stat.get_ssao_blur_sigma_depth(),
                 sigma_normal: stat.get_ssao_blur_sigma_normal(),
+                radius: stat.get_ssao_blur_radius(),
             }
         }
     }
@@ -318,6 +325,10 @@ mod config_impl {
 
         pub fn get_ssao_blur_sigma_normal(&self) -> f32 {
             self.0.borrow().ssao_blur.sigma_normal
+        }
+
+        pub fn get_ssao_blur_radius(&self) -> u32 {
+            self.0.borrow().ssao_blur.radius
         }
     }
 }

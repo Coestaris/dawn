@@ -17,14 +17,14 @@ impl SSAOTarget {
         self.texture.resize(UVec2::new(new_size.x, new_size.y));
     }
 
-    pub fn new(gl: Arc<glow::Context>, size: UVec2) -> Self {
+    pub fn new(gl: Arc<glow::Context>, size: UVec2) -> anyhow::Result<Self> {
         let target = SSAOTarget {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
             texture: GTexture::new(
                 gl.clone(),
                 IRPixelFormat::R16F,
                 FramebufferAttachment::Color0,
-            ),
+            )?,
         };
 
         target.texture.resize(size);
@@ -37,6 +37,6 @@ impl SSAOTarget {
         assert_eq!(target.fbo.is_complete(), true);
         Framebuffer::unbind(&gl);
 
-        target
+        Ok(target)
     }
 }

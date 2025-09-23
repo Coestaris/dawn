@@ -29,34 +29,34 @@ impl GBuffer {
         self.depth.resize(new_size);
     }
 
-    pub fn new(gl: Arc<glow::Context>, initial: UVec2) -> Self {
+    pub fn new(gl: Arc<glow::Context>, initial: UVec2) -> anyhow::Result<Self> {
         let buffer = GBuffer {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
             depth: GTexture::new(
                 gl.clone(),
                 IRPixelFormat::DEPTH24,
                 FramebufferAttachment::Depth,
-            ),
+            )?,
             position: GTexture::new(
                 gl.clone(),
                 IRPixelFormat::RGB16F,
                 FramebufferAttachment::Color0,
-            ),
+            )?,
             albedo_metallic: GTexture::new(
                 gl.clone(),
                 IRPixelFormat::RGBA8,
                 FramebufferAttachment::Color1,
-            ),
+            )?,
             normal: GTexture::new(
                 gl.clone(),
                 IRPixelFormat::RGB16F,
                 FramebufferAttachment::Color2,
-            ),
+            )?,
             pbr: GTexture::new(
                 gl.clone(),
                 IRPixelFormat::RGBA8,
                 FramebufferAttachment::Color3,
-            ),
+            )?,
         };
 
         buffer.resize(initial);
@@ -78,6 +78,6 @@ impl GBuffer {
         assert_eq!(buffer.fbo.is_complete(), true);
         Framebuffer::unbind(&gl);
 
-        buffer
+        Ok(buffer)
     }
 }
