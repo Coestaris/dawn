@@ -2,6 +2,7 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::obuffer::LightningTarget;
+use crate::rendering::fbo::ssao::SSAOTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::lighting::LightingShader;
 use crate::rendering::ubo::packed_light::{LightsHeaderPayload, PackedLights};
@@ -15,7 +16,6 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
-use crate::rendering::fbo::ssao::SSAOTarget;
 
 const POSITION_INDEX: i32 = 0;
 const ALBEDO_METALLIC_INDEX: i32 = 1;
@@ -146,6 +146,10 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 self.config.get_sky_color(),
             );
             program.set_uniform(
+                &shader.devtools.ssao_enabled,
+                self.config.get_is_ssao_enabled() as i32,
+            );
+            program.set_uniform(
                 &shader.devtools.ground_color_location,
                 self.config.get_ground_color(),
             );
@@ -208,7 +212,11 @@ impl RenderPass<RenderingEvent> for LightingPass {
         Framebuffer::unbind(&self.gl);
         Program::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, POSITION_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, ALBEDO_METALLIC_INDEX as u32);
+        Texture::unbind(
+            &self.gl,
+            TextureBind::Texture2D,
+            ALBEDO_METALLIC_INDEX as u32,
+        );
         Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, PBR_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, PACKED_LIGHTS_INDEX as u32);

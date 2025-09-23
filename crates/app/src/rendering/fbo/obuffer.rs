@@ -18,14 +18,14 @@ impl LightningTarget {
         self.texture.resize(new_size);
     }
 
-    pub fn new(gl: Arc<glow::Context>, initial: UVec2) -> Self {
+    pub fn new(gl: Arc<glow::Context>, initial: UVec2) -> anyhow::Result<Self> {
         let buffer = LightningTarget {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
             texture: GTexture::new(
                 gl.clone(),
                 IRPixelFormat::RGBA8,
                 FramebufferAttachment::Color0,
-            ),
+            )?,
         };
 
         buffer.resize(initial);
@@ -38,6 +38,6 @@ impl LightningTarget {
         assert_eq!(buffer.fbo.is_complete(), true);
         Framebuffer::unbind(&gl);
 
-        buffer
+        Ok(buffer)
     }
 }

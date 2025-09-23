@@ -27,17 +27,29 @@ uniform int in_debug_mode;
 
 #if ENABLE_DEVTOOLS
 
-uniform vec3 ENV_SKY_COLOR;
-uniform vec3 ENV_GROUND_COLOR;
-uniform float ENV_DIFFUSE_SCALE;
-uniform float ENV_SPECULAR_SCALE;
+uniform vec3 in_sky_color;
+uniform vec3 in_ground_color;
+uniform float in_diffuse_scale;
+uniform float in_specular_scale;
+uniform int in_ssao_enabled;
 
 #else
 
-const vec3 ENV_SKY_COLOR    = vec3(0.6, 0.7, 0.9);
-const vec3 ENV_GROUND_COLOR = vec3(0.3, 0.25, 0.2);
-const float ENV_DIFFUSE_SCALE  = 1.0;
-const float ENV_SPECULAR_SCALE = 0.3;
+#ifdef DEF_SKY_COLOR
+const vec3 in_sky_color = DEF_SKY_COLOR;
+#endif
+#ifdef DEF_GROUND_COLOR
+const vec3 in_ground_color = DEF_GROUND_COLOR;
+#endif
+#ifdef DEF_DIFFUSE_SCALE
+const float in_diffuse_scale  = DEF_DIFFUSE_SCALE;
+#endif
+#ifdef DEF_SPECULAR_SCALE
+const float in_specular_scale = DEF_SPECULAR_SCALE;
+#endif
+#ifdef DEF_SSAO_ENABLED
+const int in_ssao_enabled = DEF_SSAO_ENABLED;
+#endif
 
 #endif
 
@@ -269,7 +281,7 @@ vec3 shade_sun(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, 
 
     float ambSun = get_light_sun_ambient(L);
     float NoUp = clamp(dot(N, normalize(ENV_UP)) * 0.5 + 0.5, 0.0, 1.0);
-    vec3 hemiIrradiance = mix(ENV_GROUND_COLOR, ENV_SKY_COLOR, NoUp) * ambSun * ENV_DIFFUSE_SCALE;
+    vec3 hemiIrradiance = mix(in_ground_color, in_sky_color, NoUp) * ambSun * in_diffuse_scale;
     vec3 ambientDiffuse = albedo * hemiIrradiance * (1.0 - metallic) * ao;
 
     float avgF0 = clamp((F0.x + F0.y + F0.z) * (1.0 / 3.0), 0.0, 1.0);
@@ -277,7 +289,7 @@ vec3 shade_sun(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, 
 
     vec3 F_amb = F_Schlick(F0, NoV);
     float roughAtten = mix(1.0, 0.5, clamp(rough, 0.0, 1.0));
-    vec3 specAmb = F_amb * ambSun * ENV_SPECULAR_SCALE * roughAtten * ao;
+    vec3 specAmb = F_amb * ambSun * in_specular_scale * roughAtten * ao;
 
     // Итог
     return Lo_direct + ambientDiffuse + specAmb;
@@ -301,7 +313,11 @@ vec4 process() {
 
     vec4 albedo_metallic = texture(in_albedo_metallic_texture, tex_coord);
     vec4 pbr = texture(in_pbr_texture, tex_coord);
-    float ssao = texture(in_ssao_texture, tex_coord).r;
+    float ssao = 1.0;
+    if (in_ssao_enabled == 1) {
+        ssao = texture(in_ssao_texture, tex_coord).r;
+    }
+
     vec3 P = texture(in_position_texture, tex_coord).xyz;
 
     vec3 N = texture(in_normal_texture, tex_coord).rgb;

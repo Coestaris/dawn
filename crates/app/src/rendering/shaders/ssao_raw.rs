@@ -23,7 +23,6 @@ impl SSAORawShader {
             ubo_ssao_raw_params_location: program.get_uniform_block_location("ubo_ssao_raw_params")?,
             ubo_ssao_raw_kernel_location: program.get_uniform_block_location("ubo_ssao_raw_kernel")?,
             position_location: program.get_uniform_location("in_position")?,
-            // depth_location: program.get_uniform_location("in_depth")?,
             normal_location: program.get_uniform_location("in_normal")?,
             noise_location: program.get_uniform_location("in_noise")?,
         })

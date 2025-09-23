@@ -1,9 +1,10 @@
-use dawn_assets::ir::texture::IRPixelFormat;
+use dawn_assets::ir::texture::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
 use dawn_graphics::gl::raii::renderbuffer::{RenderBufferStorage, Renderbuffer};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use glam::UVec2;
 use std::sync::Arc;
+use glow::REPEAT;
 
 pub mod gbuffer;
 pub mod obuffer;
@@ -57,18 +58,23 @@ impl GTexture {
         gl: Arc<glow::Context>,
         format: IRPixelFormat,
         attachment: FramebufferAttachment,
-    ) -> Self {
-        let texture = Texture::new2d(gl.clone()).unwrap();
+    ) -> anyhow::Result<Self> {
+        let texture = Texture::new2d(gl.clone())?;
         Texture::bind(&gl, TextureBind::Texture2D, &texture, 0);
+        texture.set_wrap_r(IRTextureWrap::ClampToEdge)?;
+        texture.set_wrap_s(IRTextureWrap::ClampToEdge)?;
+        texture.set_wrap_t(IRTextureWrap::ClampToEdge)?;
+        texture.set_min_filter(IRTextureFilter::Nearest)?;
+        texture.set_mag_filter(IRTextureFilter::Nearest)?;
         texture.generate_mipmap();
         Texture::unbind(&gl, TextureBind::Texture2D, 0);
 
-        GTexture {
+        Ok(GTexture {
             gl,
             texture,
             format,
             attachment,
-        }
+        })
     }
 
     fn resize(&self, new_size: UVec2) {

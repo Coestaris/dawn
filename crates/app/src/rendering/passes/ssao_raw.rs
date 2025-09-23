@@ -4,7 +4,7 @@ use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::ssao::SSAOTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::ssao_raw::SSAORawShader;
-use crate::rendering::textures::noise::{white_noise_tangent_space_f32};
+use crate::rendering::textures::noise::white_noise_rgf32;
 use crate::rendering::ubo::ssao_raw::{SSAORawKernelUBO, SSAORawParametersUBO};
 use crate::rendering::ubo::{
     CAMERA_UBO_BINDING, SSAO_RAW_KERNEL_UBO_BINDING, SSAO_RAW_PARAMS_UBO_BINDING,
@@ -53,7 +53,7 @@ impl SSAORawPass {
             id,
             config,
             shader: None,
-            noise_texture: white_noise_tangent_space_f32(gl.clone(), 4, 4),
+            noise_texture: white_noise_rgf32(gl.clone(), 8, 8),
             quad: Quad2D::new(gl.clone()),
             params_ubo: SSAORawParametersUBO::new(gl.clone(), SSAO_RAW_PARAMS_UBO_BINDING),
             kernel_ubo: SSAORawKernelUBO::new(gl.clone(), SSAO_RAW_KERNEL_UBO_BINDING),
@@ -102,7 +102,6 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
                     CAMERA_UBO_BINDING as u32,
                 );
                 program.set_uniform(&shader.position_location, POSITION_INDEX);
-                // program.set_uniform(&shader.depth_location, DEPTH_INDEX);
                 program.set_uniform(&shader.normal_location, NORMAL_INDEX);
                 program.set_uniform(&shader.noise_location, NOISE_INDEX);
                 Program::unbind(&self.gl);
@@ -140,6 +139,8 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         self.params_ubo.set_bias(self.config.get_ssao_bias());
         self.params_ubo
             .set_intensity(self.config.get_ssao_intensity());
+        self.params_ubo
+            .set_enabled(self.config.get_is_ssao_enabled() as i32);
         self.params_ubo.set_power(self.config.get_ssao_power());
         if self.params_ubo.upload() {
             self.kernel_ubo

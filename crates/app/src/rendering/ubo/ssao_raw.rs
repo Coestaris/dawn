@@ -1,7 +1,7 @@
 use dawn_graphics::gl::raii::ubo::UBO;
 use glam::{FloatExt, Vec4};
-use std::sync::Arc;
 use log::info;
+use std::sync::Arc;
 
 #[repr(C)]
 #[repr(packed)]
@@ -12,7 +12,8 @@ struct SSAORawParametersUBOPayload {
     bias: f32,
     intensity: f32,
     power: f32,
-    _padding: [u32; 3],
+    enabled: i32,
+    _padding: [u32; 2],
 }
 
 #[repr(C)]
@@ -125,7 +126,8 @@ impl SSAORawParametersUBO {
                 bias: 0.025,
                 intensity: 1.0,
                 power: 1.0,
-                _padding: [0; 3],
+                enabled: 1,
+                _padding: [0; 2],
             },
             binding,
             fresh: false,
@@ -164,6 +166,13 @@ impl SSAORawParametersUBO {
     pub fn set_power(&mut self, power: f32) {
         if self.payload.power != power {
             self.payload.power = power;
+            self.fresh = false;
+        }
+    }
+
+    pub fn set_enabled(&mut self, enabled: i32) {
+        if self.payload.enabled != enabled {
+            self.payload.enabled = enabled;
             self.fresh = false;
         }
     }
