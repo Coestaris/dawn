@@ -30,16 +30,16 @@ impl LightingShaderDevtools {
 pub struct LightingShader {
     pub asset: TypedAsset<Program>,
 
-    pub packed_lights_location: UniformLocation,
-    pub packed_lights_header_location: UniformLocation,
+    pub packed_lights: UniformLocation,
+    pub packed_lights_header: UniformLocation,
 
     #[cfg(feature = "devtools")]
     pub devtools: LightingShaderDevtools,
 
-    pub position_texture: UniformLocation,
-    pub albedo_metallic_texture: UniformLocation,
-    pub rough_occlusion_normal_texture: UniformLocation,
-    pub ssao_texture: UniformLocation,
+    pub depth: UniformLocation,
+    pub albedo_metallic: UniformLocation,
+    pub rough_occlusion_normal: UniformLocation,
+    pub ssao: UniformLocation,
 }
 
 impl LightingShader {
@@ -51,15 +51,13 @@ impl LightingShader {
             asset: clone1,
             #[cfg(feature = "devtools")]
             devtools: LightingShaderDevtools::new(clone2)?,
-            packed_lights_location: program.get_uniform_location("in_packed_lights")?,
-            packed_lights_header_location: program
-                .get_uniform_location("in_packed_lights_header")?,
+            packed_lights: program.get_uniform_location("in_packed_lights")?,
+            packed_lights_header: program.get_uniform_location("in_packed_lights_header")?,
 
-            position_texture: program.get_uniform_location("in_position")?,
-            albedo_metallic_texture: program.get_uniform_location("in_albedo_metallic")?,
-            rough_occlusion_normal_texture: program
-                .get_uniform_location("in_rough_occlusion_normal")?,
-            ssao_texture: program.get_uniform_location("in_ssao")?,
+            depth: program.get_uniform_location("in_depth")?,
+            albedo_metallic: program.get_uniform_location("in_albedo_metallic")?,
+            rough_occlusion_normal: program.get_uniform_location("in_rough_occlusion_normal")?,
+            ssao: program.get_uniform_location("in_ssao")?,
         })
     }
 }
