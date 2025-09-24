@@ -21,7 +21,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 const POSITION_INDEX: i32 = 0;
-const NORMAL_INDEX: i32 = 1;
+const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 1;
 const NOISE_INDEX: i32 = 2;
 
 pub(crate) struct SSAORawPass {
@@ -102,7 +102,7 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
                     CAMERA_UBO_BINDING as u32,
                 );
                 program.set_uniform(&shader.position_location, POSITION_INDEX);
-                program.set_uniform(&shader.normal_location, NORMAL_INDEX);
+                program.set_uniform(&shader.rough_occlusion_normal_location, ROUGH_OCCLUSION_NORMAL_INDEX);
                 program.set_uniform(&shader.noise_location, NOISE_INDEX);
                 Program::unbind(&self.gl);
             }
@@ -161,8 +161,8 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.normal.texture,
-            NORMAL_INDEX as u32,
+            &self.gbuffer.rough_occlusion_normal.texture,
+            ROUGH_OCCLUSION_NORMAL_INDEX as u32,
         );
         Texture::bind(
             &self.gl,
@@ -179,7 +179,7 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, POSITION_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, ROUGH_OCCLUSION_NORMAL_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, NOISE_INDEX as u32);
         RenderResult::default()
     }

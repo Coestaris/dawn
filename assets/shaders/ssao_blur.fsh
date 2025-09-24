@@ -1,14 +1,18 @@
 #include "inc/prelude.glsl"
 #include "inc/ubo_camera.glsl"
 #include "inc/debug_mode.glsl"
+#include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
 out float out_ssao_blur;
 in vec2 tex_coord;
 
+// RGB16F view-space position
 uniform sampler2D in_position;
+// R16F
 uniform sampler2D in_ssao_raw;
-uniform sampler2D in_normal;
+// RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
+uniform sampler2D in_rough_occlusion_normal;
 
 #if ENABLE_DEVTOOLS
 
@@ -32,6 +36,11 @@ float gauss(float x, float s) {
     return exp(-0.5*(x*x)/(s*s));
 }
 
+vec3 normal(vec2 uv) {
+    vec2 e = texture(in_rough_occlusion_normal, uv).zw;
+    return decode_oct(e);
+}
+
 void main()
 {
     if (in_ssao_enabled != 1) {
@@ -42,7 +51,7 @@ void main()
     vec2 uv = tex_coord;
     vec2 texel = vec2(1.0) / vec2(in_viewport);
 
-    vec3 N = texture(in_normal, uv).xyz;
+    vec3 N = normal(uv);
     float Z = texture(in_position, uv).z;
 
     float sum = 0.0;
@@ -58,7 +67,7 @@ void main()
             float ao = texture(in_ssao_raw, uvn).r;
 
             float Zi = texture(in_position, uvn).z;
-            vec3 Ni = texture(in_normal, uvn).xyz;
+            vec3 Ni = normal(uvn);
 
             float w_spatial = gauss(length(vector), in_sigma_spatial);
             float w_depth   = gauss(abs(Zi - Z), in_sigma_depth);

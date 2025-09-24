@@ -1,14 +1,13 @@
 #include "inc/prelude.glsl"
 #include "inc/ubo_camera.glsl"
+#include "inc/normal.glsl"
 
 // RGBA16F. Frag view-space position
 layout (location = 0) out vec3 out_position;
 // RGBA8. RGB - albedo, A - metallic
 layout (location = 1) out vec4 out_albedo_metalic;
-// RGB16F. View space
-layout (location = 2) out vec3 out_normal_texture;
-// RGBA8. R - roughness, G - occlusion, BA - reserved
-layout (location = 3) out vec4 out_pbr;
+// RGBA8. R - roughness, G - occlusion, BA - octo encoded view-space normal
+layout (location = 2) out vec4 out_rough_occlusion_normal;
 
 in vec3 frag_pos;
 in vec2 tex_coord;
@@ -55,6 +54,7 @@ void main()
 
     out_position = frag_pos;
     out_albedo_metalic = vec4(albedo, metallic);
-    out_normal_texture = normalize(n_view);
-    out_pbr = vec4(roughness, occlusion, 0.0, 0.0);
+    out_rough_occlusion_normal.x = roughness;
+    out_rough_occlusion_normal.y = occlusion;
+    out_rough_occlusion_normal.zw = encode_oct(normalize(n_view));
 }

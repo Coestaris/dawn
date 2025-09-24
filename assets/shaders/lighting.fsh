@@ -1,6 +1,7 @@
 #include "inc/prelude.glsl"
 #include "inc/ubo_camera.glsl"
 #include "inc/debug_mode.glsl"
+#include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
 out vec4 FragColor;
@@ -8,15 +9,13 @@ out vec4 FragColor;
 in vec2 tex_coord;
 
 // RGBA16F
-uniform sampler2D in_position_texture;
+uniform sampler2D in_position;
 // RGBA8. RGB - albedo, A - metallic
-uniform sampler2D in_albedo_metallic_texture;
-// RGB16F. View space
-uniform sampler2D in_normal_texture;
-// RGBA8. R - roughness, G - occlusion, BA - reserved
-uniform sampler2D in_pbr_texture;
+uniform sampler2D in_albedo_metallic;
+// RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
+uniform sampler2D in_rough_occlusion_normal;
 // R16F
-uniform sampler2D in_ssao_texture;
+uniform sampler2D in_ssao;
 // RGBA32, height 1
 uniform usampler2D in_packed_lights;
 
@@ -161,6 +160,19 @@ float get_light_spot_inner_cone(in PackedLight L) {
 }
 float get_light_spot_outer_cone(in PackedLight L) {
     return L.color_rgba.a;
+}
+
+vec3 normal(vec2 uv) {
+    vec2 e = texture(in_rough_occlusion_normal, uv).zw;
+    return decode_oct(e);
+}
+
+float rough(vec2 uv) {
+    return texture(in_rough_occlusion_normal, uv).x;
+}
+
+float occlusion(vec2 uv) {
+    return texture(in_rough_occlusion_normal, uv).y;
 }
 
 // Simple helpers
@@ -311,19 +323,12 @@ vec4 process() {
     }
     #endif
 
-    vec4 albedo_metallic = texture(in_albedo_metallic_texture, tex_coord);
-    vec4 pbr = texture(in_pbr_texture, tex_coord);
-    float ssao = 1.0;
-    if (in_ssao_enabled == 1) {
-        ssao = texture(in_ssao_texture, tex_coord).r;
-    }
-
-    vec3 P = texture(in_position_texture, tex_coord).xyz;
-
-    vec3 N = texture(in_normal_texture, tex_coord).rgb;
-    float rough = max(pbr.r, 1.0/255.0);
+    vec4 albedo_metallic = texture(in_albedo_metallic, tex_coord);
+    vec3 P = texture(in_position, tex_coord).xyz;
+    vec3 N = normal(tex_coord);
+    float roughness = rough(tex_coord);
     float metallic = albedo_metallic.a;
-    float ao = pbr.g * ssao;
+    float occlusion = occlusion(tex_coord);
     vec3 albedo = albedo_metallic.rgb;
     vec3 V = normalize(-P);
 
@@ -333,18 +338,24 @@ vec4 process() {
 
         uint kind = get_light_kind(L);
         if (kind == LIGHT_KIND_SUN) {
-            Lo += shade_sun(L, P, N, V, albedo, rough, metallic);
+            Lo += shade_sun(L, P, N, V, albedo, roughness, metallic);
         } else if (kind == LIGHT_KIND_SPOT) {
-            Lo += shade_spot(L, P, N, V, albedo, rough, metallic);
+            Lo += shade_spot(L, P, N, V, albedo, roughness, metallic);
         } else if (kind == LIGHT_KIND_POINT) {
-            Lo += shade_point(L, P, N, V, albedo, rough, metallic);
+            Lo += shade_point(L, P, N, V, albedo, roughness, metallic);
         } else if (kind == LIGHT_KIND_AREA_RECT) {
-            Lo += shade_area_rect(L, P, N, V, albedo, rough, metallic);
+            Lo += shade_area_rect(L, P, N, V, albedo, roughness, metallic);
         } else {
             // Unknown light kind. Output magenta to indicate error
             Lo += vec3(1.0, 0.0, 1.0);
         }
     }
+
+    float ssao = 1.0;
+    if (in_ssao_enabled == 1) {
+        ssao = texture(in_ssao, tex_coord).r;
+    }
+    float ao = mix(1.0, occlusion * ssao, 1.0);
 
     Lo = mix(Lo * ao, Lo, metallic);
     vec3 ambient = vec3(0.03) * albedo * ao;
@@ -359,28 +370,28 @@ void main()
     if (in_debug_mode == DEBUG_MODE_OFF) {
         FragColor = process();
     } else if (in_debug_mode == DEBUG_MODE_ALBEDO) {
-        FragColor = texture(in_albedo_metallic_texture, tex_coord);
+        FragColor = texture(in_albedo_metallic, tex_coord);
     } else if (in_debug_mode == DEBUG_MODE_METALLIC) {
-        float metallic = texture(in_albedo_metallic_texture, tex_coord).a;
+        float metallic = texture(in_albedo_metallic, tex_coord).a;
         FragColor = vec4(vec3(metallic), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_NORMAL) {
-        vec3 normal = texture(in_normal_texture, tex_coord).rgb;
+        vec3 normal = normal(tex_coord);
         FragColor = vec4(normal * 0.5 + 0.5, 1.0);
     } else if (in_debug_mode == DEBUG_MODE_ROUGHNESS) {
-        float roughness = texture(in_pbr_texture, tex_coord).r;
+        float roughness = rough(tex_coord);
         FragColor = vec4(vec3(roughness), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_AO) {
-        float ao = texture(in_pbr_texture, tex_coord).g;
+        float ao = occlusion(tex_coord);
         FragColor = vec4(vec3(ao), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_DEPTH) {
-        float depth = 1.0 - texture(in_position_texture, tex_coord).z;
+        float depth = 1.0 - texture(in_position, tex_coord).z;
         float linear = linearize_depth(depth, in_clip_planes.x, in_clip_planes.y);
         FragColor = vec4(vec3(linear), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_POSITION) {
-        vec3 pos = texture(in_position_texture, tex_coord).xyz;
+        vec3 pos = texture(in_position, tex_coord).xyz;
         FragColor = vec4(pos, 1.0);
     } else if (in_debug_mode == DEBUG_MODE_SSAO) {
-        float ao = texture(in_ssao_texture, tex_coord).r;
+        float ao = texture(in_ssao, tex_coord).r;
         FragColor = vec4(vec3(ao), 1.0);
     } else {
         FragColor = vec4(1.0, 0.0, 1.0, 1.0);// Magenta for invalid mode

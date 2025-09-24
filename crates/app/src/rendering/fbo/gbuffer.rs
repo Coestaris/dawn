@@ -13,10 +13,8 @@ pub struct GBuffer {
     pub position: GTexture,
     // RGBA8. RGB - albedo, A - metallic
     pub albedo_metallic: GTexture,
-    // RGB16F. View space
-    pub normal: GTexture,
-    // RGBA8. R - roughness, G - occlusion, B - emissive, A - reserved
-    pub pbr: GTexture, // RGBA8
+    // RGBA8. R - roughness, G - occlusion, BA - octo encoded normal, view space
+    pub rough_occlusion_normal: GTexture,
 }
 
 impl GBuffer {
@@ -24,8 +22,7 @@ impl GBuffer {
         info!("Resizing GBuffer to {:?}", new_size);
         self.albedo_metallic.resize(new_size);
         self.position.resize(new_size);
-        self.normal.resize(new_size);
-        self.pbr.resize(new_size);
+        self.rough_occlusion_normal.resize(new_size);
         self.depth.resize(new_size);
     }
 
@@ -47,12 +44,7 @@ impl GBuffer {
                 IRPixelFormat::RGBA8,
                 FramebufferAttachment::Color1,
             )?,
-            normal: GTexture::new(
-                gl.clone(),
-                IRPixelFormat::RGB16F,
-                FramebufferAttachment::Color2,
-            )?,
-            pbr: GTexture::new(
+            rough_occlusion_normal: GTexture::new(
                 gl.clone(),
                 IRPixelFormat::RGBA8,
                 FramebufferAttachment::Color3,
@@ -64,16 +56,14 @@ impl GBuffer {
         // Attach textures to the framebuffer
         buffer.position.attach(&buffer.fbo);
         buffer.albedo_metallic.attach(&buffer.fbo);
-        buffer.normal.attach(&buffer.fbo);
-        buffer.pbr.attach(&buffer.fbo);
+        buffer.rough_occlusion_normal.attach(&buffer.fbo);
         buffer.depth.attach(&buffer.fbo);
 
         Framebuffer::bind(&gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[
             buffer.position.attachment,
             buffer.albedo_metallic.attachment,
-            buffer.normal.attachment,
-            buffer.pbr.attachment,
+            buffer.rough_occlusion_normal.attachment,
         ]);
         assert_eq!(buffer.fbo.is_complete(), true);
         Framebuffer::unbind(&gl);

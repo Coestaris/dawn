@@ -1,11 +1,15 @@
 #include "inc/prelude.glsl"
 #include "inc/ubo_camera.glsl"
 #include "inc/debug_mode.glsl"
+#include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
-uniform sampler2D in_position; // RGB16F view-space position
-uniform sampler2D in_normal;   // RGB16F view-space normal (unit)
-uniform sampler2D in_noise;    // small tileable 2D noise (xy in [0,1])
+// RGB16F view-space position
+uniform sampler2D in_position;
+// RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
+uniform sampler2D in_rough_occlusion_normal;
+// small tileable 2D noise (xy in [0,1])
+uniform sampler2D in_noise;
 
 layout(std140) uniform ubo_ssao_raw_params {
     float in_kernel_size; // <= 64
@@ -29,6 +33,11 @@ bool in_bounds(vec2 uv) {
     return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
 }
 
+vec3 normal(vec2 uv) {
+    vec2 e = texture(in_rough_occlusion_normal, uv).zw;
+    return decode_oct(e);
+}
+
 void main() {
     if (in_ssao_enabled != 1) {
         out_ssao_raw = 1.0;
@@ -39,7 +48,7 @@ void main() {
 
     // View-space position & normal at this pixel
     vec3 P = texture(in_position, tex_coord).xyz;
-    vec3 N = normalize(texture(in_normal,   tex_coord).xyz);
+    vec3 N = normal(tex_coord);
 
     // build TBN the same way you had (use noise.xy only, z=0)
     vec2 noise2 = texture(in_noise, tex_coord * noise_scale).xy * 2.0 - 1.0;

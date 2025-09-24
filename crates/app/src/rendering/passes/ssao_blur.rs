@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 const POSITION_INDEX: i32 = 0;
 const SSAO_RAW_INDEX: i32 = 1;
-const NORMAL_INDEX: i32 = 2;
+const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 2;
 
 pub(crate) struct SSAOBlurPass {
     gl: Arc<glow::Context>,
@@ -84,7 +84,7 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
                 );
                 program.set_uniform(&shader.ssao_raw_location, SSAO_RAW_INDEX);
                 program.set_uniform(&shader.position_location, POSITION_INDEX);
-                program.set_uniform(&shader.normal_location, NORMAL_INDEX);
+                program.set_uniform(&shader.rough_occlusion_normal_location, ROUGH_OCCLUSION_NORMAL_INDEX);
 
                 Program::unbind(&self.gl);
             }
@@ -157,8 +157,8 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.normal.texture,
-            NORMAL_INDEX as u32,
+            &self.gbuffer.rough_occlusion_normal.texture,
+            ROUGH_OCCLUSION_NORMAL_INDEX as u32,
         );
 
         self.quad.draw()
@@ -170,7 +170,7 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
         Framebuffer::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, POSITION_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, SSAO_RAW_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, ROUGH_OCCLUSION_NORMAL_INDEX as u32);
         RenderResult::default()
     }
 }

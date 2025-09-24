@@ -38,8 +38,7 @@ pub struct LightingShader {
 
     pub position_texture: UniformLocation,
     pub albedo_metallic_texture: UniformLocation,
-    pub normal_texture: UniformLocation,
-    pub pbr_texture: UniformLocation,
+    pub rough_occlusion_normal_texture: UniformLocation,
     pub ssao_texture: UniformLocation,
 }
 
@@ -55,12 +54,12 @@ impl LightingShader {
             packed_lights_location: program.get_uniform_location("in_packed_lights")?,
             packed_lights_header_location: program
                 .get_uniform_location("in_packed_lights_header")?,
-            
-            position_texture: program.get_uniform_location("in_position_texture")?,
-            albedo_metallic_texture: program.get_uniform_location("in_albedo_metallic_texture")?,
-            normal_texture: program.get_uniform_location("in_normal_texture")?,
-            pbr_texture: program.get_uniform_location("in_pbr_texture")?,
-            ssao_texture: program.get_uniform_location("in_ssao_texture")?,
+
+            position_texture: program.get_uniform_location("in_position")?,
+            albedo_metallic_texture: program.get_uniform_location("in_albedo_metallic")?,
+            rough_occlusion_normal_texture: program
+                .get_uniform_location("in_rough_occlusion_normal")?,
+            ssao_texture: program.get_uniform_location("in_ssao")?,
         })
     }
 }
