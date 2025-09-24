@@ -17,7 +17,7 @@ use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
 
-const POSITION_INDEX: i32 = 0;
+const DEPTH_INDEX: i32 = 0;
 const ALBEDO_METALLIC_INDEX: i32 = 1;
 const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 2;
 const PACKED_LIGHTS_INDEX: i32 = 3;
@@ -85,14 +85,14 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 let shader = self.shader.as_ref().unwrap();
                 let program = shader.asset.cast();
                 Program::bind(&self.gl, &program);
-                program.set_uniform(&shader.position_texture, POSITION_INDEX);
-                program.set_uniform(&shader.albedo_metallic_texture, ALBEDO_METALLIC_INDEX);
+                program.set_uniform(&shader.depth, DEPTH_INDEX);
+                program.set_uniform(&shader.albedo_metallic, ALBEDO_METALLIC_INDEX);
                 program.set_uniform(
-                    &shader.rough_occlusion_normal_texture,
+                    &shader.rough_occlusion_normal,
                     ROUGH_OCCLUSION_NORMAL_INDEX,
                 );
-                program.set_uniform(&shader.packed_lights_location, PACKED_LIGHTS_INDEX);
-                program.set_uniform(&shader.ssao_texture, SSAO_INDEX);
+                program.set_uniform(&shader.packed_lights, PACKED_LIGHTS_INDEX);
+                program.set_uniform(&shader.ssao, SSAO_INDEX);
                 Program::unbind(&self.gl);
             }
             RenderingEvent::ViewportResized(size) => {
@@ -167,12 +167,12 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 self.config.get_output_mode() as i32,
             );
         }
-        program.set_uniform(&shader.packed_lights_header_location, header.as_uvec4());
+        program.set_uniform(&shader.packed_lights_header, header.as_uvec4());
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.position.texture,
-            POSITION_INDEX as u32,
+            &self.gbuffer.depth.texture,
+            DEPTH_INDEX as u32,
         );
         Texture::bind(
             &self.gl,
@@ -206,7 +206,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Framebuffer::unbind(&self.gl);
         Program::unbind(&self.gl);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, POSITION_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
         Texture::unbind(
             &self.gl,
             TextureBind::Texture2D,
