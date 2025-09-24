@@ -20,11 +20,7 @@ impl SSAOTarget {
     pub fn new(gl: Arc<glow::Context>, size: UVec2) -> anyhow::Result<Self> {
         let target = SSAOTarget {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
-            texture: GTexture::new(
-                gl.clone(),
-                IRPixelFormat::R16F,
-                FramebufferAttachment::Color0,
-            )?,
+            texture: GTexture::new(gl.clone(), IRPixelFormat::R8, FramebufferAttachment::Color0)?,
         };
 
         target.texture.resize(size);
