@@ -7,8 +7,7 @@
 out float out_ssao_blur;
 in vec2 tex_coord;
 
-// RGB16F view-space position
-uniform sampler2D in_position;
+uniform sampler2D in_depth;
 // R16F
 uniform sampler2D in_ssao_raw;
 // RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
@@ -41,6 +40,10 @@ vec3 normal(vec2 uv) {
     return decode_oct(e);
 }
 
+float depth(vec2 uv) {
+    return linearize_depth(texture(in_depth, uv).r, in_clip_planes.x, in_clip_planes.y);
+}
+
 void main()
 {
     if (in_ssao_enabled != 1) {
@@ -52,7 +55,7 @@ void main()
     vec2 texel = vec2(1.0) / vec2(in_viewport);
 
     vec3 N = normal(uv);
-    float Z = texture(in_position, uv).z;
+    float Z = depth(uv);
 
     float sum = 0.0;
     float wsum = 0.0;
@@ -66,7 +69,7 @@ void main()
             vec2 uvn = uv + vector * texel;
             float ao = texture(in_ssao_raw, uvn).r;
 
-            float Zi = texture(in_position, uvn).z;
+            float Zi = depth(uvn);
             vec3 Ni = normal(uvn);
 
             float w_spatial = gauss(length(vector), in_sigma_spatial);

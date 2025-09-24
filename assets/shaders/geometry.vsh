@@ -9,7 +9,6 @@ layout (location = 4) in vec3 in_bitangent;
 
 uniform mat4 in_model;
 
-out vec3 frag_pos;
 out vec2 tex_coord;
 out vec3 normal;
 out vec3 tangent;
@@ -17,15 +16,11 @@ out vec3 bitangent;
 
 void main()
 {
-    // World space position
-    vec4 view_pos = in_view * in_model * vec4(in_position, 1.0);
-    frag_pos = view_pos.xyz;
-
     // Pass through the matrices and attributes to the fragment shader
     tex_coord = in_tex_coord;
     normal = in_normal;
     tangent = in_tangent;
     bitangent = in_bitangent;
 
-    gl_Position = in_projection * view_pos;
+    gl_Position = in_projection * in_view * in_model * vec4(in_position, 1.0);
 }

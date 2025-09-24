@@ -20,7 +20,7 @@ use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
 
-const POSITION_INDEX: i32 = 0;
+const DEPTH_INDEX: i32 = 0;
 const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 1;
 const NOISE_INDEX: i32 = 2;
 
@@ -90,20 +90,20 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
                 let program = shader.asset.cast();
                 Program::bind(&self.gl, &program);
                 program.set_uniform_block_binding(
-                    shader.ubo_ssao_raw_kernel_location,
+                    shader.ubo_ssao_raw_kernel,
                     SSAO_RAW_KERNEL_UBO_BINDING as u32,
                 );
                 program.set_uniform_block_binding(
-                    shader.ubo_ssao_raw_params_location,
+                    shader.ubo_ssao_raw_params,
                     SSAO_RAW_PARAMS_UBO_BINDING as u32,
                 );
                 program.set_uniform_block_binding(
-                    shader.ubo_camera_location,
+                    shader.ubo_camera,
                     CAMERA_UBO_BINDING as u32,
                 );
-                program.set_uniform(&shader.position_location, POSITION_INDEX);
-                program.set_uniform(&shader.rough_occlusion_normal_location, ROUGH_OCCLUSION_NORMAL_INDEX);
-                program.set_uniform(&shader.noise_location, NOISE_INDEX);
+                program.set_uniform(&shader.depth, DEPTH_INDEX);
+                program.set_uniform(&shader.rough_occlusion_normal, ROUGH_OCCLUSION_NORMAL_INDEX);
+                program.set_uniform(&shader.noise, NOISE_INDEX);
                 Program::unbind(&self.gl);
             }
             _ => {}
@@ -155,8 +155,8 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.position.texture,
-            POSITION_INDEX as u32,
+            &self.gbuffer.depth.texture,
+            DEPTH_INDEX as u32,
         );
         Texture::bind(
             &self.gl,
@@ -178,7 +178,7 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, POSITION_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, ROUGH_OCCLUSION_NORMAL_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, NOISE_INDEX as u32);
         RenderResult::default()

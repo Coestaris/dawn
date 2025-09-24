@@ -4,7 +4,6 @@ use dawn_graphics::gl::raii::renderbuffer::{RenderBufferStorage, Renderbuffer};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use glam::UVec2;
 use std::sync::Arc;
-use glow::REPEAT;
 
 pub mod gbuffer;
 pub mod obuffer;
