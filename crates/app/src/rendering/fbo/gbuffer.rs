@@ -9,8 +9,6 @@ pub struct GBuffer {
     pub fbo: Framebuffer,
     // Depth buffer
     pub depth: GTexture,
-    // RGB16F
-    pub position: GTexture,
     // RGBA8. RGB - albedo, A - metallic
     pub albedo_metallic: GTexture,
     // RGBA8. R - roughness, G - occlusion, BA - octo encoded normal, view space
@@ -21,7 +19,6 @@ impl GBuffer {
     pub(crate) fn resize(&self, new_size: UVec2) {
         info!("Resizing GBuffer to {:?}", new_size);
         self.albedo_metallic.resize(new_size);
-        self.position.resize(new_size);
         self.rough_occlusion_normal.resize(new_size);
         self.depth.resize(new_size);
     }
@@ -33,11 +30,6 @@ impl GBuffer {
                 gl.clone(),
                 IRPixelFormat::DEPTH24,
                 FramebufferAttachment::Depth,
-            )?,
-            position: GTexture::new(
-                gl.clone(),
-                IRPixelFormat::RGB16F,
-                FramebufferAttachment::Color0,
             )?,
             albedo_metallic: GTexture::new(
                 gl.clone(),
@@ -54,14 +46,12 @@ impl GBuffer {
         buffer.resize(initial);
 
         // Attach textures to the framebuffer
-        buffer.position.attach(&buffer.fbo);
         buffer.albedo_metallic.attach(&buffer.fbo);
         buffer.rough_occlusion_normal.attach(&buffer.fbo);
         buffer.depth.attach(&buffer.fbo);
 
         Framebuffer::bind(&gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[
-            buffer.position.attachment,
             buffer.albedo_metallic.attachment,
             buffer.rough_occlusion_normal.attachment,
         ]);

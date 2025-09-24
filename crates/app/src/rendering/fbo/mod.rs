@@ -4,7 +4,6 @@ use dawn_graphics::gl::raii::renderbuffer::{RenderBufferStorage, Renderbuffer};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use glam::UVec2;
 use std::sync::Arc;
-use glow::REPEAT;
 
 pub mod gbuffer;
 pub mod obuffer;
@@ -66,6 +65,7 @@ impl GTexture {
         texture.set_wrap_t(IRTextureWrap::ClampToEdge)?;
         texture.set_min_filter(IRTextureFilter::Nearest)?;
         texture.set_mag_filter(IRTextureFilter::Nearest)?;
+        texture.disable_compare_mode()?;
         texture.generate_mipmap();
         Texture::unbind(&gl, TextureBind::Texture2D, 0);
 

@@ -3,27 +3,29 @@ use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 
 pub struct SSAORawShader {
     pub asset: TypedAsset<Program>,
-    pub ubo_camera_location: u32,
-    pub ubo_ssao_raw_params_location: u32,
-    pub ubo_ssao_raw_kernel_location: u32,
+    pub ubo_camera: u32,
+    pub ubo_ssao_raw_params: u32,
+    pub ubo_ssao_raw_kernel: u32,
 
-    pub position_location: UniformLocation,
-    pub rough_occlusion_normal_location: UniformLocation,
-    pub noise_location: UniformLocation,
+    pub depth: UniformLocation,
+    pub rough_occlusion_normal: UniformLocation,
+    pub noise: UniformLocation,
 }
 
 impl SSAORawShader {
-    pub fn new(shader: TypedAsset<Program>) -> Result<Self, dawn_graphics::gl::raii::shader::ShaderError> {
+    pub fn new(
+        shader: TypedAsset<Program>,
+    ) -> Result<Self, dawn_graphics::gl::raii::shader::ShaderError> {
         let clone = shader.clone();
         let program = shader.cast();
         Ok(Self {
             asset: clone,
-            ubo_camera_location: program.get_uniform_block_location("ubo_camera")?,
-            ubo_ssao_raw_params_location: program.get_uniform_block_location("ubo_ssao_raw_params")?,
-            ubo_ssao_raw_kernel_location: program.get_uniform_block_location("ubo_ssao_raw_kernel")?,
-            position_location: program.get_uniform_location("in_position")?,
-            rough_occlusion_normal_location: program.get_uniform_location("in_rough_occlusion_normal")?,
-            noise_location: program.get_uniform_location("in_noise")?,
+            ubo_camera: program.get_uniform_block_location("ubo_camera")?,
+            ubo_ssao_raw_params: program.get_uniform_block_location("ubo_ssao_raw_params")?,
+            ubo_ssao_raw_kernel: program.get_uniform_block_location("ubo_ssao_raw_kernel")?,
+            depth: program.get_uniform_location("in_depth")?,
+            rough_occlusion_normal: program.get_uniform_location("in_rough_occlusion_normal")?,
+            noise: program.get_uniform_location("in_noise")?,
         })
     }
 }
