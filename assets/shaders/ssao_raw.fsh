@@ -4,8 +4,7 @@
 #include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
-// RGB16F view-space position
-uniform sampler2D in_position;
+uniform sampler2D in_depth;
 // RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
 uniform sampler2D in_rough_occlusion_normal;
 // small tileable 2D noise (xy in [0,1])
@@ -38,6 +37,10 @@ vec3 normal(vec2 uv) {
     return decode_oct(e);
 }
 
+vec3 pos(vec2 uv) {
+    return reconstruct_view_pos(texture(in_depth, uv).r, uv, in_inv_proj);
+}
+
 void main() {
     if (in_ssao_enabled != 1) {
         out_ssao_raw = 1.0;
@@ -47,7 +50,7 @@ void main() {
     vec2 noise_scale = vec2(ivec2(in_viewport) / textureSize(in_noise, 0));
 
     // View-space position & normal at this pixel
-    vec3 P = texture(in_position, tex_coord).xyz;
+    vec3 P = pos(tex_coord);
     vec3 N = normal(tex_coord);
 
     // build TBN the same way you had (use noise.xy only, z=0)
@@ -70,7 +73,7 @@ void main() {
         vec2 uv = (clip.xy / clip.w) * 0.5 + 0.5;
         if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) continue;
 
-        vec3 sceneP = texture(in_position, uv).xyz;
+        vec3 sceneP = pos(tex_coord);
         // Optional: if your “empty” is (0,0,0), skip
         // if (all(lessThan(abs(sceneP), vec3(1e-6)))) continue;
 

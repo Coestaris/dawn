@@ -8,8 +8,7 @@ out vec4 FragColor;
 
 in vec2 tex_coord;
 
-// RGBA16F
-uniform sampler2D in_position;
+uniform sampler2D in_depth;
 // RGBA8. RGB - albedo, A - metallic
 uniform sampler2D in_albedo_metallic;
 // RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
@@ -165,6 +164,19 @@ float get_light_spot_outer_cone(in PackedLight L) {
 vec3 normal(vec2 uv) {
     vec2 e = texture(in_rough_occlusion_normal, uv).zw;
     return decode_oct(e);
+}
+
+float depth(vec2 uv) {
+    float v = texture(in_depth, uv).r;
+    if (v < 0.1) {
+        return 1.0;
+    }
+    return 0.1;
+//    return linearize_depth(texture(in_depth, uv).r, in_clip_planes.x, in_clip_planes.y);
+}
+
+vec3 pos(vec2 uv) {
+    return reconstruct_view_pos(texture(in_depth, uv).r, uv, in_inv_proj);
 }
 
 float rough(vec2 uv) {
@@ -324,14 +336,15 @@ vec4 process() {
     #endif
 
     vec4 albedo_metallic = texture(in_albedo_metallic, tex_coord);
-    vec3 P = texture(in_position, tex_coord).xyz;
+    float metallic = albedo_metallic.a;
+    vec3 albedo = albedo_metallic.rgb;
+
+    vec3 P = pos(tex_coord);
     vec3 N = normal(tex_coord);
     float roughness = rough(tex_coord);
-    float metallic = albedo_metallic.a;
     float occlusion = occlusion(tex_coord);
-    vec3 albedo = albedo_metallic.rgb;
-    vec3 V = normalize(-P);
 
+    vec3 V = normalize(-P);
     vec3 Lo = vec3(0);
     for (uint i = 0u; i < get_lights_count(); ++i) {
         PackedLight L = get_light(i);
@@ -384,12 +397,11 @@ void main()
         float ao = occlusion(tex_coord);
         FragColor = vec4(vec3(ao), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_DEPTH) {
-        float depth = 1.0 - texture(in_position, tex_coord).z;
-        float linear = linearize_depth(depth, in_clip_planes.x, in_clip_planes.y);
-        FragColor = vec4(vec3(linear), 1.0);
+        float d = depth(tex_coord);
+        FragColor = vec4(vec3(d), 1.0);
     } else if (in_debug_mode == DEBUG_MODE_POSITION) {
-        vec3 pos = texture(in_position, tex_coord).xyz;
-        FragColor = vec4(pos, 1.0);
+        vec3 p = pos(tex_coord);
+        FragColor = vec4(p, 1.0);
     } else if (in_debug_mode == DEBUG_MODE_SSAO) {
         float ao = texture(in_ssao, tex_coord).r;
         FragColor = vec4(vec3(ao), 1.0);
