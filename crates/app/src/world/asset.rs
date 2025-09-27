@@ -20,7 +20,8 @@ use std::sync::Arc;
 pub const CURRENT_MAP: &str = "map1";
 
 pub const APPLICATION_ICON_BLOB_ID: &str = "icon_blob";
-pub const LIGHT_TEXTURE: &str = "light_texture";
+pub const SUN_LIGHT_TEXTURE: &str = "sun_light";
+pub const POINT_LIGHT_TEXTURE: &str = "point_light";
 
 fn assets_failed_handler(r: Receiver<AssetHubEvent>, sender: Sender<ExitEvent>) {
     match r.event {

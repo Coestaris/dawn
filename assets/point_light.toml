@@ -1,10 +1,8 @@
 [header]
 asset_type = "Texture"
-author = "kudakurage"
-license = "OFL License"
 
 [[properties.Texture.sources]]
-File = "blobs/light.png"
+File = "blobs/point_light.png"
 
 [properties.Texture]
 pixel_format = "RGBA8"
