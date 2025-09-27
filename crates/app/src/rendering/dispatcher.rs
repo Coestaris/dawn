@@ -87,7 +87,7 @@ impl RenderDispatcher {
             }
             RenderingEvent::ViewportResized(_) => RenderingEventMask::VIEWPORT_RESIZED,
 
-            RenderingEvent::SetLightTexture(_) => RenderingEventMask::SET_LIGHT_TEXTURE,
+            RenderingEvent::SetLightTexture(_, _) => RenderingEventMask::SET_LIGHT_TEXTURE,
         };
 
         for descriptor in self.descriptors.iter() {
