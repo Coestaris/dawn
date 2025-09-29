@@ -22,7 +22,6 @@ use std::sync::Arc;
 
 const DEPTH_INDEX: i32 = 0;
 const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 1;
-const NOISE_INDEX: i32 = 2;
 
 pub(crate) struct SSAORawPass {
     gl: Arc<glow::Context>,
@@ -33,7 +32,6 @@ pub(crate) struct SSAORawPass {
     config: RenderingConfig,
     gbuffer: Rc<GBuffer>,
 
-    noise_texture: Texture,
     quad: Quad2D,
 
     params_ubo: SSAORawParametersUBO,
@@ -53,7 +51,6 @@ impl SSAORawPass {
             id,
             config,
             shader: None,
-            noise_texture: white_noise_rgf32(gl.clone(), 8, 8),
             quad: Quad2D::new(gl.clone()),
             params_ubo: SSAORawParametersUBO::new(gl.clone(), SSAO_RAW_PARAMS_UBO_BINDING),
             kernel_ubo: SSAORawKernelUBO::new(gl.clone(), SSAO_RAW_KERNEL_UBO_BINDING),
@@ -103,7 +100,6 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
                 );
                 program.set_uniform(&shader.depth, DEPTH_INDEX);
                 program.set_uniform(&shader.rough_occlusion_normal, ROUGH_OCCLUSION_NORMAL_INDEX);
-                program.set_uniform(&shader.noise, NOISE_INDEX);
                 Program::unbind(&self.gl);
             }
             _ => {}
@@ -164,12 +160,6 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
             &self.gbuffer.rough_occlusion_normal.texture,
             ROUGH_OCCLUSION_NORMAL_INDEX as u32,
         );
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.noise_texture,
-            NOISE_INDEX as u32,
-        );
 
         self.quad.draw()
     }
@@ -180,7 +170,6 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         Framebuffer::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, ROUGH_OCCLUSION_NORMAL_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, NOISE_INDEX as u32);
         RenderResult::default()
     }
 }

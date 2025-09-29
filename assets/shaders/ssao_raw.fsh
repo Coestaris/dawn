@@ -7,8 +7,6 @@
 uniform sampler2D in_depth;
 // RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
 uniform sampler2D in_rough_occlusion_normal;
-// small tileable 2D noise (xy in [0,1])
-uniform sampler2D in_noise;
 
 layout(std140) uniform ubo_ssao_raw_params {
     float in_kernel_size; // <= 64
@@ -25,7 +23,21 @@ layout(std140) uniform ubo_ssao_raw_kernel {
 };
 
 out float out_ssao_raw;
+
 in vec2 tex_coord;
+
+float hash12(vec2 p){
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y)*p3.z);
+}
+
+vec2 noise2() {
+    float angle = 6.28318 * hash12(floor(gl_FragCoord.xy));
+    float s = sin(angle);
+    float c = cos(angle);
+    return vec2(c, s);
+}
 
 // Helper to keep samples on-screen
 bool in_bounds(vec2 uv) {
@@ -51,14 +63,12 @@ void main() {
         return;
     }
 
-    vec2 noise_scale = vec2(ivec2(in_viewport) / textureSize(in_noise, 0));
-
     // View-space position & normal at this pixel
     vec3 P = pos(tex_coord);
     vec3 N = normal(tex_coord);
 
     // build TBN the same way you had (use noise.xy only, z=0)
-    vec2 noise2 = texture(in_noise, tex_coord * noise_scale).xy * 2.0 - 1.0;
+    vec2 noise2 = noise2();
     vec3 randT  = normalize(vec3(noise2, 0.0));
     vec3 T = normalize(randT - N * dot(randT, N));
     vec3 B = normalize(cross(N, T));
