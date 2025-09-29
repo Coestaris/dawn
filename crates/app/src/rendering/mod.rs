@@ -195,7 +195,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             r.gl.clone(),
             self.ids.lighting_id,
             gbuffer.clone(),
-            ssao_raw_target.clone(),
+            ssao_blur_target.clone(),
             lighting_taget.clone(),
             self.config.clone(),
         );
