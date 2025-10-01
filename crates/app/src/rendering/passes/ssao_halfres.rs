@@ -82,7 +82,7 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
                     crate::rendering::CAMERA_UBO_BINDING as u32,
                 );
                 program.set_uniform(&shader.depth, DEPTH_INDEX);
-                program.set_uniform(&shader.albedo_metallic, ALBEDO_METALLIC_INDEX);
+                // program.set_uniform(&shader.albedo_metallic, ALBEDO_METALLIC_INDEX);
                 program.set_uniform(&shader.rough_occlusion_normal, ROUGH_OCCLUSION_NORMAL_INDEX);
 
                 Program::unbind(&self.gl);
@@ -109,8 +109,8 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
 
         unsafe {
             self.gl.disable(glow::DEPTH_TEST);
-            self.gl.clear(glow::COLOR_BUFFER_BIT);
-            self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
+            // self.gl.clear(glow::COLOR_BUFFER_BIT);
+            // self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
         }
 
         let shader = self.shader.as_ref().unwrap();
@@ -123,12 +123,12 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
             &self.gbuffer.depth.texture,
             DEPTH_INDEX as u32,
         );
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.gbuffer.albedo_metallic.texture,
-            ALBEDO_METALLIC_INDEX as u32,
-        );
+        // Texture::bind(
+        //     &self.gl,
+        //     TextureBind::Texture2D,
+        //     &self.gbuffer.albedo_metallic.texture,
+        //     ALBEDO_METALLIC_INDEX as u32,
+        // );
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
@@ -144,11 +144,11 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
-        Texture::unbind(
-            &self.gl,
-            TextureBind::Texture2D,
-            ALBEDO_METALLIC_INDEX as u32,
-        );
+        // Texture::unbind(
+        //     &self.gl,
+        //     TextureBind::Texture2D,
+        //     ALBEDO_METALLIC_INDEX as u32,
+        // );
         Texture::unbind(
             &self.gl,
             TextureBind::Texture2D,

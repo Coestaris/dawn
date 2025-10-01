@@ -110,8 +110,8 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
 
         unsafe {
             self.gl.disable(glow::DEPTH_TEST);
-            self.gl.clear(glow::COLOR_BUFFER_BIT);
-            self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
+            // self.gl.clear(glow::COLOR_BUFFER_BIT);
+            // self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
         }
 
         let shader = self.shader.as_ref().unwrap();
@@ -120,18 +120,24 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
 
         #[cfg(feature = "devtools")]
         {
-            program.set_uniform(&shader.radius, self.config.get_ssao_blur_radius() as f32);
             program.set_uniform(
-                &shader.ssao_enabled,
+                &shader.devtools.radius,
+                self.config.get_ssao_blur_radius() as f32,
+            );
+            program.set_uniform(
+                &shader.devtools.ssao_enabled,
                 self.config.get_is_ssao_enabled() as i32,
             );
             program.set_uniform(
-                &shader.sigma_spatial,
+                &shader.devtools.sigma_spatial,
                 self.config.get_ssao_blur_sigma_spatial(),
             );
-            program.set_uniform(&shader.sigma_depth, self.config.get_ssao_blur_sigma_depth());
             program.set_uniform(
-                &shader.sigma_normal,
+                &shader.devtools.sigma_depth,
+                self.config.get_ssao_blur_sigma_depth(),
+            );
+            program.set_uniform(
+                &shader.devtools.sigma_normal,
                 self.config.get_ssao_blur_sigma_normal(),
             );
         }
