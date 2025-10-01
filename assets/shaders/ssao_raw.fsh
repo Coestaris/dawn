@@ -48,12 +48,10 @@ vec3 normal(vec2 uv) {
     return decode_oct(e);
 }
 
-float depth(vec2 uv) {
-    return linearize_depth(texture(in_halfres_depth, uv).r, in_clip_planes.x, in_clip_planes.y);
-}
-
 vec3 pos(vec2 uv) {
-    return reconstruct_view_pos(texture(in_halfres_depth, uv).r, uv, in_inv_proj);
+    float linear = texture(in_halfres_depth, uv).r;
+    float depth = depth_from_linear(linear, in_clip_planes.x, in_clip_planes.y);
+    return reconstruct_view_pos(depth, uv, in_inv_proj);
 }
 
 void main() {
