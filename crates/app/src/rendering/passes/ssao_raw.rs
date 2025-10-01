@@ -19,6 +19,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
+use glam::UVec2;
 use crate::rendering::fbo::halfres::HalfresBuffer;
 
 const HALFRES_DEPTH_INDEX: i32 = 0;
@@ -30,6 +31,7 @@ pub(crate) struct SSAORawPass {
     shader: Option<SSAORawShader>,
     target: Rc<SSAOHalfresTarget>,
 
+    viewport: UVec2,
     config: RenderingConfig,
     halfres_buffer: Rc<HalfresBuffer>,
 
@@ -57,6 +59,7 @@ impl SSAORawPass {
             kernel_ubo: SSAORawKernelUBO::new(gl.clone(), SSAO_RAW_KERNEL_UBO_BINDING),
             halfres_buffer,
             target,
+            viewport: Default::default(),
         }
     }
 }
@@ -78,6 +81,7 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
             }
             RenderingEvent::ViewportResized(size) => {
                 self.target.resize(size);
+                self.viewport = size;
             }
             RenderingEvent::UpdateShader(_, shader) => {
                 let clone = shader.clone();
@@ -125,8 +129,15 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
 
         unsafe {
             self.gl.disable(glow::DEPTH_TEST);
-            self.gl.clear(glow::COLOR_BUFFER_BIT);
-            self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
+            // self.gl.clear(glow::COLOR_BUFFER_BIT);
+            // self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
+            // Rendering in half resolution
+            self.gl.viewport(
+                0,
+                0,
+                (self.viewport.x / 2) as i32,
+                (self.viewport.y / 2) as i32,
+            );
         }
 
         // Update params UBO
@@ -167,6 +178,11 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
 
     #[inline(always)]
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
+        unsafe {
+            // Restore viewport to full resolution
+            self.gl.viewport(0, 0, self.viewport.x as i32, self.viewport.y as i32);
+        }
+
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, HALFRES_DEPTH_INDEX as u32);

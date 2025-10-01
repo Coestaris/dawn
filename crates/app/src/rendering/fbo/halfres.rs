@@ -12,7 +12,7 @@ pub struct HalfresBuffer {
     // RG8 - octo encoded normal, view space
     pub normal: GTexture,
     // RGBA8. RGB - albedo, A - roughness
-    pub albedo_roughness: GTexture,
+    // pub albedo_roughness: GTexture,
 }
 
 impl HalfresBuffer {
@@ -21,7 +21,7 @@ impl HalfresBuffer {
         let half_size = new_size / 2;
         self.depth.resize(half_size);
         self.normal.resize(half_size);
-        self.albedo_roughness.resize(half_size);
+        // self.albedo_roughness.resize(half_size);
     }
 
     pub fn new(gl: Arc<glow::Context>, initial: UVec2) -> anyhow::Result<Self> {
@@ -37,11 +37,11 @@ impl HalfresBuffer {
                 IRPixelFormat::RG8,
                 FramebufferAttachment::Color1,
             )?,
-            albedo_roughness: GTexture::new(
-                gl.clone(),
-                IRPixelFormat::RGBA8,
-                FramebufferAttachment::Color2,
-            )?,
+            // albedo_roughness: GTexture::new(
+            //     gl.clone(),
+            //     IRPixelFormat::RGBA8,
+            //     FramebufferAttachment::Color2,
+            // )?,
         };
 
         buffer.resize(initial);
@@ -49,13 +49,13 @@ impl HalfresBuffer {
         // Attach textures to the framebuffer
         buffer.depth.attach(&buffer.fbo);
         buffer.normal.attach(&buffer.fbo);
-        buffer.albedo_roughness.attach(&buffer.fbo);
+        // buffer.albedo_roughness.attach(&buffer.fbo);
 
         Framebuffer::bind(&gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[
             buffer.depth.attachment,
             buffer.normal.attachment,
-            buffer.albedo_roughness.attachment,
+            // buffer.albedo_roughness.attachment,
         ]);
         assert_eq!(buffer.fbo.is_complete(), true);
         Framebuffer::unbind(&gl);

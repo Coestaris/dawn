@@ -60,7 +60,7 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_show_gizmos(&self) -> bool {
-            true
+            false
         }
 
         #[inline(always)]
