@@ -52,8 +52,7 @@ void main() {
     vec3 albedo_min = texture(in_albedo_metallic, uv_min).rgb;
     float roughness_min = texture(in_rough_occlusion_normal, uv_min).r;
 
-//    out_halres_depth = linearize_depth(d_min, in_clip_planes.x, in_clip_planes.y);
-    out_halres_depth = d_min;
+    out_halres_depth = linearize_depth(d_min, in_clip_planes.x, in_clip_planes.y);
     out_halres_normal = normal_min;
     out_halres_albedo_rough = vec4(albedo_min, roughness_min);
 }

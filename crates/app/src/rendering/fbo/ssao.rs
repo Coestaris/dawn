@@ -7,7 +7,7 @@ use std::sync::Arc;
 pub struct SSAOTarget {
     pub fbo: Framebuffer,
 
-    // Output texture: R32F
+    // Output texture: R8
     pub texture: GTexture,
 }
 
@@ -39,7 +39,7 @@ impl SSAOTarget {
 pub struct SSAOHalfresTarget {
     pub fbo: Framebuffer,
 
-    // Output texture: R32F
+    // Output texture: R8
     pub texture: GTexture,
 }
 

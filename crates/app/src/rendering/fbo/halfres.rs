@@ -29,7 +29,7 @@ impl HalfresBuffer {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
             depth: GTexture::new(
                 gl.clone(),
-                IRPixelFormat::R32F,
+                IRPixelFormat::R16F,
                 FramebufferAttachment::Color0,
             )?,
             normal: GTexture::new(
