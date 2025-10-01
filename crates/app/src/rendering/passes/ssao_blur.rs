@@ -1,7 +1,7 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
-use crate::rendering::fbo::ssao::SSAOTarget;
+use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::ssao_blur::SSAOBlurShader;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
@@ -25,7 +25,7 @@ pub(crate) struct SSAOBlurPass {
     config: RenderingConfig,
     shader: Option<SSAOBlurShader>,
     gbuffer: Rc<GBuffer>,
-    ssao_raw_taget: Rc<SSAOTarget>,
+    ssao_raw_taget: Rc<SSAOHalfresTarget>,
     ssao_blur_target: Rc<SSAOTarget>,
     quad: Quad2D,
 }
@@ -35,7 +35,7 @@ impl SSAOBlurPass {
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
-        ssao_raw_taget: Rc<SSAOTarget>,
+        ssao_raw_taget: Rc<SSAOHalfresTarget>,
         ssao_blur_target: Rc<SSAOTarget>,
         config: RenderingConfig,
     ) -> Self {

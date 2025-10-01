@@ -1,7 +1,7 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
-use crate::rendering::fbo::ssao::SSAOTarget;
+use crate::rendering::fbo::ssao::SSAOHalfresTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::ssao_raw::SSAORawShader;
 use crate::rendering::textures::noise::white_noise_rgf32;
@@ -19,18 +19,19 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
+use crate::rendering::fbo::halfres::HalfresBuffer;
 
-const DEPTH_INDEX: i32 = 0;
-const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 1;
+const HALFRES_DEPTH_INDEX: i32 = 0;
+const HALFRES_NORMAL_INDEX: i32 = 1;
 
 pub(crate) struct SSAORawPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     shader: Option<SSAORawShader>,
-    target: Rc<SSAOTarget>,
+    target: Rc<SSAOHalfresTarget>,
 
     config: RenderingConfig,
-    gbuffer: Rc<GBuffer>,
+    halfres_buffer: Rc<HalfresBuffer>,
 
     quad: Quad2D,
 
@@ -42,8 +43,8 @@ impl SSAORawPass {
     pub fn new(
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
-        gbuffer: Rc<GBuffer>,
-        target: Rc<SSAOTarget>,
+        halfres_buffer: Rc<HalfresBuffer>,
+        target: Rc<SSAOHalfresTarget>,
         config: RenderingConfig,
     ) -> Self {
         SSAORawPass {
@@ -54,7 +55,7 @@ impl SSAORawPass {
             quad: Quad2D::new(gl.clone()),
             params_ubo: SSAORawParametersUBO::new(gl.clone(), SSAO_RAW_PARAMS_UBO_BINDING),
             kernel_ubo: SSAORawKernelUBO::new(gl.clone(), SSAO_RAW_KERNEL_UBO_BINDING),
-            gbuffer,
+            halfres_buffer,
             target,
         }
     }
@@ -98,8 +99,8 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
                     shader.ubo_camera,
                     CAMERA_UBO_BINDING as u32,
                 );
-                program.set_uniform(&shader.depth, DEPTH_INDEX);
-                program.set_uniform(&shader.rough_occlusion_normal, ROUGH_OCCLUSION_NORMAL_INDEX);
+                program.set_uniform(&shader.halfres_depth, HALFRES_DEPTH_INDEX);
+                program.set_uniform(&shader.halfres_normal, HALFRES_NORMAL_INDEX);
                 Program::unbind(&self.gl);
             }
             _ => {}
@@ -151,14 +152,14 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.depth.texture,
-            DEPTH_INDEX as u32,
+            &self.halfres_buffer.depth.texture,
+            HALFRES_DEPTH_INDEX as u32,
         );
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
-            &self.gbuffer.rough_occlusion_normal.texture,
-            ROUGH_OCCLUSION_NORMAL_INDEX as u32,
+            &self.halfres_buffer.normal.texture,
+            HALFRES_NORMAL_INDEX as u32,
         );
 
         self.quad.draw()
@@ -168,8 +169,8 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
     fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, ROUGH_OCCLUSION_NORMAL_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, HALFRES_DEPTH_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, HALFRES_NORMAL_INDEX as u32);
         RenderResult::default()
     }
 }

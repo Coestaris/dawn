@@ -4,9 +4,10 @@
 #include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
-uniform sampler2D in_depth;
-// RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
-uniform sampler2D in_rough_occlusion_normal;
+// R16F. linear depth
+uniform sampler2D in_halfres_depth;
+// RG8 - octo encoded normal, view space
+uniform sampler2D in_halfres_normal;
 
 layout(std140) uniform ubo_ssao_raw_params {
     float in_kernel_size; // <= 64
@@ -23,8 +24,6 @@ layout(std140) uniform ubo_ssao_raw_kernel {
 };
 
 out float out_ssao_raw;
-
-in vec2 tex_coord;
 
 float hash12(vec2 p){
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -45,16 +44,16 @@ bool in_bounds(vec2 uv) {
 }
 
 vec3 normal(vec2 uv) {
-    vec2 e = texture(in_rough_occlusion_normal, uv).zw;
+    vec2 e = texture(in_halfres_normal, uv).rg;
     return decode_oct(e);
 }
 
 float depth(vec2 uv) {
-    return linearize_depth(texture(in_depth, uv).r, in_clip_planes.x, in_clip_planes.y);
+    return linearize_depth(texture(in_halfres_depth, uv).r, in_clip_planes.x, in_clip_planes.y);
 }
 
 vec3 pos(vec2 uv) {
-    return reconstruct_view_pos(texture(in_depth, uv).r, uv, in_inv_proj);
+    return reconstruct_view_pos(texture(in_halfres_depth, uv).r, uv, in_inv_proj);
 }
 
 void main() {
@@ -64,6 +63,7 @@ void main() {
     }
 
     // View-space position & normal at this pixel
+    vec2 tex_coord = gl_FragCoord.xy / vec2(in_viewport) / 0.5; // half-res
     vec3 P = pos(tex_coord);
     vec3 N = normal(tex_coord);
 
