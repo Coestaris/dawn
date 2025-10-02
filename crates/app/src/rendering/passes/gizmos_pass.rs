@@ -1,5 +1,5 @@
 use crate::rendering::config::RenderingConfig;
-use crate::rendering::event::RenderingEvent;
+use crate::rendering::event::{LightTextureType, RenderingEvent};
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::primitive::circle_lines::Circle3DLines;
 use crate::rendering::primitive::quad::Quad2D;
@@ -32,11 +32,15 @@ pub(crate) struct GizmosPass {
     line: Option<LineShader>,
 
     viewport_size: UVec2,
+    view: Mat4,
+    sunlight_distance: f32,
+
     quad: Quad2D,
     segment: Segment3DLines,
     circle: Circle3DLines,
 
-    light_texture: Option<TypedAsset<Texture>>,
+    sun_light_texture: Option<TypedAsset<Texture>>,
+    point_light_texture: Option<TypedAsset<Texture>>,
 
     gbuffer: Rc<GBuffer>,
     config: RenderingConfig,
@@ -55,22 +59,70 @@ impl GizmosPass {
             billboard: None,
             line: None,
             viewport_size: Default::default(),
+            view: Default::default(),
+            sunlight_distance: 0.0,
             quad: Quad2D::new(gl.clone()),
             segment: Segment3DLines::new(gl.clone()),
             circle: Circle3DLines::new(gl.clone()),
-            light_texture: None,
+            sun_light_texture: None,
+            point_light_texture: None,
             gbuffer,
             config,
         }
     }
 
+    fn draw_axis_helper(&self) -> RenderResult {
+        static X_COLOR: Vec4 = Vec4::new(1.0, 0.0, 0.0, 1.0);
+        static Y_COLOR: Vec4 = Vec4::new(0.0, 1.0, 0.0, 1.0);
+        static Z_COLOR: Vec4 = Vec4::new(0.0, 0.0, 1.0, 1.0);
+
+        static LENGTH: f32 = 0.1; // In world space
+        static DISTANCE: f32 = 1.5; // In front of camera
+
+        let (_, camera_rotation, camera_translation) =
+            self.view.inverse().to_scale_rotation_translation();
+        let forward = camera_rotation * -Vec3::Z;
+        let camera_position = camera_translation + forward * DISTANCE;
+        let scale = Vec3::splat(LENGTH);
+
+        let x_model = Mat4::from_scale_rotation_translation(
+            scale,
+            Quat::from_rotation_arc(Vec3::Z, Vec3::X),
+            camera_position,
+        );
+
+        let y_model = Mat4::from_scale_rotation_translation(
+            scale,
+            Quat::from_rotation_arc(Vec3::Z, Vec3::Y),
+            camera_position,
+        );
+
+        let z_model = Mat4::from_scale_rotation_translation(scale, Quat::IDENTITY, camera_position);
+
+        let shader = self.line.as_ref().unwrap();
+        let program = shader.asset.cast();
+
+        let mut result = RenderResult::default();
+        program.set_uniform(&shader.color_location, X_COLOR);
+        program.set_uniform(&shader.model_location, x_model);
+        result += self.segment.draw();
+        program.set_uniform(&shader.color_location, Y_COLOR);
+        program.set_uniform(&shader.model_location, y_model);
+        result += self.segment.draw();
+        program.set_uniform(&shader.color_location, Z_COLOR);
+        program.set_uniform(&shader.model_location, z_model);
+        result += self.segment.draw();
+
+        result
+    }
+
     fn draw_point_light_billboards(&self, frame: &DataStreamFrame) -> RenderResult {
         let shader = self.billboard.as_ref().unwrap();
         let program = shader.asset.cast();
-        Program::bind(&self.gl, &program);
 
-        let light_texture = self.light_texture.as_ref().unwrap().cast();
-        Texture::bind(&self.gl, TextureBind::Texture2D, light_texture, 0);
+        let tex = self.point_light_texture.as_ref().unwrap().cast();
+        Texture::bind(&self.gl, TextureBind::Texture2D, tex, 0);
+        program.set_uniform(&shader.size_location, Vec2::new(0.3, 0.3));
 
         let mut result = RenderResult::default();
 
@@ -79,7 +131,25 @@ impl GizmosPass {
             program.set_uniform(&shader.position_location, position);
             result += self.quad.draw();
         }
-        Program::unbind(&self.gl);
+
+        result
+    }
+
+    fn draw_sun_light_billboards(&self, frame: &DataStreamFrame) -> RenderResult {
+        let shader = self.billboard.as_ref().unwrap();
+        let program = shader.asset.cast();
+
+        let tex = self.sun_light_texture.as_ref().unwrap().cast();
+        Texture::bind(&self.gl, TextureBind::Texture2D, tex, 0);
+
+        let mut result = RenderResult::default();
+        program.set_uniform(&shader.size_location, Vec2::new(2.0, 2.0));
+
+        for sun_light in frame.sun_lights.iter() {
+            let position = -sun_light.direction.normalize() * self.sunlight_distance; // Position it far away in the light direction
+            program.set_uniform(&shader.position_location, position);
+            result += self.quad.draw();
+        }
 
         result
     }
@@ -89,7 +159,6 @@ impl GizmosPass {
 
         let shader = self.line.as_ref().unwrap();
         let program = shader.asset.cast();
-        Program::bind(&self.gl, &program);
 
         program.set_uniform(&shader.color_location, LINE_COLOR);
 
@@ -126,17 +195,14 @@ impl GizmosPass {
             result += self.circle.draw();
         }
 
-        Program::unbind(&self.gl);
-
         result
     }
 
     fn draw_sun_light_gizmos(&self, frame: &DataStreamFrame) -> RenderResult {
-        static LINE_COLOR: Vec4 = Vec4::new(0.3, 1.0, 0.3, 1.0);
+        static LINE_COLOR: Vec4 = Vec4::new(0.3, 0.7, 0.9, 1.0);
 
         let shader = self.line.as_ref().unwrap();
         let program = shader.asset.cast();
-        Program::bind(&self.gl, &program);
 
         program.set_uniform(&shader.color_location, LINE_COLOR);
 
@@ -148,13 +214,12 @@ impl GizmosPass {
             // Segment is a 1-unit long line along Z-axis
             let model = Mat4::from_rotation_translation(
                 Quat::from_rotation_arc(Vec3::Z, direction),
-                -direction * 5000.0,
-            ) * Mat4::from_scale(Vec3::splat(10000.0));
+                -direction * self.sunlight_distance,
+            ) * Mat4::from_scale(Vec3::splat(self.sunlight_distance * 2.0));
 
             program.set_uniform(&shader.model_location, model);
             result += self.segment.draw();
         }
-        Program::unbind(&self.gl);
 
         result
     }
@@ -175,10 +240,17 @@ impl RenderPass<RenderingEvent> for GizmosPass {
             RenderingEvent::DropAllAssets => {
                 self.billboard = None;
                 self.line = None;
-                self.light_texture = None;
+                self.sun_light_texture = None;
+                self.point_light_texture = None;
+            }
+            RenderingEvent::ViewUpdated(view) => {
+                self.view = view;
             }
             RenderingEvent::ViewportResized(size) => {
                 self.viewport_size = size;
+            }
+            RenderingEvent::PerspectiveProjectionUpdated(_, _, far) => {
+                self.sunlight_distance = far * 0.9;
             }
             RenderingEvent::UpdateShader(name, shader) if name == BILLBOARD_SHADER.into() => {
                 self.billboard = Some(BillboardShader::new(shader.clone()).unwrap());
@@ -191,7 +263,6 @@ impl RenderPass<RenderingEvent> for GizmosPass {
                     CAMERA_UBO_BINDING as u32,
                 );
                 program.set_uniform(&shader.texture_location, 0);
-                program.set_uniform(&shader.size_location, Vec2::new(0.7, 0.7));
                 Program::unbind(&self.gl);
             }
 
@@ -209,9 +280,14 @@ impl RenderPass<RenderingEvent> for GizmosPass {
                 Program::unbind(&self.gl);
             }
 
-            RenderingEvent::SetLightTexture(texture) => {
-                self.light_texture = Some(texture);
-            }
+            RenderingEvent::SetLightTexture(kind, texture) => match kind {
+                LightTextureType::SunLight => {
+                    self.sun_light_texture = Some(texture);
+                }
+                LightTextureType::PointLight => {
+                    self.point_light_texture = Some(texture);
+                }
+            },
 
             _ => {}
         }
@@ -232,7 +308,7 @@ impl RenderPass<RenderingEvent> for GizmosPass {
         if self.line.is_none() {
             return RenderResult::default();
         }
-        if self.light_texture.is_none() {
+        if self.sun_light_texture.is_none() || self.point_light_texture.is_none() {
             return RenderResult::default();
         }
         if !self.config.get_show_gizmos() {
@@ -253,12 +329,38 @@ impl RenderPass<RenderingEvent> for GizmosPass {
             self.gl
                 .blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
             self.gl.enable(glow::DEPTH_TEST);
+            self.gl.line_width(2.0);
         }
 
         let mut result = RenderResult::default();
+
+        let shader = self.line.as_ref().unwrap();
+        let program = shader.asset.cast();
+        Program::bind(&self.gl, &program);
+
         result += self.draw_point_light_lines(frame);
-        result += self.draw_point_light_billboards(frame);
         result += self.draw_sun_light_gizmos(frame);
+
+        unsafe {
+            // Make the axis at top of all geometry
+            self.gl.disable(glow::DEPTH_TEST);
+        }
+        result += self.draw_axis_helper();
+
+        Program::unbind(&self.gl);
+
+        unsafe {
+            // Make the axis at top of all geometry
+            self.gl.enable(glow::DEPTH_TEST);
+        }
+
+        let shader = self.billboard.as_ref().unwrap();
+        let program = shader.asset.cast();
+        Program::bind(&self.gl, &program);
+        result += self.draw_point_light_billboards(frame);
+        result += self.draw_sun_light_billboards(frame);
+        Program::unbind(&self.gl);
+
         result
     }
 
