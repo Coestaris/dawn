@@ -1,0 +1,10 @@
+[header]
+asset_type = "Texture"
+author = "kudakurage"
+license = "OFL License"
+
+[[properties.Texture.sources]]
+File = "blobs/sun_light.png"
+
+[properties.Texture]
+pixel_format = "RGBA8"

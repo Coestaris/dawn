@@ -1,7 +1,7 @@
 use crate::devtools::{DevtoolsToRendererMessage, DevtoolsToWorldMessage, DevtoolsWorldConnection};
 use crate::rendering::dispatcher::RenderDispatcher;
-use crate::rendering::event::RenderingEvent;
-use crate::world::asset::LIGHT_TEXTURE;
+use crate::rendering::event::{LightTextureType, RenderingEvent};
+use crate::world::asset::{POINT_LIGHT_TEXTURE, SUN_LIGHT_TEXTURE};
 use dawn_assets::hub::{AssetHub, AssetHubEvent};
 use dawn_ecs::events::TickEvent;
 use dawn_ecs::world::WorldLoopMonitorEvent;
@@ -111,10 +111,19 @@ fn gizmos_assets_handler(
     mut sender: Sender<RenderPassEvent<RenderingEvent>>,
 ) {
     match r.event {
-        AssetHubEvent::AssetLoaded(id) if id.as_str() == LIGHT_TEXTURE => {
-            info!("Light texture loaded");
-            let texture = hub.get_typed::<Texture>(LIGHT_TEXTURE.into()).unwrap();
-            dispatcher.dispatch(RenderingEvent::SetLightTexture(texture), &mut sender);
+        AssetHubEvent::AssetLoaded(id) if id.as_str() == SUN_LIGHT_TEXTURE => {
+            let texture = hub.get_typed::<Texture>(SUN_LIGHT_TEXTURE.into()).unwrap();
+            dispatcher.dispatch(
+                RenderingEvent::SetLightTexture(LightTextureType::SunLight, texture),
+                &mut sender,
+            );
+        }
+        AssetHubEvent::AssetLoaded(id) if id.as_str() == POINT_LIGHT_TEXTURE => {
+            let texture = hub.get_typed::<Texture>(POINT_LIGHT_TEXTURE.into()).unwrap();
+            dispatcher.dispatch(
+                RenderingEvent::SetLightTexture(LightTextureType::PointLight, texture),
+                &mut sender,
+            );
         }
 
         _ => {}

@@ -361,7 +361,9 @@ impl RendererBuilder {
             RenderingEventMask::DROP_ALL_ASSETS
                 | RenderingEventMask::UPDATE_SHADER
                 | RenderingEventMask::VIEWPORT_RESIZED
-                | RenderingEventMask::SET_LIGHT_TEXTURE,
+                | RenderingEventMask::SET_LIGHT_TEXTURE
+                | RenderingEventMask::VIEW_UPDATED
+                | RenderingEventMask::PERSP_PROJECTION_UPDATED,
             &[BILLBOARD_SHADER, LINE_SHADER],
         );
 
