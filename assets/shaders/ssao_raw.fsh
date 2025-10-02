@@ -4,6 +4,9 @@
 #include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
+// R8
+layout(location = 0) out float out_ssao_raw_halfres;
+
 // R16F. linear depth
 uniform sampler2D in_halfres_depth;
 // RG8 - octo encoded normal, view space
@@ -22,8 +25,6 @@ layout(std140) uniform ubo_ssao_raw_params {
 layout(std140) uniform ubo_ssao_raw_kernel {
     vec4 in_samples[64]; // hemisphere samples in tangent space, z>=0
 };
-
-out float out_ssao_raw;
 
 float hash12(vec2 p){
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -56,14 +57,14 @@ vec3 pos(vec2 uv) {
 
 void main() {
     if (in_ssao_enabled != 1) {
-        out_ssao_raw = 1.0;
+        out_ssao_raw_halfres = 1.0;
         return;
     }
 
     // View-space position & normal at this pixel
-    vec2 tex_coord = gl_FragCoord.xy / vec2(in_viewport) / 0.5; // half-res
-    vec3 P = pos(tex_coord);
-    vec3 N = normal(tex_coord);
+    vec2 uv = gl_FragCoord.xy / vec2(in_viewport) / 0.5; // half-res
+    vec3 P = pos(uv);
+    vec3 N = normal(uv);
 
     // build TBN the same way you had (use noise.xy only, z=0)
     vec2 noise2 = noise2();
@@ -103,5 +104,5 @@ void main() {
 
     float ao = 1.0 - (occlusion / float(kernel_size));
     ao = pow(clamp(ao, 0.0, 1.0), in_power) * in_intensity;
-    out_ssao_raw = ao;   // no debug lift
+    out_ssao_raw_halfres = ao;
 }
