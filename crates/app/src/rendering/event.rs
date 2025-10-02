@@ -5,6 +5,12 @@ use dawn_graphics::gl::raii::texture::Texture;
 use glam::{Mat4, UVec2};
 
 #[derive(Debug, Clone)]
+pub enum LightTextureType {
+    SunLight,
+    PointLight
+}
+
+#[derive(Debug, Clone)]
 pub enum RenderingEvent {
     // Generic events
     DropAllAssets,
@@ -15,7 +21,7 @@ pub enum RenderingEvent {
     ViewportResized(UVec2),
 
     // Specific events can be added here
-    SetLightTexture(TypedAsset<Texture>),
+    SetLightTexture(LightTextureType, TypedAsset<Texture>),
 }
 
 bitflags! {
