@@ -4,12 +4,12 @@
 #include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
-out float out_ssao_blur;
-in vec2 tex_coord;
+// R8
+layout(location = 0) out float out_ssao_blur;
 
 uniform sampler2D in_depth;
-// R16F
-uniform sampler2D in_ssao_raw;
+// R8
+uniform sampler2D in_ssao_raw_halfres;
 // RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
 uniform sampler2D in_rough_occlusion_normal;
 
@@ -44,18 +44,13 @@ float depth(vec2 uv) {
     return linearize_depth(texture(in_depth, uv).r, in_clip_planes.x, in_clip_planes.y);
 }
 
-void main()
-{
-    if (in_ssao_enabled != 1) {
-        out_ssao_blur = 1.0;
-        return;
-    }
+bool in_bounds(vec2 uv) {
+    return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
+}
 
-    vec2 uv = tex_coord;
-    vec2 texel = vec2(1.0) / vec2(in_viewport);
-
-    vec3 N = normal(uv);
-    float Z = depth(uv);
+float ssao(vec2 uv_full, vec2 uv_half, vec2 texel, vec2 texel_half) {
+    vec3 N = normal(uv_full);
+    float Z = depth(uv_full);
 
     float sum = 0.0;
     float wsum = 0.0;
@@ -63,16 +58,15 @@ void main()
     int R = int(in_radius);
     for (int i = -R; i <= R; i++) {
         for (int j = -R; j <= R; j++) {
-            if (i == 0 && j == 0) continue;
-
             vec2 vector = vec2(i, j);
-            vec2 uvn = uv + vector * texel;
-            float ao = texture(in_ssao_raw, uvn).r;
+            vec2 uvn_full = uv_full + vector * texel;
+            vec2 uvn_half = uv_half + vector * texel_half;
 
-            float Zi = depth(uvn);
-            vec3 Ni = normal(uvn);
+            float ao = texture(in_ssao_raw_halfres, uvn_half).r;
+            float Zi = depth(uvn_full);
+            vec3 Ni = normal(uvn_full);
 
-            float w_spatial = gauss(length(vector), in_sigma_spatial);
+            float w_spatial = gauss(pow(length(vector), 2.0), in_sigma_spatial);
             float w_depth   = gauss(abs(Zi - Z), in_sigma_depth);
             float w_normal  = pow(max(dot(N, Ni), 0.0), in_sigma_normal);
 
@@ -84,9 +78,24 @@ void main()
 
     if (wsum > 0.0) {
         sum /= wsum;
-        out_ssao_blur = sum;
+        return sum;
     } else {
         // Fallback if no weights were accumulated
-        out_ssao_blur = texture(in_ssao_raw, uv).r;
+        return 0.5; // Neutral AO value
+    }
+}
+
+void main()
+{
+    vec2 texel = vec2(1.0) / vec2(in_viewport);
+    vec2 texel_half = texel * 2.0;
+
+    vec2 uv_full = (gl_FragCoord.xy + 0.5) * texel;
+    vec2 uv_half = (floor(gl_FragCoord.xy * 0.5) + 0.5) * texel_half;
+
+    if (in_ssao_enabled != 1) {
+        out_ssao_blur = 1.0;
+    } else {
+        out_ssao_blur = ssao(uv_full, uv_half, texel, texel_half);
     }
 }

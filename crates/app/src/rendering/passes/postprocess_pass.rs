@@ -92,8 +92,8 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
 
         unsafe {
             self.gl.disable(glow::DEPTH_TEST);
-            self.gl.clear_color(0.1, 0.1, 0.1, 1.0);
-            self.gl.clear(glow::COLOR_BUFFER_BIT);
+            // self.gl.clear_color(0.1, 0.1, 0.1, 1.0);
+            // self.gl.clear(glow::COLOR_BUFFER_BIT);
         }
 
         let shader = self.shader.as_ref().unwrap();

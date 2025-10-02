@@ -4,9 +4,13 @@
 #include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
-uniform sampler2D in_depth;
-// RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
-uniform sampler2D in_rough_occlusion_normal;
+// R8
+layout(location = 0) out float out_ssao_raw_halfres;
+
+// R16F. linear depth
+uniform sampler2D in_halfres_depth;
+// RG8 - octo encoded normal, view space
+uniform sampler2D in_halfres_normal;
 
 layout(std140) uniform ubo_ssao_raw_params {
     float in_kernel_size; // <= 64
@@ -21,10 +25,6 @@ layout(std140) uniform ubo_ssao_raw_params {
 layout(std140) uniform ubo_ssao_raw_kernel {
     vec4 in_samples[64]; // hemisphere samples in tangent space, z>=0
 };
-
-out float out_ssao_raw;
-
-in vec2 tex_coord;
 
 float hash12(vec2 p){
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -45,27 +45,26 @@ bool in_bounds(vec2 uv) {
 }
 
 vec3 normal(vec2 uv) {
-    vec2 e = texture(in_rough_occlusion_normal, uv).zw;
+    vec2 e = texture(in_halfres_normal, uv).rg;
     return decode_oct(e);
 }
 
-float depth(vec2 uv) {
-    return linearize_depth(texture(in_depth, uv).r, in_clip_planes.x, in_clip_planes.y);
-}
-
 vec3 pos(vec2 uv) {
-    return reconstruct_view_pos(texture(in_depth, uv).r, uv, in_inv_proj);
+    float linear = texture(in_halfres_depth, uv).r;
+    float depth = depth_from_linear(linear, in_clip_planes.x, in_clip_planes.y);
+    return reconstruct_view_pos(depth, uv, in_inv_proj);
 }
 
 void main() {
     if (in_ssao_enabled != 1) {
-        out_ssao_raw = 1.0;
+        out_ssao_raw_halfres = 1.0;
         return;
     }
 
     // View-space position & normal at this pixel
-    vec3 P = pos(tex_coord);
-    vec3 N = normal(tex_coord);
+    vec2 uv = gl_FragCoord.xy / vec2(in_viewport) / 0.5; // half-res
+    vec3 P = pos(uv);
+    vec3 N = normal(uv);
 
     // build TBN the same way you had (use noise.xy only, z=0)
     vec2 noise2 = noise2();
@@ -105,5 +104,5 @@ void main() {
 
     float ao = 1.0 - (occlusion / float(kernel_size));
     ao = pow(clamp(ao, 0.0, 1.0), in_power) * in_intensity;
-    out_ssao_raw = ao;   // no debug lift
+    out_ssao_raw_halfres = ao;
 }

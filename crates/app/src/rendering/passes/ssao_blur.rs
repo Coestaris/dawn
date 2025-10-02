@@ -1,7 +1,7 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
-use crate::rendering::fbo::ssao::SSAOTarget;
+use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::ssao_blur::SSAOBlurShader;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
@@ -25,7 +25,7 @@ pub(crate) struct SSAOBlurPass {
     config: RenderingConfig,
     shader: Option<SSAOBlurShader>,
     gbuffer: Rc<GBuffer>,
-    ssao_raw_taget: Rc<SSAOTarget>,
+    ssao_raw_taget: Rc<SSAOHalfresTarget>,
     ssao_blur_target: Rc<SSAOTarget>,
     quad: Quad2D,
 }
@@ -35,7 +35,7 @@ impl SSAOBlurPass {
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
-        ssao_raw_taget: Rc<SSAOTarget>,
+        ssao_raw_taget: Rc<SSAOHalfresTarget>,
         ssao_blur_target: Rc<SSAOTarget>,
         config: RenderingConfig,
     ) -> Self {
@@ -110,8 +110,8 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
 
         unsafe {
             self.gl.disable(glow::DEPTH_TEST);
-            self.gl.clear(glow::COLOR_BUFFER_BIT);
-            self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
+            // self.gl.clear(glow::COLOR_BUFFER_BIT);
+            // self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
         }
 
         let shader = self.shader.as_ref().unwrap();
@@ -120,18 +120,24 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
 
         #[cfg(feature = "devtools")]
         {
-            program.set_uniform(&shader.radius, self.config.get_ssao_blur_radius() as f32);
             program.set_uniform(
-                &shader.ssao_enabled,
+                &shader.devtools.radius,
+                self.config.get_ssao_blur_radius() as f32,
+            );
+            program.set_uniform(
+                &shader.devtools.ssao_enabled,
                 self.config.get_is_ssao_enabled() as i32,
             );
             program.set_uniform(
-                &shader.sigma_spatial,
+                &shader.devtools.sigma_spatial,
                 self.config.get_ssao_blur_sigma_spatial(),
             );
-            program.set_uniform(&shader.sigma_depth, self.config.get_ssao_blur_sigma_depth());
             program.set_uniform(
-                &shader.sigma_normal,
+                &shader.devtools.sigma_depth,
+                self.config.get_ssao_blur_sigma_depth(),
+            );
+            program.set_uniform(
+                &shader.devtools.sigma_normal,
                 self.config.get_ssao_blur_sigma_normal(),
             );
         }

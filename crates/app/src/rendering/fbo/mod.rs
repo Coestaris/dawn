@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 pub mod gbuffer;
 pub mod obuffer;
+pub mod halfres;
 pub mod ssao;
 
 pub struct GTexture {
@@ -97,7 +98,6 @@ impl GTexture {
         Framebuffer::bind(&self.gl, fbo);
         Texture::bind(&self.gl, TextureBind::Texture2D, &self.texture, 0);
         fbo.attach_texture_2d(self.attachment, &self.texture, 0);
-        assert_eq!(fbo.is_complete(), true);
         Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
         Framebuffer::unbind(&self.gl);
     }

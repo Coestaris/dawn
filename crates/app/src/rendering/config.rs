@@ -60,7 +60,7 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_show_gizmos(&self) -> bool {
-            true
+            false
         }
 
         #[inline(always)]
@@ -95,12 +95,12 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_ssao_radius(&self) -> f32 {
-            0.5
+            0.9
         }
 
         #[inline(always)]
         pub fn get_ssao_bias(&self) -> f32 {
-            0.025
+            0.08
         }
 
         #[inline(always)]
