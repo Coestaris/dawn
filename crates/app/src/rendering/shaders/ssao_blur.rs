@@ -46,7 +46,7 @@ impl SSAOBlurShader {
             ubo_camera: program.get_uniform_block_location("ubo_camera")?,
 
             depth: program.get_uniform_location("in_depth")?,
-            ssao_raw: program.get_uniform_location("in_ssao_raw")?,
+            ssao_raw: program.get_uniform_location("in_ssao_raw_halfres")?,
             rough_occlusion_normal: program.get_uniform_location("in_rough_occlusion_normal")?,
             #[cfg(feature = "devtools")]
             devtools: SSAOBlurShaderDevtools::new(&program),
