@@ -1,9 +1,11 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
-use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
+use crate::rendering::fbo::halfres::HalfresBuffer;
+use crate::rendering::fbo::ssao::SSAOTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::ssao_blur::SSAOBlurShader;
+use crate::rendering::shaders::ssao_halfres::SSAOHalfresShader;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
@@ -16,46 +18,43 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 const DEPTH_INDEX: i32 = 0;
-const SSAO_RAW_INDEX: i32 = 1;
+const ALBEDO_METALLIC_INDEX: i32 = 1;
 const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 2;
 
-pub(crate) struct SSAOBlurPass {
+pub(crate) struct SSAOHalfresPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     config: RenderingConfig,
-    shader: Option<SSAOBlurShader>,
+    shader: Option<SSAOHalfresShader>,
     gbuffer: Rc<GBuffer>,
-    ssao_raw_taget: Rc<SSAOHalfresTarget>,
-    ssao_blur_target: Rc<SSAOTarget>,
+    target: Rc<HalfresBuffer>,
     quad: Quad2D,
 }
 
-impl SSAOBlurPass {
+impl SSAOHalfresPass {
     pub fn new(
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
-        ssao_raw_taget: Rc<SSAOHalfresTarget>,
-        ssao_blur_target: Rc<SSAOTarget>,
+        target: Rc<HalfresBuffer>,
         config: RenderingConfig,
     ) -> Self {
-        SSAOBlurPass {
+        SSAOHalfresPass {
             gl: gl.clone(),
             id,
             config,
             shader: None,
             gbuffer,
-            ssao_raw_taget,
-            ssao_blur_target,
+            target,
             quad: Quad2D::new(gl),
         }
     }
 }
 
-impl RenderPass<RenderingEvent> for SSAOBlurPass {
+impl RenderPass<RenderingEvent> for SSAOHalfresPass {
     fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
         fn dispatch_pass(ptr: *mut u8, event: RenderingEvent) {
-            let pass = unsafe { &mut *(ptr as *mut SSAOBlurPass) };
+            let pass = unsafe { &mut *(ptr as *mut SSAOHalfresPass) };
             pass.dispatch(event);
         }
 
@@ -68,11 +67,11 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
                 self.shader = None;
             }
             RenderingEvent::ViewportResized(size) => {
-                self.ssao_blur_target.resize(size);
+                self.target.resize(size);
             }
             RenderingEvent::UpdateShader(_, shader) => {
                 let clone = shader.clone();
-                self.shader = Some(SSAOBlurShader::new(shader.clone()).unwrap());
+                self.shader = Some(SSAOHalfresShader::new(shader.clone()).unwrap());
 
                 // Setup shader static uniforms
                 let shader = self.shader.as_ref().unwrap();
@@ -82,8 +81,8 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
                     shader.ubo_camera,
                     crate::rendering::CAMERA_UBO_BINDING as u32,
                 );
-                program.set_uniform(&shader.ssao_raw, SSAO_RAW_INDEX);
                 program.set_uniform(&shader.depth, DEPTH_INDEX);
+                // program.set_uniform(&shader.albedo_metallic, ALBEDO_METALLIC_INDEX);
                 program.set_uniform(&shader.rough_occlusion_normal, ROUGH_OCCLUSION_NORMAL_INDEX);
 
                 Program::unbind(&self.gl);
@@ -93,7 +92,7 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
     }
 
     fn name(&self) -> &str {
-        "SSAOBlur"
+        "SSAOHalfres"
     }
 
     #[inline(always)]
@@ -106,7 +105,7 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
             return RenderResult::default();
         }
 
-        Framebuffer::bind(&self.gl, &self.ssao_blur_target.fbo);
+        Framebuffer::bind(&self.gl, &self.target.fbo);
 
         unsafe {
             self.gl.disable(glow::DEPTH_TEST);
@@ -118,42 +117,18 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
         let program = shader.asset.cast();
         Program::bind(&self.gl, &program);
 
-        #[cfg(feature = "devtools")]
-        {
-            program.set_uniform(
-                &shader.devtools.radius,
-                self.config.get_ssao_blur_radius() as f32,
-            );
-            program.set_uniform(
-                &shader.devtools.ssao_enabled,
-                self.config.get_is_ssao_enabled() as i32,
-            );
-            program.set_uniform(
-                &shader.devtools.sigma_spatial,
-                self.config.get_ssao_blur_sigma_spatial(),
-            );
-            program.set_uniform(
-                &shader.devtools.sigma_depth,
-                self.config.get_ssao_blur_sigma_depth(),
-            );
-            program.set_uniform(
-                &shader.devtools.sigma_normal,
-                self.config.get_ssao_blur_sigma_normal(),
-            );
-        }
-
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.ssao_raw_taget.texture.texture,
-            SSAO_RAW_INDEX as u32,
-        );
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
             &self.gbuffer.depth.texture,
             DEPTH_INDEX as u32,
         );
+        // Texture::bind(
+        //     &self.gl,
+        //     TextureBind::Texture2D,
+        //     &self.gbuffer.albedo_metallic.texture,
+        //     ALBEDO_METALLIC_INDEX as u32,
+        // );
         Texture::bind(
             &self.gl,
             TextureBind::Texture2D,
@@ -169,7 +144,11 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, SSAO_RAW_INDEX as u32);
+        // Texture::unbind(
+        //     &self.gl,
+        //     TextureBind::Texture2D,
+        //     ALBEDO_METALLIC_INDEX as u32,
+        // );
         Texture::unbind(
             &self.gl,
             TextureBind::Texture2D,
