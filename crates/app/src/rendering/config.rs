@@ -115,17 +115,17 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_ssao_blur_sigma_spatial(&self) -> f32 {
-            2.0
+            10.0
         }
 
         #[inline(always)]
         pub fn get_ssao_blur_sigma_depth(&self) -> f32 {
-            0.1
+            5.0
         }
 
         #[inline(always)]
         pub fn get_ssao_blur_sigma_normal(&self) -> f32 {
-            0.1
+            16.0
         }
 
         #[inline(always)]

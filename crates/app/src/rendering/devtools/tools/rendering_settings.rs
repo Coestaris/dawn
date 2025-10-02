@@ -227,13 +227,13 @@ pub fn tool_rendering_settings(
                 egui::Slider::new(&mut config.ssao_blur.radius, 1..=8)
                     .text("Blur radius")
                     .ui(ui);
-                egui::Slider::new(&mut config.ssao_blur.sigma_spatial, 0.1..=10.0)
+                egui::Slider::new(&mut config.ssao_blur.sigma_spatial, 0.1..=40.0)
                     .text("Sigma Spatial")
                     .ui(ui);
-                egui::Slider::new(&mut config.ssao_blur.sigma_depth, 0.1..=10.0)
+                egui::Slider::new(&mut config.ssao_blur.sigma_depth, 0.1..=30.0)
                     .text("Sigma Depth")
                     .ui(ui);
-                egui::Slider::new(&mut config.ssao_blur.sigma_normal, 8.0..=64.0)
+                egui::Slider::new(&mut config.ssao_blur.sigma_normal, 8.0..=128.0)
                     .text("Sigma Normal")
                     .ui(ui);
             });
