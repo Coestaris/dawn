@@ -13,7 +13,6 @@ use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
 #[cfg(feature = "devtools")]
 use crate::rendering::passes::devtools_pass::DevtoolsPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
-#[cfg(feature = "devtools")]
 use crate::rendering::passes::lighting_pass::LightingPass;
 use crate::rendering::passes::postprocess_pass::PostProcessPass;
 use crate::rendering::passes::ssao_blur::SSAOBlurPass;
