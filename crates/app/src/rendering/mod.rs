@@ -14,7 +14,6 @@ use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
 use crate::rendering::passes::devtools_pass::DevtoolsPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
 #[cfg(feature = "devtools")]
-use crate::rendering::passes::gizmos_pass::GizmosPass;
 use crate::rendering::passes::lighting_pass::LightingPass;
 use crate::rendering::passes::postprocess_pass::PostProcessPass;
 use crate::rendering::passes::ssao_blur::SSAOBlurPass;
@@ -148,7 +147,7 @@ pub struct Renderer {
 }
 
 #[cfg(feature = "devtools")]
-type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass, DevtoolsPass, GizmosPass);
+type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass, DevtoolsPass);
 #[cfg(not(feature = "devtools"))]
 type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass);
 
@@ -218,15 +217,9 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
 
         #[cfg(feature = "devtools")]
         {
-            let bounding_pass = DevtoolsPass::new(
+            let devtools_pass = DevtoolsPass::new(
                 r.gl.clone(),
-                self.ids.bounding_id,
-                gbuffer.clone(),
-                self.config.clone(),
-            );
-            let gizmo_pass = GizmosPass::new(
-                r.gl.clone(),
-                self.ids.gizmos_id,
+                self.ids.devtools_id,
                 gbuffer.clone(),
                 self.config.clone(),
             );
@@ -238,8 +231,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
                 ssao_blur,
                 lighting_pass,
                 postprocess_pass,
-                bounding_pass,
-                gizmo_pass
+                devtools_pass
             ))
         }
 
@@ -294,9 +286,7 @@ pub struct PassIDs {
     pub lighting_id: RenderPassTargetId,
     pub postprocess_id: RenderPassTargetId,
     #[cfg(feature = "devtools")]
-    pub bounding_id: RenderPassTargetId,
-    #[cfg(feature = "devtools")]
-    pub gizmos_id: RenderPassTargetId,
+    pub devtools_id: RenderPassTargetId,
 }
 
 pub struct RendererBuilder {
@@ -350,21 +340,14 @@ impl RendererBuilder {
         );
 
         #[cfg(feature = "devtools")]
-        let bounding_id = dispatcher.pass(
-            RenderingEventMask::DROP_ALL_ASSETS
-                | RenderingEventMask::UPDATE_SHADER
-                | RenderingEventMask::VIEWPORT_RESIZED,
-            &[LINE_SHADER],
-        );
-        #[cfg(feature = "devtools")]
-        let gizmos_id = dispatcher.pass(
+        let devtools_id = dispatcher.pass(
             RenderingEventMask::DROP_ALL_ASSETS
                 | RenderingEventMask::UPDATE_SHADER
                 | RenderingEventMask::VIEWPORT_RESIZED
                 | RenderingEventMask::SET_LIGHT_TEXTURE
                 | RenderingEventMask::VIEW_UPDATED
                 | RenderingEventMask::PERSP_PROJECTION_UPDATED,
-            &[BILLBOARD_SHADER, LINE_SHADER],
+            &[LINE_SHADER, BILLBOARD_SHADER],
         );
 
         let config = RenderingConfig::new();
@@ -377,9 +360,7 @@ impl RendererBuilder {
                 lighting_id,
                 postprocess_id,
                 #[cfg(feature = "devtools")]
-                bounding_id,
-                #[cfg(feature = "devtools")]
-                gizmos_id,
+                devtools_id,
             },
 
             config,
