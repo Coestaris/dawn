@@ -2,11 +2,7 @@ use dawn_assets::ir::texture::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
 use std::sync::Arc;
 
-pub fn white_noise_rgf32(
-    gl: Arc<glow::Context>,
-    width: usize,
-    height: usize,
-) -> Texture {
+pub fn white_noise_rgf32(gl: Arc<glow::Context>, width: usize, height: usize) -> Texture {
     let texture = Texture::new2d(gl.clone()).unwrap();
     Texture::bind(&gl, TextureBind::Texture2D, &texture, 0);
     texture.set_min_filter(IRTextureFilter::Nearest).unwrap();

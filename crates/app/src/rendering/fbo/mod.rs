@@ -6,8 +6,8 @@ use glam::UVec2;
 use std::sync::Arc;
 
 pub mod gbuffer;
-pub mod obuffer;
 pub mod halfres;
+pub mod obuffer;
 pub mod ssao;
 
 pub struct GTexture {
