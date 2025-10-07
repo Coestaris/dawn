@@ -92,7 +92,6 @@ void main() {
 
         float scene_z = sceneP.z;
 
-        // pick the correct sign for your view space (see note above)
         float angle_bias = max(in_bias, in_bias * (1.0 - dot(N, normalize(S - P))));
         float occluder   = (scene_z >= S.z + angle_bias) ? 1.0 : 0.0;
 

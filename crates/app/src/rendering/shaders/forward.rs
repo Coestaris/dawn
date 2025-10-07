@@ -2,7 +2,7 @@ use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::shader::ShaderError;
 use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 
-pub struct GeometryShader {
+pub struct ForwardShader {
     pub asset: TypedAsset<Program>,
 
     // Vertex uniforms
@@ -17,7 +17,7 @@ pub struct GeometryShader {
     pub tangent_valid: UniformLocation,
 }
 
-impl GeometryShader {
+impl ForwardShader {
     pub fn new(shader: TypedAsset<Program>) -> Result<Self, ShaderError> {
         let clone = shader.clone();
         let program = shader.cast();
