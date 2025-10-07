@@ -112,7 +112,7 @@ impl FreeCamera {
         ) {
             const MOVE_SPEED: f32 = 10.0;
             const ROTATE_SPEED: f32 = 0.001;
-            const LERP: f32 = 0.5;
+            const LERP: f32 = 0.00001;
 
             let delta = r.event.delta;
 
@@ -150,7 +150,8 @@ impl FreeCamera {
             }
 
             // Smoothly interpolate position and rotation
-            let data = cam.data.lerp(&cam.instant, LERP * delta * 30.0);
+            let factor = 1.0 - LERP.powf(delta);
+            let data = cam.data.lerp(&cam.instant, factor.clamp(0.0, 1.0));
             if cam.data != data {
                 cam.data = data;
                 dispatcher.dispatch_update_view(cam.as_view(), sender);
