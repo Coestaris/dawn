@@ -12,14 +12,14 @@ use crate::rendering::fbo::obuffer::LightningTarget;
 use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
 #[cfg(feature = "devtools")]
 use crate::rendering::passes::devtools_pass::DevtoolsPass;
-use crate::rendering::passes::geometry_pass::GeometryPass;
+use crate::rendering::passes::forward_pass::ForwardPass;
 use crate::rendering::passes::lighting_pass::LightingPass;
 use crate::rendering::passes::postprocess_pass::PostProcessPass;
 use crate::rendering::passes::ssao_blur::SSAOBlurPass;
 use crate::rendering::passes::ssao_halfres::SSAOHalfresPass;
 use crate::rendering::passes::ssao_raw::SSAORawPass;
 use crate::rendering::shaders::{
-    BILLBOARD_SHADER, GEOMETRY_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER,
+    BILLBOARD_SHADER, FORWARD_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER,
     SSAO_BLUR_SHADER, SSAO_HALFRES_SHADER, SSAO_RAW_SHADER,
 };
 use crate::rendering::ubo::camera::CameraUBO;
@@ -146,9 +146,9 @@ pub struct Renderer {
 }
 
 #[cfg(feature = "devtools")]
-type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass, DevtoolsPass);
+type ChainType = construct_chain_type!(RenderingEvent; ForwardPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass, DevtoolsPass);
 #[cfg(not(feature = "devtools"))]
-type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass);
+type ChainType = construct_chain_type!(RenderingEvent; ForwardPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass);
 
 impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
     fn spawn_chain(
@@ -170,9 +170,9 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
 
         let camera_ubo = CameraUBO::new(r.gl.clone(), CAMERA_UBO_BINDING);
 
-        let geometry_pass = GeometryPass::new(
+        let forward_pass = ForwardPass::new(
             r.gl.clone(),
-            self.ids.geometry_id,
+            self.ids.forward_id,
             gbuffer.clone(),
             camera_ubo,
             self.config.clone(),
@@ -224,7 +224,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             );
 
             Ok(construct_chain!(
-                geometry_pass,
+                forward_pass,
                 ssao_halfres,
                 ssao_raw,
                 ssao_blur,
@@ -237,7 +237,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         #[cfg(not(feature = "devtools"))]
         {
             Ok(construct_chain!(
-                geometry_pass,
+                forward_pass,
                 ssao_halfres,
                 ssao_raw,
                 ssao_blur,
@@ -277,7 +277,7 @@ pub struct SetupRenderingParameters {
 }
 
 pub struct PassIDs {
-    pub geometry_id: RenderPassTargetId,
+    pub forward_id: RenderPassTargetId,
     pub ssao_halfres: RenderPassTargetId,
     pub ssao_raw: RenderPassTargetId,
     pub ssao_blur: RenderPassTargetId,
@@ -299,13 +299,13 @@ impl RendererBuilder {
         // This must be done before creating the renderer, because the passes
         // will need the IDs during their construction.
         let mut dispatcher = RenderDispatcher::new();
-        let geometry_id = dispatcher.pass(
+        let forward_id = dispatcher.pass(
             RenderingEventMask::DROP_ALL_ASSETS
                 | RenderingEventMask::UPDATE_SHADER
                 | RenderingEventMask::VIEW_UPDATED
                 | RenderingEventMask::VIEWPORT_RESIZED
                 | RenderingEventMask::PERSP_PROJECTION_UPDATED,
-            &[GEOMETRY_SHADER],
+            &[FORWARD_SHADER],
         );
         let ssao_halfres = dispatcher.pass(
             RenderingEventMask::DROP_ALL_ASSETS
@@ -351,7 +351,7 @@ impl RendererBuilder {
         let config = RenderingConfig::new();
         Self {
             ids: PassIDs {
-                geometry_id,
+                forward_id,
                 ssao_halfres,
                 ssao_raw,
                 ssao_blur,

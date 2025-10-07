@@ -2,7 +2,7 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
-use crate::rendering::shaders::geometry::GeometryShader;
+use crate::rendering::shaders::forward::ForwardShader;
 use crate::rendering::textures::fallback_tex::FallbackTextures;
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
@@ -25,12 +25,12 @@ const NORMAL_INDEX: i32 = 1;
 const METALLIC_ROUGHNESS_INDEX: i32 = 2;
 const OCCLUSION_INDEX: i32 = 3;
 
-pub(crate) struct GeometryPass {
+pub(crate) struct ForwardPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     config: RenderingConfig,
 
-    shader: Option<GeometryShader>,
+    shader: Option<ForwardShader>,
     fallback_textures: FallbackTextures,
 
     frustum: FrustumCulling,
@@ -39,7 +39,7 @@ pub(crate) struct GeometryPass {
     camera_ubo: CameraUBO,
 }
 
-impl GeometryPass {
+impl ForwardPass {
     pub fn new(
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
@@ -47,7 +47,7 @@ impl GeometryPass {
         camera_ubo: CameraUBO,
         config: RenderingConfig,
     ) -> Self {
-        GeometryPass {
+        ForwardPass {
             gl: gl.clone(),
             id,
             config,
@@ -60,14 +60,14 @@ impl GeometryPass {
     }
 }
 
-impl RenderPass<RenderingEvent> for GeometryPass {
+impl RenderPass<RenderingEvent> for ForwardPass {
     fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
-        fn dispatch_geometry_pass(ptr: *mut u8, event: RenderingEvent) {
-            let pass = unsafe { &mut *(ptr as *mut GeometryPass) };
+        fn dispatch_pass(ptr: *mut u8, event: RenderingEvent) {
+            let pass = unsafe { &mut *(ptr as *mut ForwardPass) };
             pass.dispatch(event);
         }
 
-        vec![PassEventTarget::new(dispatch_geometry_pass, self.id, self)]
+        vec![PassEventTarget::new(dispatch_pass, self.id, self)]
     }
 
     fn dispatch(&mut self, event: RenderingEvent) {
@@ -76,7 +76,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
                 self.shader = None;
             }
             RenderingEvent::UpdateShader(_, shader) => {
-                self.shader = Some(GeometryShader::new(shader.clone()).unwrap());
+                self.shader = Some(ForwardShader::new(shader.clone()).unwrap());
 
                 // Setup shader static uniforms
                 let shader = self.shader.as_ref().unwrap();
@@ -116,7 +116,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
     }
 
     fn name(&self) -> &str {
-        "GeometryPass"
+        "ForwardPass"
     }
 
     #[inline(always)]
