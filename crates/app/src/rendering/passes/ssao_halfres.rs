@@ -16,7 +16,7 @@ use std::sync::Arc;
 use winit::window::Window;
 
 const DEPTH_INDEX: i32 = 0;
-const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 1;
+const NORMAL_INDEX: i32 = 1;
 
 pub(crate) struct SSAOHalfresPass {
     gl: Arc<glow::Context>,
@@ -75,8 +75,7 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
                     crate::rendering::CAMERA_UBO_BINDING as u32,
                 );
                 program.set_uniform(&shader.depth, DEPTH_INDEX);
-                // program.set_uniform(&shader.albedo_metallic, ALBEDO_METALLIC_INDEX);
-                program.set_uniform(&shader.rough_occlusion_normal, ROUGH_OCCLUSION_NORMAL_INDEX);
+                program.set_uniform(&shader.normal, NORMAL_INDEX);
 
                 Program::unbind(&self.gl);
             }
@@ -103,32 +102,14 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
 
         unsafe {
             self.gl.disable(glow::DEPTH_TEST);
-            // self.gl.clear(glow::COLOR_BUFFER_BIT);
-            // self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
         }
 
         let shader = self.shader.as_ref().unwrap();
         let program = shader.asset.cast();
         Program::bind(&self.gl, &program);
 
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.gbuffer.depth.texture,
-            DEPTH_INDEX as u32,
-        );
-        // Texture::bind(
-        //     &self.gl,
-        //     TextureBind::Texture2D,
-        //     &self.gbuffer.albedo_metallic.texture,
-        //     ALBEDO_METALLIC_INDEX as u32,
-        // );
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.gbuffer.rough_occlusion_normal.texture,
-            ROUGH_OCCLUSION_NORMAL_INDEX as u32,
-        );
+        self.gbuffer.depth.bind2d(DEPTH_INDEX);
+        self.gbuffer.normal.bind2d(NORMAL_INDEX);
 
         self.quad.draw()
     }
@@ -138,16 +119,7 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
-        // Texture::unbind(
-        //     &self.gl,
-        //     TextureBind::Texture2D,
-        //     ALBEDO_METALLIC_INDEX as u32,
-        // );
-        Texture::unbind(
-            &self.gl,
-            TextureBind::Texture2D,
-            ROUGH_OCCLUSION_NORMAL_INDEX as u32,
-        );
+        Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
         RenderResult::default()
     }
 }

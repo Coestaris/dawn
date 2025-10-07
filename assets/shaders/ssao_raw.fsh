@@ -7,9 +7,9 @@
 // R8
 layout(location = 0) out float out_ssao_raw_halfres;
 
-// R16F. linear depth
+// R16F. Linear depth
 uniform sampler2D in_halfres_depth;
-// RG8 - octo encoded normal, view space
+// RG8_SNORM. Octo encoded normal, view space
 uniform sampler2D in_halfres_normal;
 
 layout(std140) uniform ubo_ssao_raw_params {

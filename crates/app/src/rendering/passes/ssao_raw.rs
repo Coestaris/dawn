@@ -156,18 +156,8 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         let program = shader.asset.cast();
         Program::bind(&self.gl, &program);
 
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.halfres_buffer.depth.texture,
-            HALFRES_DEPTH_INDEX as u32,
-        );
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.halfres_buffer.normal.texture,
-            HALFRES_NORMAL_INDEX as u32,
-        );
+        self.halfres_buffer.depth.bind2d(HALFRES_DEPTH_INDEX);
+        self.halfres_buffer.normal.bind2d(HALFRES_NORMAL_INDEX);
 
         self.quad.draw()
     }

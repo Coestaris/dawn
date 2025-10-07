@@ -7,11 +7,12 @@
 // R8
 layout(location = 0) out float out_ssao_blur;
 
+// DEPTH24. OpenGL default depth format
 uniform sampler2D in_depth;
 // R8
 uniform sampler2D in_ssao_raw_halfres;
-// RGBA8 (R - roughness, G - occlusion, BA - octo encoded view-space normal)
-uniform sampler2D in_rough_occlusion_normal;
+// RG8_SNORM. Octo encoded normal, view space
+uniform sampler2D in_normal;
 
 #if ENABLE_DEVTOOLS
 
@@ -36,8 +37,7 @@ float gauss(float x, float s) {
 }
 
 vec3 normal(vec2 uv) {
-    vec2 e = texture(in_rough_occlusion_normal, uv).zw;
-    return decode_oct(e);
+    return decode_oct(texture(in_normal, uv).rg);
 }
 
 float depth(vec2 uv) {

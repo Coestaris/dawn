@@ -7,19 +7,23 @@ use std::sync::Arc;
 
 pub struct GBuffer {
     pub fbo: Framebuffer,
-    // Depth buffer
+
+    // Depth24.
     pub depth: GTexture,
-    // RGBA8. RGB - albedo, A - metallic
-    pub albedo_metallic: GTexture,
-    // RGBA8. R - roughness, G - occlusion, BA - octo encoded normal, view space
-    pub rough_occlusion_normal: GTexture,
+    // RGB8.
+    pub albedo: GTexture,
+    // RGB8. R - occlusion, G - roughness, B - metallic
+    pub orm: GTexture,
+    // RG8_SNORM. Octo encoded normal, view space
+    pub normal: GTexture,
 }
 
 impl GBuffer {
     pub(crate) fn resize(&self, new_size: UVec2) {
         info!("Resizing GBuffer to {:?}", new_size);
-        self.albedo_metallic.resize(new_size);
-        self.rough_occlusion_normal.resize(new_size);
+        self.albedo.resize(new_size);
+        self.orm.resize(new_size);
+        self.normal.resize(new_size);
         self.depth.resize(new_size);
     }
 
@@ -31,29 +35,36 @@ impl GBuffer {
                 IRPixelFormat::DEPTH24,
                 FramebufferAttachment::Depth,
             )?,
-            albedo_metallic: GTexture::new(
+            albedo: GTexture::new(
                 gl.clone(),
-                IRPixelFormat::RGBA8,
+                IRPixelFormat::RGB8,
+                FramebufferAttachment::Color0,
+            )?,
+            orm: GTexture::new(
+                gl.clone(),
+                IRPixelFormat::RGB8,
                 FramebufferAttachment::Color1,
             )?,
-            rough_occlusion_normal: GTexture::new(
+            normal: GTexture::new(
                 gl.clone(),
-                IRPixelFormat::RGBA8,
-                FramebufferAttachment::Color3,
+                IRPixelFormat::RG8_SNORM,
+                FramebufferAttachment::Color2,
             )?,
         };
 
         buffer.resize(initial);
 
         // Attach textures to the framebuffer
-        buffer.albedo_metallic.attach(&buffer.fbo);
-        buffer.rough_occlusion_normal.attach(&buffer.fbo);
+        buffer.albedo.attach(&buffer.fbo);
+        buffer.orm.attach(&buffer.fbo);
+        buffer.normal.attach(&buffer.fbo);
         buffer.depth.attach(&buffer.fbo);
 
         Framebuffer::bind(&gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[
-            buffer.albedo_metallic.attachment,
-            buffer.rough_occlusion_normal.attachment,
+            buffer.albedo.attachment,
+            buffer.orm.attachment,
+            buffer.normal.attachment,
         ]);
         assert_eq!(buffer.fbo.is_complete(), true);
         Framebuffer::unbind(&gl);

@@ -34,14 +34,9 @@ impl HalfresBuffer {
             )?,
             normal: GTexture::new(
                 gl.clone(),
-                IRPixelFormat::RG8,
+                IRPixelFormat::RG8_SNORM,
                 FramebufferAttachment::Color1,
             )?,
-            // albedo_roughness: GTexture::new(
-            //     gl.clone(),
-            //     IRPixelFormat::RGBA8,
-            //     FramebufferAttachment::Color2,
-            // )?,
         };
 
         buffer.resize(initial);
@@ -49,13 +44,11 @@ impl HalfresBuffer {
         // Attach textures to the framebuffer
         buffer.depth.attach(&buffer.fbo);
         buffer.normal.attach(&buffer.fbo);
-        // buffer.albedo_roughness.attach(&buffer.fbo);
 
         Framebuffer::bind(&gl, &buffer.fbo);
         buffer.fbo.draw_buffers(&[
             buffer.depth.attachment,
             buffer.normal.attachment,
-            // buffer.albedo_roughness.attachment,
         ]);
         assert_eq!(buffer.fbo.is_complete(), true);
         Framebuffer::unbind(&gl);

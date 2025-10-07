@@ -105,4 +105,8 @@ impl GTexture {
         Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
         Framebuffer::unbind(&self.gl);
     }
+
+    pub fn bind2d(&self, index: i32) {
+        Texture::bind(&self.gl, TextureBind::Texture2D, &self.texture, index as u32);
+    }
 }
