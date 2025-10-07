@@ -16,10 +16,8 @@ pub enum DictionaryEntry {
 
 impl DictionaryEntry {
     pub fn as_map(&self) -> Option<&Vec<MapEntry>> {
-        if let DictionaryEntry::Map(entries) = self {
-            Some(entries)
-        } else {
-            None
+        match self {
+            DictionaryEntry::Map(map) => Some(map),
         }
     }
 }

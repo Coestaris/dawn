@@ -182,7 +182,6 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             self.ids.ssao_halfres,
             gbuffer.clone(),
             halfres.clone(),
-            self.config.clone(),
         );
         let ssao_raw = SSAORawPass::new(
             r.gl.clone(),

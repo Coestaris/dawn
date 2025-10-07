@@ -10,8 +10,8 @@ use std::sync::Arc;
 /// Defines the 2D circle primitive as a line loop.
 pub struct Circle3DLines {
     vao: VertexArray,
-    vbo: ArrayBuffer,
-    ebo: ElementArrayBuffer,
+    _vbo: ArrayBuffer,
+    _ebo: ElementArrayBuffer,
     index_count: usize,
 }
 
@@ -70,8 +70,8 @@ impl Circle3DLines {
 
         Circle3DLines {
             vao,
-            vbo,
-            ebo,
+            _vbo: vbo,
+            _ebo: ebo,
             index_count: indices_edges.len(),
         }
     }

@@ -55,7 +55,7 @@ struct MainToEcs {
 
 fn init_world(world: &mut World, to_ecs: MainToEcs) {
     to_ecs.renderer_proxy.attach_to_ecs(world);
-    to_ecs.dispatcher.attach_to_ecs(world, WINDOW_SIZE);
+    to_ecs.dispatcher.attach_to_ecs(world);
 
     InputHolder::new().attach_to_ecs(world);
     FreeCamera::new().attach_to_ecs(world);
@@ -188,7 +188,7 @@ pub fn run_dawn<PH>(
         dispatcher: renderer_dispatcher,
     };
     #[cfg(feature = "threading")]
-    let world_loop = match sync {
+    let _world_loop = match sync {
         WorldSyncMode::FixedTickRate(tps) => {
             use dawn_ecs::world::threading::WorldLoopProxy;
             #[cfg(feature = "devtools")]
@@ -225,14 +225,14 @@ pub fn run_dawn<PH>(
     }
     .unwrap();
     #[cfg(not(feature = "threading"))]
-    let mut world_loop = WorldLoop::new_with_monitoring(|w| Ok(init_world(w, to_ecs))).unwrap();
+    let mut _world_loop = WorldLoop::new_with_monitoring(|w| Ok(init_world(w, to_ecs))).unwrap();
 
     // Start the rendering loop
     // This will block the main thread until the window is closed.
     #[cfg(feature = "threading")]
     renderer.run(Box::new(move || true));
     #[cfg(not(feature = "threading"))]
-    renderer.run(Box::new(move || match world_loop.tick() {
+    renderer.run(Box::new(move || match _world_loop.tick() {
         WorldLoopTickResult::Continue => true,
         WorldLoopTickResult::Exit => false,
     }));

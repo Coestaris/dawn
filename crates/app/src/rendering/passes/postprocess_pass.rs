@@ -59,7 +59,6 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
                 self.shader = None;
             }
             RenderingEvent::UpdateShader(_, shader) => {
-                let clone = shader.clone();
                 self.shader = Some(PostprocessShader::new(shader.clone()).unwrap());
 
                 // Setup shader static uniforms

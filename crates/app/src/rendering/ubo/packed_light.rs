@@ -24,10 +24,13 @@ impl LightsHeaderPayload {
     }
 }
 
-const LIGHT_KIND_SUN: u32 = 1;
-const LIGHT_KIND_SPOT: u32 = 2;
-const LIGHT_KIND_POINT: u32 = 3;
-const LIGHT_KIND_AREA_RECT: u32 = 4;
+#[allow(dead_code)]
+mod light_kinds {
+    pub(crate) const LIGHT_KIND_SUN: u32 = 1;
+    pub(crate) const LIGHT_KIND_SPOT: u32 = 2;
+    pub(crate) const LIGHT_KIND_POINT: u32 = 3;
+    pub(crate) const LIGHT_KIND_AREA_RECT: u32 = 4;
+}
 
 #[repr(C)]
 #[repr(packed)]
@@ -118,7 +121,7 @@ impl PackedLights {
 
     pub fn push_point_light(&mut self, l: &RenderablePointLight, view_mat: &glam::Mat4) {
         let mut packed = LightPackedPayload::default();
-        packed.kind = LIGHT_KIND_POINT;
+        packed.kind = light_kinds::LIGHT_KIND_POINT;
         packed.flags = 0;
         packed.reserved = 0;
         packed.intensity = l.intensity;
@@ -140,7 +143,7 @@ impl PackedLights {
 
     pub fn push_sun_light(&mut self, l: &RenderableSunLight, view_mat: &glam::Mat4) {
         let mut packed = LightPackedPayload::default();
-        packed.kind = LIGHT_KIND_SUN;
+        packed.kind = light_kinds::LIGHT_KIND_SUN;
         packed.flags = 0;
         packed.reserved = 0;
         packed.intensity = l.intensity;
