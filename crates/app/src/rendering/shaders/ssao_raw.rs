@@ -13,9 +13,7 @@ pub struct SSAORawShader {
 }
 
 impl SSAORawShader {
-    pub fn new(
-        shader: TypedAsset<Program>,
-    ) -> Result<Self, ShaderError> {
+    pub fn new(shader: TypedAsset<Program>) -> Result<Self, ShaderError> {
         let clone = shader.clone();
         let program = shader.cast();
         Ok(Self {

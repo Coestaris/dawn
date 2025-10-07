@@ -1,4 +1,3 @@
-
 fn main() {
     let _build_info = build_info_build::build_script().build();
 
@@ -38,8 +37,8 @@ fn main() {
     #[cfg(feature = "build_assets")]
     {
         use dawn_package::package;
-        use std::path::PathBuf;
         use dawn_package::Compression;
+        use std::path::PathBuf;
         let profile = std::env::var("PROFILE").unwrap();
         let assets = std::env::current_dir()
             .unwrap()

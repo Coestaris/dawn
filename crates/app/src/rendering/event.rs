@@ -7,7 +7,7 @@ use glam::{Mat4, UVec2};
 #[derive(Debug, Clone)]
 pub enum LightTextureType {
     SunLight,
-    PointLight
+    PointLight,
 }
 
 #[derive(Debug, Clone)]

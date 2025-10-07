@@ -1,4 +1,6 @@
-use dawn_assets::ir::mesh::{IRIndexType, IRMeshLayoutItem, IRLayoutField, IRLayoutSampleType, IRTopology};
+use dawn_assets::ir::mesh::{
+    IRIndexType, IRLayoutField, IRLayoutSampleType, IRMeshLayoutItem, IRTopology,
+};
 use dawn_graphics::gl::raii::array_buffer::{ArrayBuffer, ArrayBufferUsage};
 use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementArrayBufferUsage};
 use dawn_graphics::gl::raii::vertex_array::VertexArray;

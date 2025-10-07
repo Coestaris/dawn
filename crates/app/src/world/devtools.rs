@@ -119,7 +119,9 @@ fn gizmos_assets_handler(
             );
         }
         AssetHubEvent::AssetLoaded(id) if id.as_str() == POINT_LIGHT_TEXTURE => {
-            let texture = hub.get_typed::<Texture>(POINT_LIGHT_TEXTURE.into()).unwrap();
+            let texture = hub
+                .get_typed::<Texture>(POINT_LIGHT_TEXTURE.into())
+                .unwrap();
             dispatcher.dispatch(
                 RenderingEvent::SetLightTexture(LightTextureType::PointLight, texture),
                 &mut sender,
