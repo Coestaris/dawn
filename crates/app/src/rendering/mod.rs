@@ -11,7 +11,7 @@ use crate::rendering::fbo::halfres::HalfresBuffer;
 use crate::rendering::fbo::obuffer::LightningTarget;
 use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
 #[cfg(feature = "devtools")]
-use crate::rendering::passes::bounding_pass::BoundingPass;
+use crate::rendering::passes::devtools_pass::DevtoolsPass;
 use crate::rendering::passes::geometry_pass::GeometryPass;
 #[cfg(feature = "devtools")]
 use crate::rendering::passes::gizmos_pass::GizmosPass;
@@ -148,7 +148,7 @@ pub struct Renderer {
 }
 
 #[cfg(feature = "devtools")]
-type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass, BoundingPass, GizmosPass);
+type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass, DevtoolsPass, GizmosPass);
 #[cfg(not(feature = "devtools"))]
 type ChainType = construct_chain_type!(RenderingEvent; GeometryPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass);
 
@@ -218,7 +218,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
 
         #[cfg(feature = "devtools")]
         {
-            let bounding_pass = BoundingPass::new(
+            let bounding_pass = DevtoolsPass::new(
                 r.gl.clone(),
                 self.ids.bounding_id,
                 gbuffer.clone(),

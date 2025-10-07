@@ -19,27 +19,27 @@ use std::rc::Rc;
 use std::sync::Arc;
 use crate::rendering::shaders::line::LineShader;
 
-pub(crate) struct BoundingPass {
+pub(crate) struct DevtoolsPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     cube: Cube3DLines,
-    shader: Option<LineShader>,
+    line_shader: Option<LineShader>,
     viewport_size: UVec2,
     gbuffer: Rc<GBuffer>,
     config: RenderingConfig,
 }
 
-impl BoundingPass {
+impl DevtoolsPass {
     pub fn new(
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
         config: RenderingConfig,
     ) -> Self {
-        BoundingPass {
+        DevtoolsPass {
             gl: gl.clone(),
             id,
-            shader: None,
+            line_shader: None,
             cube: Cube3DLines::new(gl),
             viewport_size: UVec2::ZERO,
             gbuffer,
@@ -48,10 +48,10 @@ impl BoundingPass {
     }
 }
 
-impl RenderPass<RenderingEvent> for BoundingPass {
+impl RenderPass<RenderingEvent> for DevtoolsPass {
     fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
         fn dispatch_bounding_pass(ptr: *mut u8, event: RenderingEvent) {
-            let pass = unsafe { &mut *(ptr as *mut BoundingPass) };
+            let pass = unsafe { &mut *(ptr as *mut DevtoolsPass) };
             pass.dispatch(event);
         }
 
@@ -61,14 +61,14 @@ impl RenderPass<RenderingEvent> for BoundingPass {
     fn dispatch(&mut self, event: RenderingEvent) {
         match event {
             RenderingEvent::DropAllAssets => {
-                self.shader = None;
+                self.line_shader = None;
             }
 
             RenderingEvent::UpdateShader(_, shader) => {
-                self.shader = Some(LineShader::new(shader.clone()).unwrap());
+                self.line_shader = Some(LineShader::new(shader.clone()).unwrap());
 
                 // Setup shader static uniforms
-                let shader = self.shader.as_ref().unwrap();
+                let shader = self.line_shader.as_ref().unwrap();
                 let program = shader.asset.cast();
                 Program::bind(&self.gl, &program);
                 program.set_uniform_block_binding(
@@ -95,7 +95,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         _backend: &RendererBackend<RenderingEvent>,
         _frame: &DataStreamFrame,
     ) -> RenderResult {
-        if self.shader.is_none() {
+        if self.line_shader.is_none() {
             return RenderResult::default();
         }
 
@@ -123,7 +123,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         }
 
         // Bind shader
-        let shader = self.shader.as_ref().unwrap();
+        let shader = self.line_shader.as_ref().unwrap();
         let program = shader.asset.cast();
         Program::bind(&self.gl, &program);
 
@@ -136,7 +136,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         _: &mut RendererBackend<RenderingEvent>,
         renderable: &Renderable,
     ) -> RenderResult {
-        if self.shader.is_none() {
+        if self.line_shader.is_none() {
             return RenderResult::default();
         }
 
@@ -148,7 +148,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         }
 
         let mesh = renderable.mesh.cast();
-        let shader = self.shader.as_ref().unwrap();
+        let shader = self.line_shader.as_ref().unwrap();
         let program = shader.asset.cast();
         let mut result = RenderResult::default();
 
@@ -156,12 +156,12 @@ impl RenderPass<RenderingEvent> for BoundingPass {
         static SUBMESH_COLOR: Vec4 = Vec4::new(0.0, 1.0, 0.0, 1.0);
 
         fn draw_cube(
-            pass: &BoundingPass,
+            pass: &DevtoolsPass,
             renderable_model: Mat4,
             min: Vec3,
             max: Vec3,
         ) -> RenderResult {
-            let shader = pass.shader.as_ref().unwrap();
+            let shader = pass.line_shader.as_ref().unwrap();
             let program = shader.asset.cast();
             let mode = pass.config.get_bounding_box_mode();
 
@@ -202,7 +202,7 @@ impl RenderPass<RenderingEvent> for BoundingPass {
     }
 
     fn end(&mut self, _backend: &mut RendererBackend<RenderingEvent>) -> RenderResult {
-        if self.shader.is_none() {
+        if self.line_shader.is_none() {
             return RenderResult::default();
         }
         if matches!(

@@ -1,5 +1,5 @@
 #[cfg(feature = "devtools")]
-pub mod bounding_pass;
+pub mod devtools_pass;
 pub mod geometry_pass;
 #[cfg(feature = "devtools")]
 pub mod gizmos_pass;
