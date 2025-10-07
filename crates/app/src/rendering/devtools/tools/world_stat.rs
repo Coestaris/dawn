@@ -1,4 +1,4 @@
-use crate::rendering::devtools::tools::{mul_sample, row_duration, row_f32, row_height};
+use crate::rendering::devtools::tools::{mul_sample, row3_duration, row3_f32, row_height};
 use crate::world::devtools::WorldStatistics;
 use dawn_ecs::world::WorldLoopMonitorEvent;
 use egui_extras::{Column, TableBuilder};
@@ -37,13 +37,13 @@ pub fn tool_world_stat(
                 })
                 .body(|mut body| {
                     body.row(text_height, |mut row| {
-                        row_f32(&mut row, "Update Time (ms)", monitor.tps);
+                        row3_f32(&mut row, "Update Time (ms)", monitor.tps);
                     });
                     body.row(text_height, |mut row| {
-                        row_f32(&mut row, "Load (percent)", mul_sample(monitor.load, 100.0));
+                        row3_f32(&mut row, "Load (percent)", mul_sample(monitor.load, 100.0));
                     });
                     body.row(text_height, |mut row| {
-                        row_duration(&mut row, "Cycle time", monitor.cycle_time);
+                        row3_duration(&mut row, "Cycle time", monitor.cycle_time);
                     });
                 });
 
