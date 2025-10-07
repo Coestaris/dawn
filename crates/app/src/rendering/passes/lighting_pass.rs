@@ -16,6 +16,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
+use winit::window::Window;
 
 const DEPTH_INDEX: i32 = 0;
 const ALBEDO_METALLIC_INDEX: i32 = 1;
@@ -87,10 +88,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 Program::bind(&self.gl, &program);
                 program.set_uniform(&shader.depth, DEPTH_INDEX);
                 program.set_uniform(&shader.albedo_metallic, ALBEDO_METALLIC_INDEX);
-                program.set_uniform(
-                    &shader.rough_occlusion_normal,
-                    ROUGH_OCCLUSION_NORMAL_INDEX,
-                );
+                program.set_uniform(&shader.rough_occlusion_normal, ROUGH_OCCLUSION_NORMAL_INDEX);
                 program.set_uniform(&shader.packed_lights, PACKED_LIGHTS_INDEX);
                 program.set_uniform(&shader.ssao, SSAO_INDEX);
                 Program::unbind(&self.gl);
@@ -111,6 +109,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
     #[inline(always)]
     fn begin(
         &mut self,
+        _: &Window,
         _: &RendererBackend<RenderingEvent>,
         frame: &DataStreamFrame,
     ) -> RenderResult {
@@ -203,7 +202,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
     }
 
     #[inline(always)]
-    fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
+    fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Framebuffer::unbind(&self.gl);
         Program::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
@@ -212,7 +211,11 @@ impl RenderPass<RenderingEvent> for LightingPass {
             TextureBind::Texture2D,
             ALBEDO_METALLIC_INDEX as u32,
         );
-        Texture::unbind(&self.gl, TextureBind::Texture2D, ROUGH_OCCLUSION_NORMAL_INDEX as u32);
+        Texture::unbind(
+            &self.gl,
+            TextureBind::Texture2D,
+            ROUGH_OCCLUSION_NORMAL_INDEX as u32,
+        );
         Texture::unbind(&self.gl, TextureBind::Texture2D, PACKED_LIGHTS_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, SSAO_INDEX as u32);
         RenderResult::default()

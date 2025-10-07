@@ -14,6 +14,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
+use winit::window::Window;
 
 const DEPTH_INDEX: i32 = 0;
 const SSAO_RAW_INDEX: i32 = 1;
@@ -99,6 +100,7 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
     #[inline(always)]
     fn begin(
         &mut self,
+        _: &Window,
         _: &RendererBackend<RenderingEvent>,
         _frame: &DataStreamFrame,
     ) -> RenderResult {
@@ -165,7 +167,7 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
     }
 
     #[inline(always)]
-    fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
+    fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);

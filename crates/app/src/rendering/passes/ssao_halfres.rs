@@ -2,9 +2,7 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::halfres::HalfresBuffer;
-use crate::rendering::fbo::ssao::SSAOTarget;
 use crate::rendering::primitive::quad::Quad2D;
-use crate::rendering::shaders::ssao_blur::SSAOBlurShader;
 use crate::rendering::shaders::ssao_halfres::SSAOHalfresShader;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
@@ -16,6 +14,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
+use winit::window::Window;
 
 const DEPTH_INDEX: i32 = 0;
 const ALBEDO_METALLIC_INDEX: i32 = 1;
@@ -98,6 +97,7 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
     #[inline(always)]
     fn begin(
         &mut self,
+        _: &Window,
         _: &RendererBackend<RenderingEvent>,
         _frame: &DataStreamFrame,
     ) -> RenderResult {
@@ -140,7 +140,7 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
     }
 
     #[inline(always)]
-    fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
+    fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
