@@ -336,6 +336,4 @@ mod config_impl {
 #[cfg(not(feature = "devtools"))]
 pub type RenderingConfig = config_static::RenderingConfig;
 #[cfg(feature = "devtools")]
-pub use config_impl::{
-    GeneralConfig, LightingConfig, RenderingConfig, SSAOBlurConfig, SSAORawConfig,
-};
+pub use config_impl::RenderingConfig;

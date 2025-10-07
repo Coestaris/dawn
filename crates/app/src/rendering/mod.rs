@@ -23,8 +23,7 @@ use crate::rendering::shaders::{
     SSAO_BLUR_SHADER, SSAO_HALFRES_SHADER, SSAO_RAW_SHADER,
 };
 use crate::rendering::ubo::camera::CameraUBO;
-use crate::rendering::ubo::ssao_raw::SSAORawParametersUBO;
-use crate::rendering::ubo::{CAMERA_UBO_BINDING, SSAO_RAW_PARAMS_UBO_BINDING};
+use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::WINDOW_SIZE;
 use build_info::BuildInfo;
 use dawn_graphics::gl::probe::OpenGLInfo;
