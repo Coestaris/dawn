@@ -3,7 +3,6 @@ use dawn_graphics::gl::raii::array_buffer::{ArrayBuffer, ArrayBufferUsage};
 use dawn_graphics::gl::raii::element_array_buffer::{ElementArrayBuffer, ElementArrayBufferUsage};
 use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::result::RenderResult;
-use glam::{Mat4, Vec3};
 use std::sync::Arc;
 
 /// Defines the 2-point line primitive as a line loop along the z-axis.
