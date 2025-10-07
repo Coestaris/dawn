@@ -1,4 +1,5 @@
 use crate::rendering::config::{BoundingBoxMode, RenderingConfig};
+use crate::rendering::devtools::DevToolsGUI;
 use crate::rendering::event::{LightTextureType, RenderingEvent};
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
@@ -22,14 +23,17 @@ use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::{Mat4, Quat, UVec2, Vec2, Vec3, Vec4};
 use glow::HasContext;
+use std::cell::RefCell;
 use std::f32::consts::FRAC_PI_2;
 use std::rc::Rc;
 use std::sync::Arc;
+use winit::window::Window;
 
 pub(crate) struct DevtoolsPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     config: RenderingConfig,
+    gui: Rc<RefCell<DevToolsGUI>>,
 
     // Resources
     line_shader: Option<LineShader>,
@@ -62,6 +66,7 @@ impl DevtoolsPass {
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
         config: RenderingConfig,
+        gui: Rc<RefCell<DevToolsGUI>>,
     ) -> Self {
         DevtoolsPass {
             gl: gl.clone(),
@@ -79,6 +84,7 @@ impl DevtoolsPass {
             view: Default::default(),
             gbuffer,
             config,
+            gui,
         }
     }
 
@@ -406,7 +412,13 @@ impl DevtoolsPass {
         }
     }
 
-    fn process_overlays(&mut self) {}
+    fn process_overlays(
+        &mut self,
+        win: &Window,
+        backend: &RendererBackend<RenderingEvent>,
+    ) -> ProcessResult {
+        ProcessResult::Rendered(self.gui.borrow_mut().render(win, backend))
+    }
 }
 
 impl RenderPass<RenderingEvent> for DevtoolsPass {
@@ -484,7 +496,8 @@ impl RenderPass<RenderingEvent> for DevtoolsPass {
 
     fn begin(
         &mut self,
-        _backend: &RendererBackend<RenderingEvent>,
+        win: &Window,
+        backend: &RendererBackend<RenderingEvent>,
         frame: &DataStreamFrame,
     ) -> RenderResult {
         let mut result = RenderResult::default();
@@ -506,11 +519,15 @@ impl RenderPass<RenderingEvent> for DevtoolsPass {
                 r
             }
         };
+        result += match self.process_overlays(win, backend) {
+            ProcessResult::Skipped => RenderResult::default(),
+            ProcessResult::Rendered(r) => r,
+            ProcessResult::RenderWithDepthBlit(r) => {
+                blit = true;
+                r
+            }
+        };
 
         result
-    }
-
-    fn end(&mut self, _backend: &mut RendererBackend<RenderingEvent>) -> RenderResult {
-        RenderResult::default()
     }
 }

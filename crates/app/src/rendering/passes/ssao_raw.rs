@@ -1,10 +1,9 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
-use crate::rendering::fbo::gbuffer::GBuffer;
+use crate::rendering::fbo::halfres::HalfresBuffer;
 use crate::rendering::fbo::ssao::SSAOHalfresTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::ssao_raw::SSAORawShader;
-use crate::rendering::textures::noise::white_noise_rgf32;
 use crate::rendering::ubo::ssao_raw::{SSAORawKernelUBO, SSAORawParametersUBO};
 use crate::rendering::ubo::{
     CAMERA_UBO_BINDING, SSAO_RAW_KERNEL_UBO_BINDING, SSAO_RAW_PARAMS_UBO_BINDING,
@@ -16,11 +15,11 @@ use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
+use glam::UVec2;
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
-use glam::UVec2;
-use crate::rendering::fbo::halfres::HalfresBuffer;
+use winit::window::Window;
 
 const HALFRES_DEPTH_INDEX: i32 = 0;
 const HALFRES_NORMAL_INDEX: i32 = 1;
@@ -99,10 +98,7 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
                     shader.ubo_ssao_raw_params,
                     SSAO_RAW_PARAMS_UBO_BINDING as u32,
                 );
-                program.set_uniform_block_binding(
-                    shader.ubo_camera,
-                    CAMERA_UBO_BINDING as u32,
-                );
+                program.set_uniform_block_binding(shader.ubo_camera, CAMERA_UBO_BINDING as u32);
                 program.set_uniform(&shader.halfres_depth, HALFRES_DEPTH_INDEX);
                 program.set_uniform(&shader.halfres_normal, HALFRES_NORMAL_INDEX);
                 Program::unbind(&self.gl);
@@ -117,6 +113,7 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
 
     fn begin(
         &mut self,
+        _: &Window,
         _: &RendererBackend<RenderingEvent>,
         _frame: &DataStreamFrame,
     ) -> RenderResult {
@@ -177,16 +174,21 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
     }
 
     #[inline(always)]
-    fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
+    fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         unsafe {
             // Restore viewport to full resolution
-            self.gl.viewport(0, 0, self.viewport.x as i32, self.viewport.y as i32);
+            self.gl
+                .viewport(0, 0, self.viewport.x as i32, self.viewport.y as i32);
         }
 
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, HALFRES_DEPTH_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, HALFRES_NORMAL_INDEX as u32);
+        Texture::unbind(
+            &self.gl,
+            TextureBind::Texture2D,
+            HALFRES_NORMAL_INDEX as u32,
+        );
         RenderResult::default()
     }
 }
