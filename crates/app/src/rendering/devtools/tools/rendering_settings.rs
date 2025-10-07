@@ -169,7 +169,7 @@ pub fn tool_rendering_settings(
                 let mut changed = false;
                 changed |= egui::Slider::new(&mut sunlight_control.intensity, 0.0..=10.0)
                     .text("Intensity")
-                    .ui(ui)  
+                    .ui(ui)
                     .changed();
                 changed |= egui::Slider::new(&mut sunlight_control.ambient, 0.0..=1.0)
                     .text("Ambient")
