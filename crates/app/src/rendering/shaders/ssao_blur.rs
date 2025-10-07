@@ -30,7 +30,7 @@ pub struct SSAOBlurShader {
     pub ubo_camera: u32,
     pub depth: UniformLocation,
     pub ssao_raw: UniformLocation,
-    pub rough_occlusion_normal: UniformLocation,
+    pub normal: UniformLocation,
 
     #[cfg(feature = "devtools")]
     pub devtools: SSAOBlurShaderDevtools,
@@ -47,7 +47,8 @@ impl SSAOBlurShader {
 
             depth: program.get_uniform_location("in_depth")?,
             ssao_raw: program.get_uniform_location("in_ssao_raw_halfres")?,
-            rough_occlusion_normal: program.get_uniform_location("in_rough_occlusion_normal")?,
+            normal: program.get_uniform_location("in_normal")?,
+
             #[cfg(feature = "devtools")]
             devtools: SSAOBlurShaderDevtools::new(&program),
         })

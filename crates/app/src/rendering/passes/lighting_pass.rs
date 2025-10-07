@@ -19,10 +19,11 @@ use std::sync::Arc;
 use winit::window::Window;
 
 const DEPTH_INDEX: i32 = 0;
-const ALBEDO_METALLIC_INDEX: i32 = 1;
-const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 2;
-const PACKED_LIGHTS_INDEX: i32 = 3;
-const SSAO_INDEX: i32 = 4;
+const ALBEDO_INDEX: i32 = 1;
+const ORM_INDEX: i32 = 2;
+const NORMAL_INDEX: i32 = 3;
+const PACKED_LIGHTS_INDEX: i32 = 4;
+const SSAO_INDEX: i32 = 5;
 
 pub(crate) struct LightingPass {
     gl: Arc<glow::Context>,
@@ -87,8 +88,9 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 let program = shader.asset.cast();
                 Program::bind(&self.gl, &program);
                 program.set_uniform(&shader.depth, DEPTH_INDEX);
-                program.set_uniform(&shader.albedo_metallic, ALBEDO_METALLIC_INDEX);
-                program.set_uniform(&shader.rough_occlusion_normal, ROUGH_OCCLUSION_NORMAL_INDEX);
+                program.set_uniform(&shader.albedo, ALBEDO_INDEX);
+                program.set_uniform(&shader.orm, ORM_INDEX);
+                program.set_uniform(&shader.normal, NORMAL_INDEX);
                 program.set_uniform(&shader.packed_lights, PACKED_LIGHTS_INDEX);
                 program.set_uniform(&shader.ssao, SSAO_INDEX);
                 Program::unbind(&self.gl);
@@ -167,36 +169,12 @@ impl RenderPass<RenderingEvent> for LightingPass {
             );
         }
         program.set_uniform(&shader.packed_lights_header, header.as_uvec4());
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.gbuffer.depth.texture,
-            DEPTH_INDEX as u32,
-        );
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.gbuffer.albedo_metallic.texture,
-            ALBEDO_METALLIC_INDEX as u32,
-        );
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.gbuffer.rough_occlusion_normal.texture,
-            ROUGH_OCCLUSION_NORMAL_INDEX as u32,
-        );
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.packed_lights.texture,
-            PACKED_LIGHTS_INDEX as u32,
-        );
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.ssao_blurred.texture.texture,
-            SSAO_INDEX as u32,
-        );
+        self.gbuffer.depth.bind2d(DEPTH_INDEX);
+        self.gbuffer.albedo.bind2d(ALBEDO_INDEX);
+        self.gbuffer.orm.bind2d(ORM_INDEX);
+        self.gbuffer.normal.bind2d(NORMAL_INDEX);
+        self.packed_lights.bind(PACKED_LIGHTS_INDEX);
+        self.ssao_blurred.texture.bind2d(SSAO_INDEX);
 
         self.quad.draw()
     }
@@ -206,16 +184,9 @@ impl RenderPass<RenderingEvent> for LightingPass {
         Framebuffer::unbind(&self.gl);
         Program::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
-        Texture::unbind(
-            &self.gl,
-            TextureBind::Texture2D,
-            ALBEDO_METALLIC_INDEX as u32,
-        );
-        Texture::unbind(
-            &self.gl,
-            TextureBind::Texture2D,
-            ROUGH_OCCLUSION_NORMAL_INDEX as u32,
-        );
+        Texture::unbind(&self.gl, TextureBind::Texture2D, ALBEDO_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, ORM_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, PACKED_LIGHTS_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, SSAO_INDEX as u32);
         RenderResult::default()

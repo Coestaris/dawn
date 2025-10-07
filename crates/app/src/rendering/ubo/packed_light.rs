@@ -193,4 +193,13 @@ impl PackedLights {
             .ok();
         Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
     }
+
+    pub fn bind(&self, index: i32) {
+        Texture::bind(
+            &self.gl,
+            TextureBind::Texture2D,
+            &self.texture,
+            index as u32,
+        );
+    }
 }
