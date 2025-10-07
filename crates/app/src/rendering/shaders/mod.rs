@@ -1,5 +1,5 @@
 pub mod billboard;
-pub mod geometry;
+pub mod forward;
 pub mod lighting;
 pub mod line;
 pub mod postprocess;
@@ -8,7 +8,7 @@ pub mod ssao_halfres;
 pub mod ssao_raw;
 
 pub const LINE_SHADER: &str = "line_shader";
-pub const GEOMETRY_SHADER: &str = "geometry_shader";
+pub const FORWARD_SHADER: &str = "forward_shader";
 pub const BILLBOARD_SHADER: &str = "billboard_shader";
 pub const LIGHTING_SHADER: &str = "lighting_shader";
 pub const POSTPROCESS_SHADER: &str = "postprocess_shader";
