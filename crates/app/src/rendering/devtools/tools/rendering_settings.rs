@@ -230,9 +230,6 @@ pub fn tool_rendering_settings(
                 egui::Slider::new(&mut config.ssao_blur.sigma_spatial, 0.1..=40.0)
                     .text("Sigma Spatial")
                     .ui(ui);
-                egui::Slider::new(&mut config.ssao_blur.sigma_depth, 0.1..=30.0)
-                    .text("Sigma Depth")
-                    .ui(ui);
                 egui::Slider::new(&mut config.ssao_blur.sigma_normal, 8.0..=128.0)
                     .text("Sigma Normal")
                     .ui(ui);

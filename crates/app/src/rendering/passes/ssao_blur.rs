@@ -16,9 +16,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 use winit::window::Window;
 
-const DEPTH_INDEX: i32 = 0;
-const SSAO_RAW_INDEX: i32 = 1;
-const NORMAL_INDEX: i32 = 2;
+const SSAO_RAW_INDEX: i32 = 0;
+const NORMAL_INDEX: i32 = 1;
 
 pub(crate) struct SSAOBlurPass {
     gl: Arc<glow::Context>,
@@ -83,7 +82,6 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
                     crate::rendering::CAMERA_UBO_BINDING as u32,
                 );
                 program.set_uniform(&shader.ssao_raw, SSAO_RAW_INDEX);
-                program.set_uniform(&shader.depth, DEPTH_INDEX);
                 program.set_uniform(&shader.normal, NORMAL_INDEX);
 
                 Program::unbind(&self.gl);
@@ -132,17 +130,12 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
                 self.config.get_ssao_blur_sigma_spatial(),
             );
             program.set_uniform(
-                &shader.devtools.sigma_depth,
-                self.config.get_ssao_blur_sigma_depth(),
-            );
-            program.set_uniform(
                 &shader.devtools.sigma_normal,
                 self.config.get_ssao_blur_sigma_normal(),
             );
         }
 
         self.ssao_raw_taget.texture.bind2d(SSAO_RAW_INDEX);
-        self.gbuffer.depth.bind2d(DEPTH_INDEX);
         self.gbuffer.normal.bind2d(NORMAL_INDEX);
 
         self.quad.draw()
@@ -152,7 +145,6 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
     fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, SSAO_RAW_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
         RenderResult::default()
