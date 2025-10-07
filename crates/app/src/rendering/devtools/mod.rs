@@ -7,6 +7,7 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::devtools::compositor::Compositor;
 use crate::rendering::event::RenderingEvent;
 use build_info::BuildInfo;
+use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::renderer::RendererBackend;
 use std::sync::Arc;
 use winit::window::Window;
@@ -69,12 +70,16 @@ impl DevToolsGUI {
         self.compositor.before_frame();
     }
 
-    pub fn after_render(&mut self, window: &Window, _backend: &RendererBackend<RenderingEvent>) {
+    pub fn render(
+        &mut self,
+        window: &Window,
+        _backend: &RendererBackend<RenderingEvent>,
+    ) -> RenderResult {
         // Render UI here if needed
         if let (Some(egui_winit), Some(egui_glow)) = (&mut self.egui_winit, &mut self.egui_glow) {
             let raw_input = egui_winit.take_egui_input(&window);
             let full_output = egui_winit.egui_ctx().run(raw_input, |ctx| {
-                self.compositor.run(ctx);
+                self.compositor.render(ctx);
             });
             egui_winit.handle_platform_output(&window, full_output.platform_output);
 
@@ -91,6 +96,8 @@ impl DevToolsGUI {
                 &full_output.textures_delta,
             );
         }
+
+        RenderResult::default()
     }
 }
 

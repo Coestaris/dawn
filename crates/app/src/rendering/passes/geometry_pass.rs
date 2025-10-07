@@ -2,6 +2,8 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::frustum::FrustumCulling;
+use crate::rendering::shaders::geometry::GeometryShader;
+use crate::rendering::textures::fallback_tex::FallbackTextures;
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_graphics::gl::material::Material;
@@ -16,8 +18,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
-use crate::rendering::shaders::geometry::GeometryShader;
-use crate::rendering::textures::fallback_tex::FallbackTextures;
+use winit::window::Window;
 
 const ALBEDO_INDEX: i32 = 0;
 const NORMAL_INDEX: i32 = 1;
@@ -121,6 +122,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
     #[inline(always)]
     fn begin(
         &mut self,
+        _: &Window,
         _: &RendererBackend<RenderingEvent>,
         _frame: &DataStreamFrame,
     ) -> RenderResult {
@@ -154,6 +156,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
     #[inline(always)]
     fn on_renderable(
         &mut self,
+        _: &Window,
         _: &mut RendererBackend<RenderingEvent>,
         renderable: &Renderable,
     ) -> RenderResult {
@@ -251,7 +254,7 @@ impl RenderPass<RenderingEvent> for GeometryPass {
     }
 
     #[inline(always)]
-    fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
+    fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         unsafe {
             self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::FILL);
         }

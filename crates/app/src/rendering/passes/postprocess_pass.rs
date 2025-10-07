@@ -13,6 +13,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
+use winit::window::Window;
 
 pub(crate) struct PostProcessPass {
     gl: Arc<glow::Context>,
@@ -83,6 +84,7 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
     #[inline(always)]
     fn begin(
         &mut self,
+        _: &Window,
         _: &RendererBackend<RenderingEvent>,
         _frame: &DataStreamFrame,
     ) -> RenderResult {
@@ -114,7 +116,7 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
     }
 
     #[inline(always)]
-    fn end(&mut self, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
+    fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Program::unbind(&self.gl);
         Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
         RenderResult::default()

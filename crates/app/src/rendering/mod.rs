@@ -35,6 +35,7 @@ use dawn_graphics::{construct_chain, construct_chain_type};
 use glam::Vec3;
 use glow::HasContext;
 use log::{debug, info, warn};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -143,7 +144,7 @@ pub struct Renderer {
     ids: PassIDs,
     config: RenderingConfig,
     #[cfg(feature = "devtools")]
-    devtools_gui: DevToolsGUI,
+    devtools_gui: Rc<RefCell<DevToolsGUI>>,
 }
 
 #[cfg(feature = "devtools")]
@@ -158,7 +159,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         r: &'static mut RendererBackend<RenderingEvent>,
     ) -> anyhow::Result<ChainType> {
         #[cfg(feature = "devtools")]
-        self.devtools_gui.attach_to_window(w, r);
+        self.devtools_gui.borrow_mut().attach_to_window(w, r);
 
         log_info(&r.info);
         pre_pipeline_construct(&r.gl);
@@ -222,6 +223,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
                 self.ids.devtools_id,
                 gbuffer.clone(),
                 self.config.clone(),
+                self.devtools_gui.clone(),
             );
 
             Ok(construct_chain!(
@@ -257,17 +259,16 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         debug!("Renderer received window event: {:?}", _event);
 
         #[cfg(feature = "devtools")]
-        self.devtools_gui.on_window_event(_window, _event);
+        self.devtools_gui
+            .borrow_mut()
+            .on_window_event(_window, _event);
     }
 
     fn before_frame(&mut self, _window: &Window, _backend: &RendererBackend<RenderingEvent>) {
         #[cfg(feature = "devtools")]
-        self.devtools_gui.before_frame(_window, _backend);
-    }
-
-    fn after_render(&mut self, _window: &Window, _backend: &RendererBackend<RenderingEvent>) {
-        #[cfg(feature = "devtools")]
-        self.devtools_gui.after_render(_window, _backend);
+        self.devtools_gui
+            .borrow_mut()
+            .before_frame(_window, _backend);
     }
 }
 
@@ -377,12 +378,12 @@ impl RendererBuilder {
             ids: self.ids,
             config: self.config.clone(),
             #[cfg(feature = "devtools")]
-            devtools_gui: DevToolsGUI::new(
+            devtools_gui: Rc::new(RefCell::new(DevToolsGUI::new(
                 self.config,
                 param.connection,
                 param.bi,
                 param.reader_backend,
-            ),
+            ))),
         }
     }
 }

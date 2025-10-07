@@ -89,7 +89,7 @@ impl Compositor {
         }
     }
 
-    pub fn run(&mut self, ui: &egui::Context) {
+    pub fn render(&mut self, ui: &egui::Context) {
         // Create a toolbar window
         let fill = ui.style().visuals.window_fill();
         egui::TopBottomPanel::bottom("toolbar")
