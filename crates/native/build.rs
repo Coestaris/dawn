@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 fn main() {
-    let build_info = build_info_build::build_script().build();
+    let _build_info = build_info_build::build_script().build();
 
     // Set up Windows resources (icon, version info) in release builds
     #[cfg(target_os = "windows")] // TODO: Cross compilation?
@@ -25,9 +25,9 @@ fn main() {
         }
 
         let version_code = version!(
-            build_info.crate_info.version.major,
-            build_info.crate_info.version.minor,
-            build_info.crate_info.version.patch,
+            _build_info.crate_info.version.major,
+            _build_info.crate_info.version.minor,
+            _build_info.crate_info.version.patch,
             0
         );
         res.set_version_info(VersionInfo::FILEVERSION, version_code);
