@@ -18,7 +18,6 @@ uniform sampler2D in_normal;
 
 uniform float in_radius;
 uniform float in_sigma_spatial;
-uniform float in_sigma_depth;
 uniform float in_sigma_normal;
 uniform int in_ssao_enabled;
 
@@ -26,7 +25,6 @@ uniform int in_ssao_enabled;
 
 const float in_radius = 3.0;
 const float in_sigma_spatial = 2.0;
-const float in_sigma_depth   = 0.1;
 const float in_sigma_normal  = 16.0;
 const int in_ssao_enabled = 1;
 
@@ -40,17 +38,12 @@ vec3 normal(vec2 uv) {
     return decode_oct(texture(in_normal, uv).rg);
 }
 
-float depth(vec2 uv) {
-    return linearize_depth(texture(in_depth, uv).r, in_clip_planes.x, in_clip_planes.y);
-}
-
 bool in_bounds(vec2 uv) {
     return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
 }
 
 float ssao(vec2 uv_full, vec2 uv_half, vec2 texel, vec2 texel_half) {
     vec3 N = normal(uv_full);
-    float Z = depth(uv_full);
 
     float sum = 0.0;
     float wsum = 0.0;
@@ -63,14 +56,12 @@ float ssao(vec2 uv_full, vec2 uv_half, vec2 texel, vec2 texel_half) {
             vec2 uvn_half = uv_half + vector * texel_half;
 
             float ao = texture(in_ssao_raw_halfres, uvn_half).r;
-            float Zi = depth(uvn_full);
             vec3 Ni = normal(uvn_full);
 
             float w_spatial = gauss(pow(length(vector), 2.0), in_sigma_spatial);
-            float w_depth   = gauss(abs(Zi - Z), in_sigma_depth);
             float w_normal  = pow(max(dot(N, Ni), 0.0), in_sigma_normal);
 
-            float w = w_spatial * w_depth * w_normal;
+            float w = w_spatial * w_normal;
             sum += ao * w;
             wsum += w;
         }
