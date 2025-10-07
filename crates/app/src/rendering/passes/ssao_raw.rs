@@ -83,7 +83,6 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
                 self.viewport = size;
             }
             RenderingEvent::UpdateShader(_, shader) => {
-                let clone = shader.clone();
                 self.shader = Some(SSAORawShader::new(shader.clone()).unwrap());
 
                 // Setup shader static uniforms

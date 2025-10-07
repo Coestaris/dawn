@@ -20,7 +20,7 @@ pub mod maps;
 #[derive(Component)]
 pub struct Rotating;
 #[derive(Component)]
-struct MovingByArrowKeys;
+pub struct MovingByArrowKeys;
 
 fn rotate_handler(t: Receiver<TickEvent>, f: Fetcher<(&mut ObjectRotation, &Rotating)>) {
     for (rot, _) in f {

@@ -1,4 +1,3 @@
-use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::halfres::HalfresBuffer;
@@ -17,13 +16,11 @@ use std::sync::Arc;
 use winit::window::Window;
 
 const DEPTH_INDEX: i32 = 0;
-const ALBEDO_METALLIC_INDEX: i32 = 1;
-const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 2;
+const ROUGH_OCCLUSION_NORMAL_INDEX: i32 = 1;
 
 pub(crate) struct SSAOHalfresPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
-    config: RenderingConfig,
     shader: Option<SSAOHalfresShader>,
     gbuffer: Rc<GBuffer>,
     target: Rc<HalfresBuffer>,
@@ -36,12 +33,10 @@ impl SSAOHalfresPass {
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
         target: Rc<HalfresBuffer>,
-        config: RenderingConfig,
     ) -> Self {
         SSAOHalfresPass {
             gl: gl.clone(),
             id,
-            config,
             shader: None,
             gbuffer,
             target,
@@ -69,7 +64,6 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
                 self.target.resize(size);
             }
             RenderingEvent::UpdateShader(_, shader) => {
-                let clone = shader.clone();
                 self.shader = Some(SSAOHalfresShader::new(shader.clone()).unwrap());
 
                 // Setup shader static uniforms

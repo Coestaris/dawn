@@ -8,7 +8,7 @@ use winit::event::{ElementState, KeyEvent, WindowEvent};
 use winit::keyboard::{Key, NamedKey};
 
 #[derive(Component)]
-struct CurrentFullscreenState {
+pub struct CurrentFullscreenState {
     is_fullscreen: bool,
 }
 

@@ -16,7 +16,7 @@ use evenio::fetch::{Fetcher, Single};
 use log::{info, warn};
 
 #[derive(Component)]
-struct MapLink {
+pub struct MapLink {
     map_name: String,
     map_uid: MapEntryID,
 }
@@ -90,7 +90,7 @@ impl MapDispatcher {
                 match entry.data.clone() {
                     MapEntryData::Mesh {
                         location,
-                        mesh,
+                        mesh: _,
                         scale,
                         rotation,
                     } => {
