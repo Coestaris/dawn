@@ -37,8 +37,9 @@ pub struct LightingShader {
     pub devtools: LightingShaderDevtools,
 
     pub depth: UniformLocation,
-    pub albedo_metallic: UniformLocation,
-    pub rough_occlusion_normal: UniformLocation,
+    pub albedo: UniformLocation,
+    pub orm: UniformLocation,
+    pub normal: UniformLocation,
     pub ssao: UniformLocation,
 }
 
@@ -55,8 +56,9 @@ impl LightingShader {
             packed_lights_header: program.get_uniform_location("in_packed_lights_header")?,
 
             depth: program.get_uniform_location("in_depth")?,
-            albedo_metallic: program.get_uniform_location("in_albedo_metallic")?,
-            rough_occlusion_normal: program.get_uniform_location("in_rough_occlusion_normal")?,
+            albedo: program.get_uniform_location("in_albedo")?,
+            orm: program.get_uniform_location("in_orm")?,
+            normal: program.get_uniform_location("in_normal")?,
             ssao: program.get_uniform_location("in_ssao")?,
         })
     }

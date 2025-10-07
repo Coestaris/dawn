@@ -104,12 +104,7 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
             &shader.fxaa_enabled,
             self.config.get_is_fxaa_enabled() as i32,
         );
-        Texture::bind(
-            &self.gl,
-            TextureBind::Texture2D,
-            &self.lightning_target.texture.texture,
-            0,
-        );
+        self.lightning_target.texture.bind2d(0);
 
         self.quad.draw()
     }
