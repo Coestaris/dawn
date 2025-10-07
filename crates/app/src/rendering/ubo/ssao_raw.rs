@@ -6,7 +6,7 @@ use std::sync::Arc;
 #[repr(C)]
 #[repr(packed)]
 #[derive(Clone, Copy)]
-struct SSAORawParametersUBOPayload {
+pub struct SSAORawParametersUBOPayload {
     kernel_size: f32, // up to 64
     radius: f32,
     bias: f32,
@@ -19,7 +19,7 @@ struct SSAORawParametersUBOPayload {
 #[repr(C)]
 #[repr(packed)]
 #[derive(Clone, Copy)]
-struct SSAORawKernelUBOPayload {
+pub struct SSAORawKernelUBOPayload {
     samples: [[f32; 4]; 64],
 }
 

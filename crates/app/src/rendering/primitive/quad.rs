@@ -10,8 +10,8 @@ use std::sync::Arc;
 /// Defines the 2D circle primitive.
 pub struct Quad2D {
     vao: VertexArray,
-    vbo: ArrayBuffer,
-    ebo: ElementArrayBuffer,
+    _vbo: ArrayBuffer,
+    _ebo: ElementArrayBuffer,
 }
 
 impl Quad2D {
@@ -64,7 +64,11 @@ impl Quad2D {
         drop(ebo_binding);
         drop(vao_binding);
 
-        Quad2D { vao, vbo, ebo }
+        Quad2D {
+            vao,
+            _vbo: vbo,
+            _ebo: ebo,
+        }
     }
 
     pub fn draw(&self) -> RenderResult {

@@ -14,7 +14,7 @@ use log::info;
 use winit::event::WindowEvent;
 
 #[derive(Clone)]
-struct PassDescriptor {
+pub struct PassDescriptor {
     id: RenderPassTargetId,
     events: RenderingEventMask,
     shaders: HashSet<AssetID>,
@@ -163,7 +163,7 @@ impl RenderDispatcher {
         }
     }
 
-    pub(crate) fn attach_to_ecs(self, world: &mut World, win_size: UVec2) {
+    pub(crate) fn attach_to_ecs(self, world: &mut World) {
         fn asset_events_handler(
             r: Receiver<AssetHubEvent>,
             hub: Single<&mut AssetHub>,

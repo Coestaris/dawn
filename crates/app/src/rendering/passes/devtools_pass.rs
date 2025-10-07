@@ -60,6 +60,24 @@ enum ProcessResult {
     RenderWithDepthBlit(RenderResult),
 }
 
+impl ProcessResult {
+    fn as_result(&self) -> RenderResult {
+        match self {
+            ProcessResult::Skipped => RenderResult::default(),
+            ProcessResult::Rendered(r) => *r,
+            ProcessResult::RenderWithDepthBlit(r) => *r,
+        }
+    }
+
+    fn as_blit(&self) -> bool {
+        match self {
+            ProcessResult::Skipped => false,
+            ProcessResult::Rendered(_) => false,
+            ProcessResult::RenderWithDepthBlit(_) => true,
+        }
+    }
+}
+
 impl DevtoolsPass {
     pub fn new(
         gl: Arc<glow::Context>,
@@ -503,30 +521,12 @@ impl RenderPass<RenderingEvent> for DevtoolsPass {
         let mut result = RenderResult::default();
         let mut blit = false;
 
-        result += match self.process_gizmos(frame, blit) {
-            ProcessResult::Skipped => RenderResult::default(),
-            ProcessResult::Rendered(r) => r,
-            ProcessResult::RenderWithDepthBlit(r) => {
-                blit = true;
-                r
-            }
-        };
-        result += match self.process_bounding_boxes(frame, blit) {
-            ProcessResult::Skipped => RenderResult::default(),
-            ProcessResult::Rendered(r) => r,
-            ProcessResult::RenderWithDepthBlit(r) => {
-                blit = true;
-                r
-            }
-        };
-        result += match self.process_overlays(win, backend) {
-            ProcessResult::Skipped => RenderResult::default(),
-            ProcessResult::Rendered(r) => r,
-            ProcessResult::RenderWithDepthBlit(r) => {
-                blit = true;
-                r
-            }
-        };
+        let gizmos = self.process_gizmos(frame, blit);
+        result += gizmos.as_result();
+        blit |= gizmos.as_blit();
+
+        result += self.process_bounding_boxes(frame, blit).as_result();
+        result += self.process_overlays(win, backend).as_result();
 
         result
     }

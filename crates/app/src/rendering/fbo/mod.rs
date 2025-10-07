@@ -10,6 +10,7 @@ pub mod halfres;
 pub mod obuffer;
 pub mod ssao;
 
+#[allow(dead_code)]
 pub struct GTexture {
     gl: Arc<glow::Context>,
     pub texture: Texture,
@@ -17,6 +18,7 @@ pub struct GTexture {
     pub attachment: FramebufferAttachment,
 }
 
+#[allow(dead_code)]
 pub struct GRenderBuffer {
     gl: Arc<glow::Context>,
     pub render_buffer: Renderbuffer,
@@ -24,6 +26,7 @@ pub struct GRenderBuffer {
     pub attachment: FramebufferAttachment,
 }
 
+#[allow(dead_code)]
 impl GRenderBuffer {
     fn new(
         gl: Arc<glow::Context>,
@@ -53,6 +56,7 @@ impl GRenderBuffer {
     }
 }
 
+#[allow(dead_code)]
 impl GTexture {
     fn new(
         gl: Arc<glow::Context>,

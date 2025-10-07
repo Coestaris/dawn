@@ -72,7 +72,6 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
                 self.ssao_blur_target.resize(size);
             }
             RenderingEvent::UpdateShader(_, shader) => {
-                let clone = shader.clone();
                 self.shader = Some(SSAOBlurShader::new(shader.clone()).unwrap());
 
                 // Setup shader static uniforms

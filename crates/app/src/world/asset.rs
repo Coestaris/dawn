@@ -23,7 +23,7 @@ pub const APPLICATION_ICON_BLOB_ID: &str = "icon_blob";
 pub const SUN_LIGHT_TEXTURE: &str = "sun_light";
 pub const POINT_LIGHT_TEXTURE: &str = "point_light";
 
-fn assets_failed_handler(r: Receiver<AssetHubEvent>, sender: Sender<ExitEvent>) {
+fn assets_failed_handler(r: Receiver<AssetHubEvent>) {
     match r.event {
         AssetHubEvent::RequestFinished(request, Err(message)) => {
             panic!("Asset Request Failed {:?}: {:?}", request, message);
