@@ -5,7 +5,7 @@
 #include "inc/depth.glsl"
 
 // R8
-layout(location = 0) out float out_ssao_raw_halfres;
+layout(location = 0) out float out_halfres_ssao_raw;
 
 // R16F. Linear depth
 uniform sampler2D in_halfres_depth;
@@ -69,7 +69,7 @@ vec3 pos(vec2 uv) {
 
 void main() {
     if (in_ssao_enabled != 1) {
-        out_ssao_raw_halfres = 1.0;
+        out_halfres_ssao_raw = 1.0;
         return;
     }
 
@@ -114,5 +114,5 @@ void main() {
 
     float ao = 1.0 - (occlusion / float(in_kernel_size));
     ao = pow(clamp(ao, 0.0, 1.0), in_power) * in_intensity;
-    out_ssao_raw_halfres = ao;
+    out_halfres_ssao_raw = ao;
 }
