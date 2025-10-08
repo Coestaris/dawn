@@ -12,19 +12,31 @@ uniform sampler2D in_halfres_depth;
 // RG8_SNORM. Octo encoded normal, view space
 uniform sampler2D in_halfres_normal;
 
-layout(std140) uniform ubo_ssao_raw_params {
-    float in_kernel_size; // <= 64
-    float in_radius;      // view-space radius
-    float in_bias;        // base bias (e.g. 0.02)
-    float in_intensity;   // optional multiplier
-    float in_power;       // e.g. 1.0–2.0
-    int in_ssao_enabled;
-    vec2 _padding;
+#if ENABLE_DEVTOOLS
+
+uniform int   in_kernel_size; // <= 64
+uniform float in_radius;      // view-space radius
+uniform float in_bias;        // base bias (e.g. 0.02)
+uniform float in_intensity;   // optional multiplier
+uniform float in_power;       // e.g. 1.0–2.0
+uniform int   in_ssao_enabled;
+
+// hemisphere samples in tangent space, z>=0
+layout(std140) uniform ubo_ssao_raw_kernel {
+    vec4 in_samples[64];
 };
 
-layout(std140) uniform ubo_ssao_raw_kernel {
-    vec4 in_samples[64]; // hemisphere samples in tangent space, z>=0
-};
+#else
+
+const int   in_kernel_size  = DEF_SSAO_KERNEL_SIZE;
+const float in_radius       = DEF_SSAO_RADIUS;
+const float in_bias         = DEF_SSAO_BIAS;
+const float in_intensity    = DEF_SSAO_INTENSITY;
+const float in_power        = DEF_SSAO_POWER;
+const int   in_ssao_enabled = DEF_SSAO_ENABLED;
+const vec4  in_samples[DEF_SSAO_KERNEL_SIZE] = DEF_SSAO_KERNEL;
+
+#endif
 
 float hash12(vec2 p){
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -76,8 +88,7 @@ void main() {
     float occlusion = 0.0;
     const float eps = 1e-4;
 
-    int kernel_size = int(in_kernel_size);
-    for (int i = 0; i < kernel_size; ++i) {
+    for (int i = 0; i < in_kernel_size; ++i) {
         vec3 s = TBN * in_samples[i].xyz;
         vec3 S = P + s * in_radius;
 
@@ -101,7 +112,7 @@ void main() {
         occlusion += occluder * range;
     }
 
-    float ao = 1.0 - (occlusion / float(kernel_size));
+    float ao = 1.0 - (occlusion / float(in_kernel_size));
     ao = pow(clamp(ao, 0.0, 1.0), in_power) * in_intensity;
     out_ssao_raw_halfres = ao;
 }

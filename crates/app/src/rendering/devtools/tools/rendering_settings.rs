@@ -1,5 +1,7 @@
 use crate::devtools::SunlightControl;
-use crate::rendering::config::{BoundingBoxMode, OutputMode, RenderingConfig};
+use crate::rendering::config::{
+    generate_ssao_kernel, BoundingBoxMode, OutputMode, RenderingConfig,
+};
 use egui::Widget;
 
 pub enum ToolRenderingSettingsMessage {
@@ -206,9 +208,14 @@ pub fn tool_rendering_settings(
             });
 
             ui.collapsing("SSAO Raw", |ui| {
-                egui::Slider::new(&mut config.ssao_raw.kernel_size, 1..=64)
+                if egui::Slider::new(&mut config.ssao_raw.kernel_size, 1..=64)
                     .text("Kernel Size")
-                    .ui(ui);
+                    .ui(ui)
+                    .changed()
+                {
+                    config.ssao_raw.kernel =
+                        generate_ssao_kernel(config.ssao_raw.kernel_size as usize);
+                }
                 egui::Slider::new(&mut config.ssao_raw.radius, 0.01..=5.0)
                     .text("Radius")
                     .ui(ui);

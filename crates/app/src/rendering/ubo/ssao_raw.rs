@@ -6,29 +6,8 @@ use std::sync::Arc;
 #[repr(C)]
 #[repr(packed)]
 #[derive(Clone, Copy)]
-pub struct SSAORawParametersUBOPayload {
-    kernel_size: f32, // up to 64
-    radius: f32,
-    bias: f32,
-    intensity: f32,
-    power: f32,
-    enabled: i32,
-    _padding: [u32; 2],
-}
-
-#[repr(C)]
-#[repr(packed)]
-#[derive(Clone, Copy)]
 pub struct SSAORawKernelUBOPayload {
     samples: [[f32; 4]; 64],
-}
-
-pub struct SSAORawParametersUBO {
-    gl: Arc<glow::Context>,
-    pub ubo: UBO,
-    pub payload: SSAORawParametersUBOPayload,
-    pub binding: usize,
-    pub fresh: bool,
 }
 
 pub struct SSAORawKernelUBO {
@@ -61,30 +40,12 @@ impl SSAORawKernelUBO {
         }
     }
 
-    pub fn set_samples(&mut self, n: usize) {
-        assert!(n <= 64);
-
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-
-        // Vectors of Normal-oriented hemisphere
-        for i in 0..n {
-            // Make samples at the center more dense
-            let scale = (i as f32) / (n as f32);
-            let scale = f32::lerp(0.1, 1.0, scale * scale);
-
-            let sample = Vec4::new(
-                rng.gen_range(-1.0..1.0),
-                rng.gen_range(-1.0..1.0),
-                rng.gen_range(0.0..1.0),
-                0.0,
-            )
-            .normalize()
-                * rng.gen_range(0.0..1.0)
-                * scale;
+    pub fn set_samples(&mut self, kernel: Vec<Vec4>) {
+        assert!(kernel.len() <= 64);
+        for (i, sample) in kernel.iter().enumerate() {
             self.payload.samples[i] = sample.to_array();
         }
-
+        info!("SSAORawKernelUBO: set {} samples", kernel.len());
         self.fresh = false;
     }
 
@@ -98,96 +59,6 @@ impl SSAORawKernelUBO {
             std::slice::from_raw_parts(
                 &self.payload as *const SSAORawKernelUBOPayload as *const u8,
                 size_of::<SSAORawKernelUBOPayload>(),
-            )
-        });
-        UBO::unbind(&self.gl);
-        self.fresh = true;
-        true
-    }
-}
-
-impl SSAORawParametersUBO {
-    pub(crate) fn new(gl: Arc<glow::Context>, binding: usize) -> Self {
-        let ubo = UBO::new(
-            gl.clone(),
-            Some(std::mem::size_of::<SSAORawParametersUBOPayload>()),
-        )
-        .unwrap();
-        UBO::bind(&gl, &ubo);
-        ubo.bind_base(binding as u32);
-        UBO::unbind(&gl);
-
-        Self {
-            gl,
-            ubo,
-            payload: SSAORawParametersUBOPayload {
-                kernel_size: 16.0,
-                radius: 0.5,
-                bias: 0.025,
-                intensity: 1.0,
-                power: 1.0,
-                enabled: 1,
-                _padding: [0; 2],
-            },
-            binding,
-            fresh: false,
-        }
-    }
-
-    pub fn set_kernel_size(&mut self, size: u32) {
-        assert!(size <= 64);
-        if self.payload.kernel_size as u32 != size {
-            self.payload.kernel_size = size as f32;
-            self.fresh = false;
-        }
-    }
-
-    pub fn set_radius(&mut self, radius: f32) {
-        if self.payload.radius != radius {
-            self.payload.radius = radius;
-            self.fresh = false;
-        }
-    }
-
-    pub fn set_bias(&mut self, bias: f32) {
-        if self.payload.bias != bias {
-            self.payload.bias = bias;
-            self.fresh = false;
-        }
-    }
-
-    pub fn set_intensity(&mut self, intensity: f32) {
-        if self.payload.intensity != intensity {
-            self.payload.intensity = intensity;
-            self.fresh = false;
-        }
-    }
-
-    pub fn set_power(&mut self, power: f32) {
-        if self.payload.power != power {
-            self.payload.power = power;
-            self.fresh = false;
-        }
-    }
-
-    pub fn set_enabled(&mut self, enabled: i32) {
-        if self.payload.enabled != enabled {
-            self.payload.enabled = enabled;
-            self.fresh = false;
-        }
-    }
-
-    pub fn upload(&mut self) -> bool {
-        if self.fresh {
-            return false;
-        }
-
-        info!("Uploading SSAO Raw Parameters UBO");
-        UBO::bind(&self.gl, &self.ubo);
-        self.ubo.feed(unsafe {
-            std::slice::from_raw_parts(
-                &self.payload as *const SSAORawParametersUBOPayload as *const u8,
-                size_of::<SSAORawParametersUBOPayload>(),
             )
         });
         UBO::unbind(&self.gl);
