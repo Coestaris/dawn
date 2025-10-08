@@ -22,8 +22,39 @@ pub enum BoundingBoxMode {
     OBBHonorDepth,
 }
 
+pub fn generate_ssao_kernel(size: usize) -> Vec<Vec4> {
+    use rand::Rng;
+    use rand::SeedableRng;
+
+    // Create a seeded random number generator to keep the kernel consistent
+    let mut rng = rand::rngs::StdRng::seed_from_u64(0);
+    let mut kernel = vec![Vec4::ZERO; size];
+
+    // Vectors of Normal-oriented hemisphere
+    for i in 0..size {
+        // Make samples at the center more dense
+        let scale = (i as f32) / (size as f32);
+        let scale = f32::lerp(0.1, 1.0, scale * scale);
+
+        let sample = Vec4::new(
+            rng.gen_range(-1.0..1.0),
+            rng.gen_range(-1.0..1.0),
+            rng.gen_range(0.0..1.0),
+            0.0,
+        )
+        .normalize()
+            * rng.gen_range(0.0..1.0)
+            * scale;
+        kernel[i] = sample;
+    }
+
+    kernel
+}
+
 pub(crate) mod config_static {
     use crate::rendering::config::{BoundingBoxMode, OutputMode};
+    use glam::Vec4;
+    use std::os::linux::raw::stat;
 
     #[derive(Debug, Clone, Copy)]
     pub struct RenderingConfig;
@@ -90,7 +121,16 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_ssao_kernel_size(&self) -> u32 {
-            16
+            24
+        }
+
+        #[inline(always)]
+        pub fn get_ssao_kernel(&self) -> Vec<Vec4> {
+            static KERNEL: once_cell::sync::Lazy<Vec<Vec4>> = once_cell::sync::Lazy::new(|| {
+                super::generate_ssao_kernel(RenderingConfig::new().get_ssao_kernel_size() as usize)
+            });
+
+            KERNEL.clone()
         }
 
         #[inline(always)]
@@ -187,6 +227,7 @@ mod config_impl {
         pub bias: f32,
         pub intensity: f32,
         pub power: f32,
+        pub kernel: Vec<glam::Vec4>,
     }
 
     impl SSAORawConfig {
@@ -198,6 +239,7 @@ mod config_impl {
                 bias: stat.get_ssao_bias(),
                 intensity: stat.get_ssao_intensity(),
                 power: stat.get_ssao_power(),
+                kernel: stat.get_ssao_kernel(),
             }
         }
     }
@@ -319,10 +361,16 @@ mod config_impl {
         pub fn get_ssao_blur_radius(&self) -> u32 {
             self.0.borrow().ssao_blur.radius
         }
+
+        pub fn get_ssao_kernel(&self) -> Vec<glam::Vec4> {
+            self.0.borrow().ssao_raw.kernel.clone()
+        }
     }
 }
 
 #[cfg(not(feature = "devtools"))]
 pub type RenderingConfig = config_static::RenderingConfig;
+
 #[cfg(feature = "devtools")]
 pub use config_impl::RenderingConfig;
+use glam::{FloatExt, Vec4};
