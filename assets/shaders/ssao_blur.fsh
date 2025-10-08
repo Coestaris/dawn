@@ -58,7 +58,7 @@ float ssao(vec2 uv_full, vec2 uv_half, vec2 texel, vec2 texel_half) {
             float ao = texture(in_ssao_raw_halfres, uvn_half).r;
             vec3 Ni = normal(uvn_full);
 
-            float w_spatial = gauss(pow(length(vector), 2.0), in_sigma_spatial);
+            float w_spatial = gauss(length(vector), in_sigma_spatial);
             float w_normal  = pow(max(dot(N, Ni), 0.0), in_sigma_normal);
 
             float w = w_spatial * w_normal;

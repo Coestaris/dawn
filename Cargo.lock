@@ -1035,6 +1035,7 @@ dependencies = [
  "ico",
  "log",
  "native-dialog",
+ "once_cell",
  "rand",
  "wasm-bindgen",
  "web-time",

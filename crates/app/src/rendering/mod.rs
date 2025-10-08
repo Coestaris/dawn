@@ -30,7 +30,7 @@ use dawn_graphics::gl::probe::OpenGLInfo;
 use dawn_graphics::passes::events::RenderPassTargetId;
 use dawn_graphics::renderer::{CustomRenderer, RendererBackend};
 use dawn_graphics::{construct_chain, construct_chain_type};
-use glam::Vec3;
+use glam::{Vec3, Vec4};
 use glow::HasContext;
 use log::{debug, info, warn};
 use std::cell::RefCell;
@@ -110,30 +110,48 @@ pub fn shader_defines() -> HashMap<String, String> {
     fn vec3(v: Vec3) -> String {
         format!("vec3({}, {}, {})", v.x, v.y, v.z)
     }
+    fn vec4(v: Vec4) -> String {
+        format!("vec4({}, {}, {}, {})", v.x, v.y, v.z, v.w)
+    }
     fn f32(v: f32) -> String {
         format!("{}", v)
     }
     fn i32(v: i32) -> String {
         format!("{}", v)
     }
+    fn vec_vec4(v: Vec<Vec4>) -> String {
+        let mut s = "vec4[](".to_string();
+        for (i, v) in v.iter().enumerate() {
+            if i > 0 {
+                s.push_str(", ");
+            }
+            s.push_str(&vec4(*v));
+        }
+        s.push_str(")");
+        s
+    }
 
-    defines.insert("DEF_SKY_COLOR".to_string(), vec3(config.get_sky_color()));
-    defines.insert(
-        "DEF_GROUND_COLOR".to_string(),
-        vec3(config.get_ground_color()),
+    macro_rules! insert_define {
+        ($name:expr, $t:expr, $v:expr) => {
+            defines.insert($name.to_string(), $t($v));
+        };
+    }
+
+    insert_define!("DEF_SKY_COLOR", vec3, config.get_sky_color());
+    insert_define!("DEF_GROUND_COLOR", vec3, config.get_ground_color());
+    insert_define!("DEF_DIFFUSE_SCALE", f32, config.get_diffuse_scale());
+    insert_define!("DEF_SPECULAR_SCALE", f32, config.get_specular_scale());
+    insert_define!("DEF_SSAO_ENABLED", i32, config.get_is_ssao_enabled() as i32);
+    insert_define!(
+        "DEF_SSAO_KERNEL_SIZE",
+        i32,
+        config.get_ssao_kernel_size() as i32
     );
-    defines.insert(
-        "DEF_DIFFUSE_SCALE".to_string(),
-        f32(config.get_diffuse_scale()),
-    );
-    defines.insert(
-        "DEF_SPECULAR_SCALE".to_string(),
-        f32(config.get_specular_scale()),
-    );
-    defines.insert(
-        "DEF_SSAO_ENABLED".to_string(),
-        i32(config.get_is_ssao_enabled() as i32),
-    );
+    insert_define!("DEF_SSAO_RADIUS", f32, config.get_ssao_radius());
+    insert_define!("DEF_SSAO_BIAS", f32, config.get_ssao_bias());
+    insert_define!("DEF_SSAO_INTENSITY", f32, config.get_ssao_intensity());
+    insert_define!("DEF_SSAO_POWER", f32, config.get_ssao_power());
+    insert_define!("DEF_SSAO_KERNEL", vec_vec4, config.get_ssao_kernel());
 
     defines
 }

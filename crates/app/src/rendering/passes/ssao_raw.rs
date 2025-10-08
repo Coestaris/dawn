@@ -4,10 +4,8 @@ use crate::rendering::fbo::halfres::HalfresBuffer;
 use crate::rendering::fbo::ssao::SSAOHalfresTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::ssao_raw::SSAORawShader;
-use crate::rendering::ubo::ssao_raw::{SSAORawKernelUBO, SSAORawParametersUBO};
-use crate::rendering::ubo::{
-    CAMERA_UBO_BINDING, SSAO_RAW_KERNEL_UBO_BINDING, SSAO_RAW_PARAMS_UBO_BINDING,
-};
+use crate::rendering::ubo::ssao_raw::SSAORawKernelUBO;
+use crate::rendering::ubo::{CAMERA_UBO_BINDING, SSAO_RAW_KERNEL_UBO_BINDING};
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
@@ -36,8 +34,10 @@ pub(crate) struct SSAORawPass {
 
     quad: Quad2D,
 
-    params_ubo: SSAORawParametersUBO,
+    #[cfg(feature = "devtools")]
     kernel_ubo: SSAORawKernelUBO,
+    #[cfg(feature = "devtools")]
+    prev_kernel_size: usize,
 }
 
 impl SSAORawPass {
@@ -54,11 +54,13 @@ impl SSAORawPass {
             config,
             shader: None,
             quad: Quad2D::new(gl.clone()),
-            params_ubo: SSAORawParametersUBO::new(gl.clone(), SSAO_RAW_PARAMS_UBO_BINDING),
-            kernel_ubo: SSAORawKernelUBO::new(gl.clone(), SSAO_RAW_KERNEL_UBO_BINDING),
             halfres_buffer,
             target,
             viewport: Default::default(),
+            #[cfg(feature = "devtools")]
+            prev_kernel_size: 0,
+            #[cfg(feature = "devtools")]
+            kernel_ubo: SSAORawKernelUBO::new(gl.clone(), SSAO_RAW_KERNEL_UBO_BINDING),
         }
     }
 }
@@ -89,17 +91,17 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
                 let shader = self.shader.as_ref().unwrap();
                 let program = shader.asset.cast();
                 Program::bind(&self.gl, &program);
-                program.set_uniform_block_binding(
-                    shader.ubo_ssao_raw_kernel,
-                    SSAO_RAW_KERNEL_UBO_BINDING as u32,
-                );
-                program.set_uniform_block_binding(
-                    shader.ubo_ssao_raw_params,
-                    SSAO_RAW_PARAMS_UBO_BINDING as u32,
-                );
+
                 program.set_uniform_block_binding(shader.ubo_camera, CAMERA_UBO_BINDING as u32);
                 program.set_uniform(&shader.halfres_depth, HALFRES_DEPTH_INDEX);
                 program.set_uniform(&shader.halfres_normal, HALFRES_NORMAL_INDEX);
+
+                #[cfg(feature = "devtools")]
+                program.set_uniform_block_binding(
+                    shader.devtools.ubo_ssao_raw_kernel,
+                    SSAO_RAW_KERNEL_UBO_BINDING as u32,
+                );
+
                 Program::unbind(&self.gl);
             }
             _ => {}
@@ -136,25 +138,30 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
             );
         }
 
-        // Update params UBO
-        self.params_ubo
-            .set_kernel_size(self.config.get_ssao_kernel_size());
-        self.params_ubo.set_radius(self.config.get_ssao_radius());
-        self.params_ubo.set_bias(self.config.get_ssao_bias());
-        self.params_ubo
-            .set_intensity(self.config.get_ssao_intensity());
-        self.params_ubo
-            .set_enabled(self.config.get_is_ssao_enabled() as i32);
-        self.params_ubo.set_power(self.config.get_ssao_power());
-        if self.params_ubo.upload() {
-            self.kernel_ubo
-                .set_samples(self.config.get_ssao_kernel_size() as usize);
-            self.kernel_ubo.upload();
-        }
-
         let shader = self.shader.as_ref().unwrap();
         let program = shader.asset.cast();
         Program::bind(&self.gl, &program);
+
+        #[cfg(feature = "devtools")]
+        {
+            program.set_uniform(
+                &shader.devtools.kernel_size,
+                self.config.get_ssao_kernel_size() as i32,
+            );
+            program.set_uniform(&shader.devtools.radius, self.config.get_ssao_radius());
+            program.set_uniform(&shader.devtools.bias, self.config.get_ssao_bias());
+            program.set_uniform(&shader.devtools.intensity, self.config.get_ssao_intensity());
+            program.set_uniform(&shader.devtools.power, self.config.get_ssao_power());
+            program.set_uniform(
+                &shader.devtools.ssao_enabled,
+                self.config.get_is_ssao_enabled() as i32,
+            );
+            if self.prev_kernel_size != self.config.get_ssao_kernel_size() as usize {
+                self.prev_kernel_size = self.config.get_ssao_kernel_size() as usize;
+                self.kernel_ubo.set_samples(self.config.get_ssao_kernel());
+                self.kernel_ubo.upload();
+            }
+        }
 
         self.halfres_buffer.depth.bind2d(HALFRES_DEPTH_INDEX);
         self.halfres_buffer.normal.bind2d(HALFRES_NORMAL_INDEX);
