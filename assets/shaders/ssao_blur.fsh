@@ -23,7 +23,7 @@ uniform vec2 stride;
 #if ENABLE_DEVTOOLS
 
 uniform int   in_tap_count;
-uniform float in_sigma;
+uniform float in_sigma_depth;
 uniform int   in_ssao_enabled;
 
 layout(std140) uniform ubo_ssao_blur_taps {
@@ -34,7 +34,7 @@ layout(std140) uniform ubo_ssao_blur_taps {
 #else
 
 const int   in_tap_count                           = DEF_SSAO_BLUR_TAP_COUNT;
-const float in_sigma                               = DEF_SSAO_BLUR_SIGMA;
+const float in_sigma_depth                         = DEF_SSAO_BLUR_SIGMA_NORMAL;
 const float in_tap_weight[DEF_SSAO_BLUR_TAP_COUNT] = DEF_SSAO_BLUR_TAP_WEIGHT;
 const float in_tap_offset[DEF_SSAO_BLUR_TAP_COUNT] = DEF_SSAO_BLUR_TAP_OFFSET;
 const int   in_ssao_enabled                        = DEF_SSAO_ENABLED;
@@ -94,8 +94,8 @@ float ssao(vec2 uv) {
         wnp *= wnp;
         wnm *= wnm;
 
-        float wdp = exp(-abs(Z - Zp) * in_sigma);
-        float wdm = exp(-abs(Z - Zm) * in_sigma);
+        float wdp = exp(-abs(Z - Zp) * in_sigma_depth);
+        float wdm = exp(-abs(Z - Zm) * in_sigma_depth);
 
         float w = in_tap_weight[t];
         float wp = w * wnp * wdp;

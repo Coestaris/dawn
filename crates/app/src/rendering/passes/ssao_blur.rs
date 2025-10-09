@@ -127,7 +127,7 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
             );
             program.set_uniform(
                 &shader.devtools.sigma_spatial,
-                self.config.get_ssao_blur_sigma_spatial(),
+                self.config.get_ssao_blur_sigma_normal(),
             );
             program.set_uniform(
                 &shader.devtools.sigma_normal,

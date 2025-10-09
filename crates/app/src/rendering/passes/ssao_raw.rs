@@ -146,19 +146,19 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         {
             program.set_uniform(
                 &shader.devtools.kernel_size,
-                self.config.get_ssao_kernel_size() as i32,
+                self.config.get_ssao_raw_kernel_size() as i32,
             );
-            program.set_uniform(&shader.devtools.radius, self.config.get_ssao_radius());
-            program.set_uniform(&shader.devtools.bias, self.config.get_ssao_bias());
-            program.set_uniform(&shader.devtools.intensity, self.config.get_ssao_intensity());
-            program.set_uniform(&shader.devtools.power, self.config.get_ssao_power());
+            program.set_uniform(&shader.devtools.radius, self.config.get_ssao_raw_radius());
+            program.set_uniform(&shader.devtools.bias, self.config.get_ssao_raw_bias());
+            program.set_uniform(&shader.devtools.intensity, self.config.get_ssao_raw_intensity());
+            program.set_uniform(&shader.devtools.power, self.config.get_ssao_raw_power());
             program.set_uniform(
                 &shader.devtools.ssao_enabled,
                 self.config.get_is_ssao_enabled() as i32,
             );
-            if self.prev_kernel_size != self.config.get_ssao_kernel_size() as usize {
-                self.prev_kernel_size = self.config.get_ssao_kernel_size() as usize;
-                self.kernel_ubo.set_samples(self.config.get_ssao_kernel());
+            if self.prev_kernel_size != self.config.get_ssao_raw_kernel_size() as usize {
+                self.prev_kernel_size = self.config.get_ssao_raw_kernel_size() as usize;
+                self.kernel_ubo.set_samples(self.config.get_ssao_raw_kernel());
                 self.kernel_ubo.upload();
             }
         }

@@ -22,7 +22,7 @@ pub enum BoundingBoxMode {
     OBBHonorDepth,
 }
 
-pub fn generate_ssao_kernel(size: usize) -> Vec<Vec4> {
+pub fn generate_ssao_raw_kernel(size: usize) -> Vec<Vec4> {
     use rand::Rng;
     use rand::SeedableRng;
 
@@ -49,6 +49,53 @@ pub fn generate_ssao_kernel(size: usize) -> Vec<Vec4> {
     }
 
     kernel
+}
+
+/// Returns (tap_weights, tap_offsets)
+pub fn generate_ssao_blur_kernel(taps_count: usize, sigma_spatial: f32) -> (Vec<f32>, Vec<f32>) {
+    // Taps must be odd
+    assert_eq!(taps_count % 2, 1);
+
+    fn gaussian_kernel_1d(r: usize, sigma: f32) -> Vec<f32> {
+        let mut g = vec![0.0; r + 1];
+        for i in 0..=r {
+            let x = i as f32;
+            g[i] = (-0.5 * (x * x) / (sigma * sigma)).exp();
+        }
+        let mut s = g[0];
+        for i in 1..=r {
+            s += 2.0 * g[i];
+        }
+        let mut w = vec![0.0; r + 1];
+        for i in 0..=r {
+            w[i] = g[i] / s;
+        }
+        w
+    }
+
+    let w = gaussian_kernel_1d(taps_count, sigma_spatial);
+    let mut taps: Vec<(f32, f32)> = vec![];
+
+    // Central tap
+    taps.push((w[0], 0.0));
+
+    // Pairs
+    let mut i = 1;
+    while i + 1 <= taps_count {
+        let w1 = w[i];
+        let w2 = w[i + 1];
+        let pair = w1 + w2;
+        let o = if pair > 0.0 {
+            (w2 - w1) / pair + (i as f32)
+        } else {
+            i as f32
+        };
+        taps.push((pair, o));
+        i += 2;
+    }
+
+    let (tap_weights, tap_offsets): (Vec<f32>, Vec<f32>) = taps.into_iter().unzip();
+    (tap_weights, tap_offsets)
 }
 
 pub(crate) mod config_static {
@@ -119,37 +166,70 @@ pub(crate) mod config_static {
         }
 
         #[inline(always)]
-        pub fn get_ssao_kernel_size(&self) -> u32 {
+        pub fn get_ssao_raw_kernel_size(&self) -> u32 {
             24
         }
 
         #[inline(always)]
-        pub fn get_ssao_kernel(&self) -> Vec<Vec4> {
+        pub fn get_ssao_raw_kernel(&self) -> Vec<Vec4> {
             static KERNEL: once_cell::sync::Lazy<Vec<Vec4>> = once_cell::sync::Lazy::new(|| {
-                super::generate_ssao_kernel(RenderingConfig::new().get_ssao_kernel_size() as usize)
+                super::generate_ssao_raw_kernel(
+                    RenderingConfig::new().get_ssao_raw_kernel_size() as usize
+                )
             });
 
             KERNEL.clone()
         }
 
         #[inline(always)]
-        pub fn get_ssao_radius(&self) -> f32 {
+        pub fn get_ssao_raw_radius(&self) -> f32 {
             0.9
         }
 
         #[inline(always)]
-        pub fn get_ssao_bias(&self) -> f32 {
+        pub fn get_ssao_raw_bias(&self) -> f32 {
             0.08
         }
 
         #[inline(always)]
-        pub fn get_ssao_intensity(&self) -> f32 {
+        pub fn get_ssao_raw_intensity(&self) -> f32 {
             1.0
         }
 
         #[inline(always)]
-        pub fn get_ssao_power(&self) -> f32 {
+        pub fn get_ssao_raw_power(&self) -> f32 {
             1.0
+        }
+
+        #[inline(always)]
+        pub fn get_ssao_blur_taps_count(&self) -> u32 {
+            4
+        }
+
+        #[inline(always)]
+        pub fn get_ssao_blur_tap_weight(&self) -> Vec<f32> {
+            static WEIGHT: once_cell::sync::Lazy<Vec<f32>> = once_cell::sync::Lazy::new(|| {
+                super::generate_ssao_blur_kernel(
+                    RenderingConfig::new().get_ssao_blur_taps_count() as usize,
+                    RenderingConfig::new().get_ssao_blur_sigma_spatial(),
+                )
+                .0
+            });
+
+            WEIGHT.clone()
+        }
+
+        #[inline(always)]
+        pub fn get_ssao_blur_tap_offset(&self) -> Vec<f32> {
+            static OFFSET: once_cell::sync::Lazy<Vec<f32>> = once_cell::sync::Lazy::new(|| {
+                super::generate_ssao_blur_kernel(
+                    RenderingConfig::new().get_ssao_blur_taps_count() as usize,
+                    RenderingConfig::new().get_ssao_blur_sigma_spatial(),
+                )
+                .1
+            });
+
+            OFFSET.clone()
         }
 
         #[inline(always)]
@@ -158,13 +238,8 @@ pub(crate) mod config_static {
         }
 
         #[inline(always)]
-        pub fn get_ssao_blur_sigma_normal(&self) -> f32 {
+        pub fn get_ssao_blur_sigma_depth(&self) -> f32 {
             16.0
-        }
-
-        #[inline(always)]
-        pub fn get_ssao_blur_radius(&self) -> u32 {
-            3
         }
     }
 }
@@ -233,29 +308,33 @@ mod config_impl {
         pub fn new() -> Self {
             let stat = config_static::RenderingConfig::new();
             Self {
-                kernel_size: stat.get_ssao_kernel_size(),
-                radius: stat.get_ssao_radius(),
-                bias: stat.get_ssao_bias(),
-                intensity: stat.get_ssao_intensity(),
-                power: stat.get_ssao_power(),
-                kernel: stat.get_ssao_kernel(),
+                kernel_size: stat.get_ssao_raw_kernel_size(),
+                radius: stat.get_ssao_raw_radius(),
+                bias: stat.get_ssao_raw_bias(),
+                intensity: stat.get_ssao_raw_intensity(),
+                power: stat.get_ssao_raw_power(),
+                kernel: stat.get_ssao_raw_kernel(),
             }
         }
     }
 
     pub struct SSAOBlurConfig {
+        pub taps_count: u32,
+        pub tap_weight: Vec<f32>,
+        pub tap_offset: Vec<f32>,
+        pub sigma_depth: f32,
         pub sigma_spatial: f32,
-        pub sigma_normal: f32,
-        pub radius: u32,
     }
 
     impl SSAOBlurConfig {
         pub fn new() -> Self {
             let stat = config_static::RenderingConfig::new();
             Self {
+                taps_count: stat.get_ssao_blur_taps_count(),
+                tap_weight: stat.get_ssao_blur_tap_weight(),
+                tap_offset: stat.get_ssao_blur_tap_offset(),
+                sigma_depth: stat.get_ssao_blur_sigma_depth(),
                 sigma_spatial: stat.get_ssao_blur_sigma_spatial(),
-                sigma_normal: stat.get_ssao_blur_sigma_normal(),
-                radius: stat.get_ssao_blur_radius(),
             }
         }
     }
@@ -329,40 +408,44 @@ mod config_impl {
             self.0.borrow().lighting.force_no_tangents
         }
 
-        pub fn get_ssao_kernel_size(&self) -> u32 {
+        pub fn get_ssao_raw_kernel_size(&self) -> u32 {
             self.0.borrow().ssao_raw.kernel_size
         }
 
-        pub fn get_ssao_radius(&self) -> f32 {
+        pub fn get_ssao_raw_kernel(&self) -> Vec<glam::Vec4> {
+            self.0.borrow().ssao_raw.kernel.clone()
+        }
+
+        pub fn get_ssao_raw_radius(&self) -> f32 {
             self.0.borrow().ssao_raw.radius
         }
 
-        pub fn get_ssao_bias(&self) -> f32 {
+        pub fn get_ssao_raw_bias(&self) -> f32 {
             self.0.borrow().ssao_raw.bias
         }
 
-        pub fn get_ssao_intensity(&self) -> f32 {
+        pub fn get_ssao_raw_intensity(&self) -> f32 {
             self.0.borrow().ssao_raw.intensity
         }
 
-        pub fn get_ssao_power(&self) -> f32 {
+        pub fn get_ssao_raw_power(&self) -> f32 {
             self.0.borrow().ssao_raw.power
         }
 
-        pub fn get_ssao_blur_sigma_spatial(&self) -> f32 {
-            self.0.borrow().ssao_blur.sigma_spatial
+        pub fn get_ssao_blur_taps_count(&self) -> u32 {
+            self.0.borrow().ssao_blur.taps_count
         }
 
-        pub fn get_ssao_blur_sigma_normal(&self) -> f32 {
-            self.0.borrow().ssao_blur.sigma_normal
+        pub fn get_ssao_blur_tap_weight(&self) -> Vec<f32> {
+            self.0.borrow().ssao_blur.tap_weight.clone()
         }
 
-        pub fn get_ssao_blur_radius(&self) -> u32 {
-            self.0.borrow().ssao_blur.radius
+        pub fn get_ssao_blur_tap_offset(&self) -> Vec<f32> {
+            self.0.borrow().ssao_blur.tap_offset.clone()
         }
 
-        pub fn get_ssao_kernel(&self) -> Vec<glam::Vec4> {
-            self.0.borrow().ssao_raw.kernel.clone()
+        pub fn get_ssao_blur_sigma_depth(&self) -> f32 {
+            self.0.borrow().ssao_blur.sigma_depth
         }
     }
 }
