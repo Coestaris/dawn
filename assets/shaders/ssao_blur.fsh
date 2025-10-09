@@ -53,6 +53,27 @@ bool in_bounds(vec2 uv) {
     return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
 }
 
+void ssao_tap(vec2 uv, vec3 N, float Z, out float ao, out float w) {
+    // Fetch tap data
+    float tap_ao = texture(in_ssao_raw_halfres, uv).r;
+    vec3 tap_n = normal(uv);
+    float tap_z = depth(uv);
+
+    // Normal weight
+    float tap_d = max(dot(N, tap_n), 0.0);
+    // Raise to the 4th power to make it sharper
+    float wn = tap_d * tap_d;
+    wn *= wn;
+
+    // Depth weight
+    float wd = exp(-abs(Z - tap_z) * in_sigma_depth);
+
+    // Combined weight
+    float weight = wn * wd;
+    ao = tap_ao;
+    w = weight;
+}
+
 float ssao(vec2 uv) {
     vec3 N = normal(uv);
     float Z = depth(uv);
@@ -71,38 +92,27 @@ float ssao(vec2 uv) {
     // Other taps
     for (int t = 1; t < in_tap_count; t++) {
         float offset = in_tap_offset[t];
+        float weight = in_tap_weight[t];
 
         vec2 du = stride * offset;
         vec2 uvp = uv + du;
         vec2 uvm = uv - du;
 
-        float aop = texture(in_ssao_raw_halfres, uvp).r;
-        float aom = texture(in_ssao_raw_halfres, uvm).r;
+        if (in_bounds(uvp)) {
+            float ao, w;
+            ssao_tap(uvp, N, Z, ao, w);
+            w *= weight;
+            sum += ao * w;
+            wsum += w;
+        }
 
-        vec3 Np = normal(uvp);
-        vec3 Nm = normal(uvm);
-        float Zp = depth(uvp);
-        float Zm = depth(uvm);
-
-        // Weight by normal similarity
-        float dp = max(dot(N, Np), 0.0);
-        float dm = max(dot(N, Nm), 0.0);
-
-        // Raise to the 4th power to make it sharper
-        float wnp = dp * dp;
-        float wnm = dm * dm;
-        wnp *= wnp;
-        wnm *= wnm;
-
-        float wdp = exp(-abs(Z - Zp) * in_sigma_depth);
-        float wdm = exp(-abs(Z - Zm) * in_sigma_depth);
-
-        float w = in_tap_weight[t];
-        float wp = w * wnp * wdp;
-        float wm = w * wnm * wdm;
-
-        sum += aop * wp + aom * wm;
-        wsum += wp + wm;
+        if (in_bounds(uvm)) {
+            float ao, w;
+            ssao_tap(uvm, N, Z, ao, w);
+            w *= weight;
+            sum += ao * w;
+            wsum += w;
+        }
     }
 
     if (wsum > 0.0) {
