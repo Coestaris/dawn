@@ -12,6 +12,8 @@ struct Args {
     output_file: PathBuf,
     #[clap(long, default_value = "true")]
     compress: bool,
+    #[clap(long, default_value = "")]
+    cache_dir: PathBuf,
 }
 
 struct Logger;
@@ -36,9 +38,17 @@ fn main() {
     log::set_max_level(log::LevelFilter::Debug);
 
     let args = Args::parse();
+
+    let cache_dir = if args.cache_dir.as_os_str().is_empty() {
+        dirs::cache_dir().unwrap().join("dawn")
+    } else {
+        args.cache_dir.clone()
+    };
+
     package(
         &args.assets_dir,
         &args.output_file,
+        cache_dir.as_path(),
         if args.compress {
             Compression::Default
         } else {
