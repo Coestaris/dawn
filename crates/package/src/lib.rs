@@ -12,6 +12,7 @@ pub enum Compression {
 pub fn package(
     assets_dir: &Path,
     output_file: &Path,
+    cache_dir: &Path,
     compression: Compression,
 ) -> Result<(), String> {
     use dawn_dac::{ChecksumAlgorithm, CompressionLevel, ReadMode, Version};
@@ -37,7 +38,7 @@ pub fn package(
             read_mode: ReadMode::Recursive,
             checksum_algorithm: ChecksumAlgorithm::Blake3,
             compression_level,
-            cache_dir: dirs::cache_dir().unwrap().join("dawn"),
+            cache_dir: cache_dir.to_path_buf(),
             author: Some("Coestaris".to_string()),
             description: Some("DAWN assets".to_string()),
             version: Some(Version::new(
