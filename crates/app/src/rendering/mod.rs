@@ -52,6 +52,7 @@ pub mod primitive;
 pub mod shaders;
 pub mod textures;
 pub mod ubo;
+pub mod preprocessor;
 
 fn log_info(info: &OpenGLInfo) {
     info!("OpenGL information:");
@@ -99,62 +100,6 @@ fn pre_pipeline_construct(gl: &glow::Context) {
     }
 }
 
-pub fn shader_defines() -> HashMap<String, String> {
-    let mut defines = HashMap::new();
-    #[cfg(feature = "devtools")]
-    {
-        defines.insert("ENABLE_DEVTOOLS".to_string(), "1".to_string());
-    }
-
-    let config = config::config_static::RenderingConfig::new();
-    fn vec3(v: Vec3) -> String {
-        format!("vec3({}, {}, {})", v.x, v.y, v.z)
-    }
-    fn vec4(v: Vec4) -> String {
-        format!("vec4({}, {}, {}, {})", v.x, v.y, v.z, v.w)
-    }
-    fn f32(v: f32) -> String {
-        format!("{}", v)
-    }
-    fn i32(v: i32) -> String {
-        format!("{}", v)
-    }
-    fn vec_vec4(v: Vec<Vec4>) -> String {
-        let mut s = "vec4[](".to_string();
-        for (i, v) in v.iter().enumerate() {
-            if i > 0 {
-                s.push_str(", ");
-            }
-            s.push_str(&vec4(*v));
-        }
-        s.push_str(")");
-        s
-    }
-
-    macro_rules! insert_define {
-        ($name:expr, $t:expr, $v:expr) => {
-            defines.insert($name.to_string(), $t($v));
-        };
-    }
-
-    insert_define!("DEF_SKY_COLOR", vec3, config.get_sky_color());
-    insert_define!("DEF_GROUND_COLOR", vec3, config.get_ground_color());
-    insert_define!("DEF_DIFFUSE_SCALE", f32, config.get_diffuse_scale());
-    insert_define!("DEF_SPECULAR_SCALE", f32, config.get_specular_scale());
-    insert_define!("DEF_SSAO_ENABLED", i32, config.get_is_ssao_enabled() as i32);
-    insert_define!(
-        "DEF_SSAO_KERNEL_SIZE",
-        i32,
-        config.get_ssao_kernel_size() as i32
-    );
-    insert_define!("DEF_SSAO_RADIUS", f32, config.get_ssao_radius());
-    insert_define!("DEF_SSAO_BIAS", f32, config.get_ssao_bias());
-    insert_define!("DEF_SSAO_INTENSITY", f32, config.get_ssao_intensity());
-    insert_define!("DEF_SSAO_POWER", f32, config.get_ssao_power());
-    insert_define!("DEF_SSAO_KERNEL", vec_vec4, config.get_ssao_kernel());
-
-    defines
-}
 
 pub struct Renderer {
     ids: PassIDs,

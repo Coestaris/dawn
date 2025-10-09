@@ -1,23 +1,25 @@
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::shader::ShaderError;
-use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformBlockLocation, UniformLocation};
 
 #[cfg(feature = "devtools")]
 pub struct SSAOBlurShaderDevtools {
-    pub radius: UniformLocation,
-    pub sigma_spatial: UniformLocation,
-    pub sigma_normal: UniformLocation,
+    pub tap_count: UniformLocation,
+    pub sigma_depth: UniformLocation,
     pub ssao_enabled: UniformLocation,
+    pub ubo_ssao_blur_taps: u32,
 }
 
 #[cfg(feature = "devtools")]
 impl SSAOBlurShaderDevtools {
     pub fn new(program: &Program) -> Self {
         Self {
-            radius: program.get_uniform_location("in_radius").unwrap(),
-            sigma_spatial: program.get_uniform_location("in_sigma_spatial").unwrap(),
-            sigma_normal: program.get_uniform_location("in_sigma_normal").unwrap(),
+            tap_count: program.get_uniform_location("in_tap_count").unwrap(),
+            sigma_depth: program.get_uniform_location("in_sigma_depth").unwrap(),
             ssao_enabled: program.get_uniform_location("in_ssao_enabled").unwrap(),
+            ubo_ssao_blur_taps: program
+                .get_uniform_block_location("ubo_ssao_blur_taps")
+                .unwrap(),
         }
     }
 }
@@ -26,8 +28,9 @@ pub struct SSAOBlurShader {
     pub asset: TypedAsset<Program>,
 
     pub ubo_camera: u32,
-    pub ssao_raw: UniformLocation,
-    pub normal: UniformLocation,
+    pub halfres_ssao_raw: UniformLocation,
+    pub halfres_normal: UniformLocation,
+    pub halfres_depth: UniformLocation,
 
     #[cfg(feature = "devtools")]
     pub devtools: SSAOBlurShaderDevtools,
@@ -42,8 +45,9 @@ impl SSAOBlurShader {
 
             ubo_camera: program.get_uniform_block_location("ubo_camera")?,
 
-            ssao_raw: program.get_uniform_location("in_ssao_raw_halfres")?,
-            normal: program.get_uniform_location("in_normal")?,
+            halfres_ssao_raw: program.get_uniform_location("in_halfres_ssao_raw")?,
+            halfres_normal: program.get_uniform_location("in_halfres_normal")?,
+            halfres_depth: program.get_uniform_location("in_halfres_depth")?,
 
             #[cfg(feature = "devtools")]
             devtools: SSAOBlurShaderDevtools::new(&program),

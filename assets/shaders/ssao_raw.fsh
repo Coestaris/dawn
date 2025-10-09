@@ -28,11 +28,11 @@ layout(std140) uniform ubo_ssao_raw_kernel {
 
 #else
 
-const int   in_kernel_size  = DEF_SSAO_KERNEL_SIZE;
-const float in_radius       = DEF_SSAO_RADIUS;
-const float in_bias         = DEF_SSAO_BIAS;
-const float in_intensity    = DEF_SSAO_INTENSITY;
-const float in_power        = DEF_SSAO_POWER;
+const int   in_kernel_size  = DEF_SSAO_RAW_KERNEL_SIZE;
+const float in_radius       = DEF_SSAO_RAW_RADIUS;
+const float in_bias         = DEF_SSAO_RAW_BIAS;
+const float in_intensity    = DEF_SSAO_RAW_INTENSITY;
+const float in_power        = DEF_SSAO_RAW_POWER;
 const int   in_ssao_enabled = DEF_SSAO_ENABLED;
 const vec4  in_samples[DEF_SSAO_KERNEL_SIZE] = DEF_SSAO_KERNEL;
 
