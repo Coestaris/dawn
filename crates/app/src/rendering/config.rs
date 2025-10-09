@@ -54,7 +54,6 @@ pub fn generate_ssao_kernel(size: usize) -> Vec<Vec4> {
 pub(crate) mod config_static {
     use crate::rendering::config::{BoundingBoxMode, OutputMode};
     use glam::Vec4;
-    use std::os::linux::raw::stat;
 
     #[derive(Debug, Clone, Copy)]
     pub struct RenderingConfig;
