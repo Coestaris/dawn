@@ -1,6 +1,7 @@
 use crate::devtools::SunlightControl;
 use crate::rendering::config::{
-    generate_ssao_kernel, BoundingBoxMode, OutputMode, RenderingConfig,
+    generate_ssao_blur_kernel, generate_ssao_raw_kernel, BoundingBoxMode, OutputMode,
+    RenderingConfig,
 };
 use egui::Widget;
 
@@ -214,7 +215,7 @@ pub fn tool_rendering_settings(
                     .changed()
                 {
                     config.ssao_raw.kernel =
-                        generate_ssao_kernel(config.ssao_raw.kernel_size as usize);
+                        generate_ssao_raw_kernel(config.ssao_raw.kernel_size as usize);
                 }
                 egui::Slider::new(&mut config.ssao_raw.radius, 0.01..=5.0)
                     .text("Radius")
@@ -231,15 +232,33 @@ pub fn tool_rendering_settings(
             });
 
             ui.collapsing("SSAO Blur", |ui| {
-                egui::Slider::new(&mut config.ssao_blur.radius, 1..=8)
-                    .text("Blur radius")
-                    .ui(ui);
-                egui::Slider::new(&mut config.ssao_blur.sigma_spatial, 0.1..=40.0)
+                // Must be odd
+                if egui::Slider::new(&mut config.ssao_blur.taps_count, 2..=16)
+                    .step_by(2.0)
+                    .text("Taps Count")
+                    .ui(ui)
+                    .changed()
+                {
+                    let (weight, offset) = generate_ssao_blur_kernel(
+                        config.ssao_blur.taps_count as usize,
+                        config.ssao_blur.sigma_spatial,
+                    );
+                    config.ssao_blur.tap_weight = weight;
+                    config.ssao_blur.tap_offset = offset;
+                }
+                if egui::Slider::new(&mut config.ssao_blur.sigma_spatial, 0.0..=10.0)
                     .text("Sigma Spatial")
-                    .ui(ui);
-                egui::Slider::new(&mut config.ssao_blur.sigma_normal, 8.0..=128.0)
-                    .text("Sigma Normal")
-                    .ui(ui);
+                    .ui(ui)
+                    .changed()
+                {
+                    let (weight, offset) = generate_ssao_blur_kernel(
+                        config.ssao_blur.taps_count as usize,
+                        config.ssao_blur.sigma_spatial,
+                    );
+                    config.ssao_blur.tap_weight = weight;
+                    config.ssao_blur.tap_offset = offset;
+                }
+                egui::Slider::new(&mut config.ssao_blur.sigma_depth, 0.0..=10.0)
             });
         });
 

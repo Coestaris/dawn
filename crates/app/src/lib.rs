@@ -11,7 +11,7 @@ use crate::devtools::{devtools_bridge, DevtoolsWorldConnection};
 use crate::logging::{print_build_info, START_TIME};
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
-use crate::rendering::{shader_defines, RendererBuilder, SetupRenderingParameters};
+use crate::rendering::{RendererBuilder, SetupRenderingParameters};
 use crate::world::app_icon::map_app_icon_handler;
 use crate::world::asset::setup_assets_system;
 use crate::world::exit::escape_handler;
@@ -34,6 +34,7 @@ use std::panic::PanicHookInfo;
 use std::sync::Arc;
 use web_time::Instant;
 use winit::window::{Cursor, CursorIcon};
+use crate::rendering::preprocessor::shader_defines;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
@@ -139,7 +140,7 @@ pub fn run_dawn<PH>(
     let mut hub = AssetHub::new();
 
     let backend_config = RendererConfig {
-        shader_defines: shader_defines(),
+        shader_defines: Arc::new(shader_defines),
         shader_factory_binding: Some(hub.get_factory_biding(AssetType::Shader)),
         texture_factory_binding: Some(hub.get_factory_biding(AssetType::Texture)),
         mesh_factory_binding: Some(hub.get_factory_biding(AssetType::Mesh)),
