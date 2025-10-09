@@ -1022,7 +1022,6 @@ dependencies = [
  "dawn-ecs",
  "dawn-graphics",
  "dawn-util",
- "dirs",
  "egui",
  "egui-winit",
  "egui_extras",

@@ -39,23 +39,21 @@ fn main() {
         use dawn_package::package;
         use dawn_package::Compression;
         use std::path::PathBuf;
-        let profile = std::env::var("PROFILE").unwrap();
-        let assets = std::env::current_dir()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("assets");
-        let mut target_dir: PathBuf = std::env::var_os("CARGO_MANIFEST_DIR").unwrap().into();
-        target_dir = target_dir.parent().unwrap().parent().unwrap().into();
-        target_dir.push("target");
-        target_dir.push(profile.clone()); // "debug" or "release"
-        let output = target_dir.join("assets.dac");
+
+        let profile = std::env::var("PROFILE").unwrap(); // "debug" or "release"
+        let mut root_dir: PathBuf = std::env::var_os("CARGO_MANIFEST_DIR").unwrap().into();
+        root_dir = root_dir.parent().unwrap().parent().unwrap().to_path_buf();
+
+        let target_dir = root_dir.join("target");
+
+        let assets = root_dir.join("assets");
+        let cache_dir = target_dir.join("dac_cache");
+        let output_file = target_dir.join(&profile).join("assets.dac");
 
         package(
             &assets,
-            &output,
+            &output_file,
+            &cache_dir,
             if profile == "release" {
                 Compression::Default
             } else {
