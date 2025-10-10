@@ -129,7 +129,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         let halfres = Rc::new(HalfresBuffer::new(r.gl.clone(), WINDOW_SIZE).unwrap());
         let lighting_taget = Rc::new(LightningTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
         let ssao_raw_target = Rc::new(SSAOHalfresTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
-        let ssao_blur_target = Rc::new(SSAOTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
+        let ssao_blur_target = Rc::new(SSAOHalfresTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
 
         let camera_ubo = CameraUBO::new(r.gl.clone(), CAMERA_UBO_BINDING);
 
@@ -156,7 +156,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         let ssao_blur = SSAOBlurPass::new(
             r.gl.clone(),
             self.ids.ssao_blur,
-            gbuffer.clone(),
+            halfres.clone(),
             ssao_raw_target.clone(),
             ssao_blur_target.clone(),
             self.config.clone(),
@@ -165,7 +165,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             r.gl.clone(),
             self.ids.lighting_id,
             gbuffer.clone(),
-            ssao_blur_target.clone(),
+            ssao_raw_target.clone(),
             lighting_taget.clone(),
             self.config.clone(),
         );

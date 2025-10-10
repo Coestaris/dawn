@@ -4,7 +4,7 @@
 #include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
-#define MAX_TAPS 9
+#define MAX_TAPS 32
 
 // R8
 layout(location = 0) out float out_halfres_ssao_blur;
@@ -16,9 +16,9 @@ uniform sampler2D in_halfres_ssao_raw;
 // RG8_SNORM. Octo encoded normal, view space
 uniform sampler2D in_halfres_normal;
 
-// (1 / width, 0) for vertical and (0, 1 / height) for horizontal
+// (1 / width, 0) for horizontal, (0, 1 / height) for vertical
 // Used to select direction in separable blur
-uniform vec2 stride;
+uniform vec2 in_stride;
 
 #if ENABLE_DEVTOOLS
 
@@ -49,13 +49,9 @@ float depth(vec2 uv) {
     return texture(in_halfres_depth, uv).r;
 }
 
-bool in_bounds(vec2 uv) {
-    return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
-}
-
 void ssao_tap(vec2 uv, vec3 N, float Z, out float ao, out float w) {
     // Fetch tap data
-    float tap_ao = texture(in_ssao_raw_halfres, uv).r;
+    float tap_ao = texture(in_halfres_ssao_raw, uv).r;
     vec3 tap_n = normal(uv);
     float tap_z = depth(uv);
 
@@ -83,7 +79,7 @@ float ssao(vec2 uv) {
 
     // Central tap
     {
-        float ao = texture(in_ssao_raw_halfres, uv).r;
+        float ao = texture(in_halfres_ssao_raw, uv).r;
         float w = in_tap_weight[0];
         sum += ao * w;
         wsum += w;
@@ -94,11 +90,11 @@ float ssao(vec2 uv) {
         float offset = in_tap_offset[t];
         float weight = in_tap_weight[t];
 
-        vec2 du = stride * offset;
+        vec2 du = in_stride * offset;
         vec2 uvp = uv + du;
         vec2 uvm = uv - du;
 
-        if (in_bounds(uvp)) {
+        {
             float ao, w;
             ssao_tap(uvp, N, Z, ao, w);
             w *= weight;
@@ -106,7 +102,7 @@ float ssao(vec2 uv) {
             wsum += w;
         }
 
-        if (in_bounds(uvm)) {
+        {
             float ao, w;
             ssao_tap(uvm, N, Z, ao, w);
             w *= weight;
@@ -120,7 +116,7 @@ float ssao(vec2 uv) {
         return sum;
     } else {
         // Fallback if no weights were accumulated
-        return texture(in_ssao_raw_halfres, uv).r;
+        return texture(in_halfres_ssao_raw, uv).r;
     }
 }
 
@@ -129,6 +125,8 @@ void main()
     if (in_ssao_enabled != 1) {
         out_halfres_ssao_blur = 1.0;
     } else {
-        out_halfres_ssao_blur = ssao(gl_FragCoord.xy / vec2(in_viewport));
+        ivec2 size = textureSize(in_halfres_ssao_raw, 0);
+        vec2 uv = (gl_FragCoord.xy + 0.5) / vec2(size);
+        out_halfres_ssao_blur = ssao(uv);
     }
 }
