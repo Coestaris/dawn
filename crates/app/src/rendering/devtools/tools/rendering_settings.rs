@@ -233,7 +233,7 @@ pub fn tool_rendering_settings(
 
             ui.collapsing("SSAO Blur", |ui| {
                 // Must be odd
-                if egui::Slider::new(&mut config.ssao_blur.taps_count, 2..=16)
+                if egui::Slider::new(&mut config.ssao_blur.taps_count, 1..=17)
                     .step_by(2.0)
                     .text("Taps Count")
                     .ui(ui)
@@ -259,6 +259,8 @@ pub fn tool_rendering_settings(
                     config.ssao_blur.tap_offset = offset;
                 }
                 egui::Slider::new(&mut config.ssao_blur.sigma_depth, 0.0..=10.0)
+                    .text("Sigma Depth")
+                    .ui(ui);
             });
         });
 
