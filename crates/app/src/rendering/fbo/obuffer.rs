@@ -8,7 +8,7 @@ use std::sync::Arc;
 pub struct LightningTarget {
     pub fbo: Framebuffer,
 
-    // Output texture. RGBA8
+    // Output texture. RGB8
     pub texture: GTexture,
 }
 
@@ -23,7 +23,7 @@ impl LightningTarget {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
             texture: GTexture::new(
                 gl.clone(),
-                IRPixelFormat::RGBA8,
+                IRPixelFormat::RGB8,
                 FramebufferAttachment::Color0,
             )?,
         };

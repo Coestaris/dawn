@@ -40,7 +40,7 @@ pub struct LightingShader {
     pub albedo: UniformLocation,
     pub orm: UniformLocation,
     pub normal: UniformLocation,
-    pub ssao: UniformLocation,
+    pub halfres_ssao: UniformLocation,
 }
 
 impl LightingShader {
@@ -59,7 +59,7 @@ impl LightingShader {
             albedo: program.get_uniform_location("in_albedo")?,
             orm: program.get_uniform_location("in_orm")?,
             normal: program.get_uniform_location("in_normal")?,
-            ssao: program.get_uniform_location("in_ssao")?,
+            halfres_ssao: program.get_uniform_location("in_halfres_ssao")?,
         })
     }
 }
