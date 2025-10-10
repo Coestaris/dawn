@@ -203,7 +203,7 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_ssao_blur_taps_count(&self) -> u32 {
-            5
+            7
         }
 
         #[inline(always)]
