@@ -183,7 +183,7 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_ssao_raw_radius(&self) -> f32 {
-            0.9
+            0.5
         }
 
         #[inline(always)]
@@ -203,7 +203,7 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_ssao_blur_taps_count(&self) -> u32 {
-            4
+            5
         }
 
         #[inline(always)]
@@ -234,12 +234,12 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_ssao_blur_sigma_spatial(&self) -> f32 {
-            10.0
+            8.0
         }
 
         #[inline(always)]
         pub fn get_ssao_blur_sigma_depth(&self) -> f32 {
-            16.0
+            8.0
         }
     }
 }
@@ -446,6 +446,10 @@ mod config_impl {
 
         pub fn get_ssao_blur_sigma_depth(&self) -> f32 {
             self.0.borrow().ssao_blur.sigma_depth
+        }
+
+        pub fn get_ssao_blur_sigma_spatial(&self) -> f32 {
+            self.0.borrow().ssao_blur.sigma_spatial
         }
     }
 }

@@ -28,6 +28,7 @@ pub struct SSAOBlurShader {
     pub asset: TypedAsset<Program>,
 
     pub ubo_camera: u32,
+    pub stride: UniformLocation,
     pub halfres_ssao_raw: UniformLocation,
     pub halfres_normal: UniformLocation,
     pub halfres_depth: UniformLocation,
@@ -45,6 +46,7 @@ impl SSAOBlurShader {
 
             ubo_camera: program.get_uniform_block_location("ubo_camera")?,
 
+            stride: program.get_uniform_location("in_stride")?,
             halfres_ssao_raw: program.get_uniform_location("in_halfres_ssao_raw")?,
             halfres_normal: program.get_uniform_location("in_halfres_normal")?,
             halfres_depth: program.get_uniform_location("in_halfres_depth")?,

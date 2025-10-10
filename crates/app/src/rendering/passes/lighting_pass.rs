@@ -2,7 +2,7 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::obuffer::LightningTarget;
-use crate::rendering::fbo::ssao::SSAOTarget;
+use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::lighting::LightingShader;
 use crate::rendering::ubo::packed_light::{LightsHeaderPayload, PackedLights};
@@ -34,7 +34,7 @@ pub(crate) struct LightingPass {
     quad: Quad2D,
     view: glam::Mat4,
     packed_lights: PackedLights,
-    ssao_blurred: Rc<SSAOTarget>,
+    ssao_blurred: Rc<SSAOHalfresTarget>,
     gbuffer: Rc<GBuffer>,
     target: Rc<LightningTarget>,
 }
@@ -44,7 +44,7 @@ impl LightingPass {
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
-        ssao_blurred: Rc<SSAOTarget>,
+        ssao_blurred: Rc<SSAOHalfresTarget>,
         target: Rc<LightningTarget>,
         config: RenderingConfig,
     ) -> Self {
