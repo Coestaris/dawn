@@ -2,7 +2,7 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::obuffer::LightningTarget;
-use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
+use crate::rendering::fbo::ssao::SSAOHalfresTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::lighting::LightingShader;
 use crate::rendering::ubo::packed_light::{LightsHeaderPayload, PackedLights};
@@ -23,7 +23,7 @@ const ALBEDO_INDEX: i32 = 1;
 const ORM_INDEX: i32 = 2;
 const NORMAL_INDEX: i32 = 3;
 const PACKED_LIGHTS_INDEX: i32 = 4;
-const SSAO_INDEX: i32 = 5;
+const HALFRES_SSAO_INDEX: i32 = 5;
 
 pub(crate) struct LightingPass {
     gl: Arc<glow::Context>,
@@ -34,7 +34,7 @@ pub(crate) struct LightingPass {
     quad: Quad2D,
     view: glam::Mat4,
     packed_lights: PackedLights,
-    ssao_blurred: Rc<SSAOHalfresTarget>,
+    halfres_ssao: Rc<SSAOHalfresTarget>,
     gbuffer: Rc<GBuffer>,
     target: Rc<LightningTarget>,
 }
@@ -56,7 +56,7 @@ impl LightingPass {
             quad: Quad2D::new(gl.clone()),
             view: glam::Mat4::IDENTITY,
             packed_lights: PackedLights::new(gl).unwrap(),
-            ssao_blurred,
+            halfres_ssao: ssao_blurred,
             gbuffer,
             target,
         }
@@ -92,7 +92,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 program.set_uniform(&shader.orm, ORM_INDEX);
                 program.set_uniform(&shader.normal, NORMAL_INDEX);
                 program.set_uniform(&shader.packed_lights, PACKED_LIGHTS_INDEX);
-                program.set_uniform(&shader.ssao, SSAO_INDEX);
+                program.set_uniform(&shader.halfres_ssao, HALFRES_SSAO_INDEX);
                 Program::unbind(&self.gl);
             }
             RenderingEvent::ViewportResized(size) => {
@@ -174,7 +174,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
         self.gbuffer.orm.bind2d(ORM_INDEX);
         self.gbuffer.normal.bind2d(NORMAL_INDEX);
         self.packed_lights.bind(PACKED_LIGHTS_INDEX);
-        self.ssao_blurred.texture.bind2d(SSAO_INDEX);
+        self.halfres_ssao.texture.bind2d(HALFRES_SSAO_INDEX);
 
         self.quad.draw()
     }
@@ -188,7 +188,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
         Texture::unbind(&self.gl, TextureBind::Texture2D, ORM_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
         Texture::unbind(&self.gl, TextureBind::Texture2D, PACKED_LIGHTS_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, SSAO_INDEX as u32);
+        Texture::unbind(&self.gl, TextureBind::Texture2D, HALFRES_SSAO_INDEX as u32);
         RenderResult::default()
     }
 }
