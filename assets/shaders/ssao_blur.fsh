@@ -22,7 +22,12 @@ uniform vec2 in_stride;
 
 #if ENABLE_DEVTOOLS
 
-uniform int   in_tap_count;
+// Full taps.
+uniform int in_tap_count;
+// i.e., if tap_count = 9, we have 5 weights/offsets
+//          center + 4 pairs of symmetric taps
+#define ITERATIONS ((in_tap_count) / 2 + 1)
+
 uniform float in_sigma_depth;
 uniform int   in_ssao_enabled;
 
@@ -33,11 +38,13 @@ layout(std140) uniform ubo_ssao_blur_taps {
 
 #else
 
-const int   in_tap_count                           = DEF_SSAO_BLUR_TAP_COUNT;
-const float in_sigma_depth                         = DEF_SSAO_BLUR_SIGMA_NORMAL;
-const float in_tap_weight[DEF_SSAO_BLUR_TAP_COUNT] = DEF_SSAO_BLUR_TAP_WEIGHT;
-const float in_tap_offset[DEF_SSAO_BLUR_TAP_COUNT] = DEF_SSAO_BLUR_TAP_OFFSET;
-const int   in_ssao_enabled                        = DEF_SSAO_ENABLED;
+// Half taps, since we do symmetric taps
+#define ITERATIONS (DEF_SSAO_BLUR_TAP_COUNT / 2 + 1)
+
+const float in_sigma_depth            = DEF_SSAO_BLUR_SIGMA_NORMAL;
+const float in_tap_weight[ITERATIONS] = DEF_SSAO_BLUR_TAP_WEIGHT;
+const float in_tap_offset[ITERATIONS] = DEF_SSAO_BLUR_TAP_OFFSET;
+const int   in_ssao_enabled           = DEF_SSAO_ENABLED;
 
 #endif
 
@@ -85,8 +92,8 @@ float ssao(vec2 uv) {
         wsum += w;
     }
 
-    // Other taps
-    for (int t = 1; t < in_tap_count; t++) {
+    // Other taps (symmetric)
+    for (int t = 1; t < ITERATIONS; t++) {
         float offset = in_tap_offset[t];
         float weight = in_tap_weight[t];
 

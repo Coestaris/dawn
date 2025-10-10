@@ -34,7 +34,7 @@ const float in_bias         = DEF_SSAO_RAW_BIAS;
 const float in_intensity    = DEF_SSAO_RAW_INTENSITY;
 const float in_power        = DEF_SSAO_RAW_POWER;
 const int   in_ssao_enabled = DEF_SSAO_ENABLED;
-const vec4  in_samples[DEF_SSAO_KERNEL_SIZE] = DEF_SSAO_KERNEL;
+const vec4  in_samples[DEF_SSAO_RAW_KERNEL_SIZE] = DEF_SSAO_RAW_KERNEL;
 
 #endif
 
