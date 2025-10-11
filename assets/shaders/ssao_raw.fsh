@@ -93,8 +93,10 @@ void main() {
         return;
     }
 
+    ivec2 size = textureSize(in_halfres_depth, 0);
+    vec2 uv = (gl_FragCoord.xy + 0.5) / vec2(size);
+
     // View-space position & normal at this pixel
-    vec2 uv = gl_FragCoord.xy / vec2(in_viewport) / 0.5; // half-res
     vec3 P = pos(uv);
     vec3 N = normal(uv);
 

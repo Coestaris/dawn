@@ -67,6 +67,8 @@ void ssao_tap(vec2 uv, vec3 N, float Z, out float ao, out float w) {
     // Raise to the 4th power to make it sharper
     float wn = tap_d * tap_d;
     wn *= wn;
+//    wn += 1000;
+//    wn = max(wn, 1.0);
 
     // Depth weight
     float wd = exp(-abs(Z - tap_z) * in_sigma_depth);

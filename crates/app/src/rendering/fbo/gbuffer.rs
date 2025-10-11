@@ -32,7 +32,7 @@ impl GBuffer {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
             depth: GTexture::new(
                 gl.clone(),
-                IRPixelFormat::DEPTH24,
+                IRPixelFormat::DEPTH32F,
                 FramebufferAttachment::Depth,
             )?,
             albedo: GTexture::new(
