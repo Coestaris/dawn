@@ -71,7 +71,7 @@ impl GTexture {
         texture.set_min_filter(IRTextureFilter::Nearest)?;
         texture.set_mag_filter(IRTextureFilter::Nearest)?;
         texture.disable_compare_mode()?;
-        texture.generate_mipmap();
+        texture.set_max_level(0)?;
         Texture::unbind(&gl, TextureBind::Texture2D, 0);
 
         Ok(GTexture {

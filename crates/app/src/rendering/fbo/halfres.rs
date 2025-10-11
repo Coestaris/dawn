@@ -11,8 +11,6 @@ pub struct HalfresBuffer {
     pub depth: GTexture,
     // RG8 - octo encoded normal, view space
     pub normal: GTexture,
-    // RGBA8. RGB - albedo, A - roughness
-    // pub albedo_roughness: GTexture,
 }
 
 impl HalfresBuffer {
@@ -21,7 +19,6 @@ impl HalfresBuffer {
         let half_size = new_size / 2;
         self.depth.resize(half_size);
         self.normal.resize(half_size);
-        // self.albedo_roughness.resize(half_size);
     }
 
     pub fn new(gl: Arc<glow::Context>, initial: UVec2) -> anyhow::Result<Self> {

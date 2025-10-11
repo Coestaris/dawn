@@ -246,7 +246,7 @@ pub fn tool_rendering_settings(
                     config.ssao_blur.tap_weight = weight;
                     config.ssao_blur.tap_offset = offset;
                 }
-                if egui::Slider::new(&mut config.ssao_blur.sigma_spatial, 0.0..=10.0)
+                if egui::Slider::new(&mut config.ssao_blur.sigma_spatial, 0.0..=32.0)
                     .text("Sigma Spatial")
                     .ui(ui)
                     .changed()
@@ -258,7 +258,7 @@ pub fn tool_rendering_settings(
                     config.ssao_blur.tap_weight = weight;
                     config.ssao_blur.tap_offset = offset;
                 }
-                egui::Slider::new(&mut config.ssao_blur.sigma_depth, 0.0..=10.0)
+                egui::Slider::new(&mut config.ssao_blur.sigma_depth, 0.0..=32.0)
                     .text("Sigma Depth")
                     .ui(ui);
             });

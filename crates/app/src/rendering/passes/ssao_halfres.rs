@@ -13,6 +13,7 @@ use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
 use std::rc::Rc;
 use std::sync::Arc;
+use glam::UVec2;
 use winit::window::Window;
 
 const DEPTH_INDEX: i32 = 0;
@@ -24,6 +25,7 @@ pub(crate) struct SSAOHalfresPass {
     shader: Option<SSAOHalfresShader>,
     gbuffer: Rc<GBuffer>,
     target: Rc<HalfresBuffer>,
+    viewport: UVec2,
     quad: Quad2D,
 }
 
@@ -40,6 +42,7 @@ impl SSAOHalfresPass {
             shader: None,
             gbuffer,
             target,
+            viewport: UVec2::ZERO,
             quad: Quad2D::new(gl),
         }
     }
@@ -62,6 +65,7 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
             }
             RenderingEvent::ViewportResized(size) => {
                 self.target.resize(size);
+                self.viewport = size;
             }
             RenderingEvent::UpdateShader(_, shader) => {
                 self.shader = Some(SSAOHalfresShader::new(shader.clone()).unwrap());
@@ -102,6 +106,14 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
 
         unsafe {
             self.gl.disable(glow::DEPTH_TEST);
+
+            // Rendering in half resolution
+            self.gl.viewport(
+                0,
+                0,
+                (self.viewport.x / 2) as i32,
+                (self.viewport.y / 2) as i32,
+            );
         }
 
         let shader = self.shader.as_ref().unwrap();
