@@ -25,11 +25,14 @@ void main() {
     float d2 = texelFetch(in_depth,  f0 + ivec2(0,1), 0).r;
     float d3 = texelFetch(in_depth,  f0 + ivec2(1,1), 0).r;
 
-    float d_min = d0; ivec2 off = ivec2(0,0);
-    if (d1 < d_min) { d_min = d1; off = ivec2(1,0); }
-    if (d2 < d_min) { d_min = d2; off = ivec2(0,1); }
-    if (d3 < d_min) { d_min = d3; off = ivec2(1,1); }
+    float d_max = d0; ivec2 off = ivec2(0,0);
+    if (d1 > d_max) { d_max = d1; off = ivec2(1,0); }
+    if (d2 > d_max) { d_max = d2; off = ivec2(0,1); }
+    if (d3 > d_max) { d_max = d3; off = ivec2(1,1); }
 
-    out_halres_depth  = linearize_depth(d_min, in_clip_planes.x, in_clip_planes.y);
+    // TODO: Implement some kind of depth guided blending?
+    //       E.g., if d_max is much larger than the others,
+    //       we could try to pick the second largest, etc.
+    out_halres_depth  = linearize_depth(d_max, in_clip_planes.x, in_clip_planes.y);
     out_halres_normal = texelFetch(in_normal, f0 + off, 0).rg;
 }

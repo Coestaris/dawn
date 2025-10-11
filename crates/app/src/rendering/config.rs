@@ -167,7 +167,7 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_ssao_raw_kernel_size(&self) -> u32 {
-            24
+            20
         }
 
         #[inline(always)]
@@ -198,7 +198,7 @@ pub(crate) mod config_static {
 
         #[inline(always)]
         pub fn get_ssao_raw_power(&self) -> f32 {
-            1.0
+            1.3
         }
 
         #[inline(always)]

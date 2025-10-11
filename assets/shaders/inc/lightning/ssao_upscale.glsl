@@ -7,7 +7,7 @@ float upsample_ssao(vec2 uv_full) {
     float z0 = get_depth(uv_full);
     vec3  n0 = get_normal(uv_full);
 
-    vec2 st   = uv_full * vec2(half_size) - 0.5;
+    vec2 st   = uv_full * vec2(half_size);
     ivec2 ij0 = ivec2(floor(st));
     vec2  frac = st - vec2(ij0);
 

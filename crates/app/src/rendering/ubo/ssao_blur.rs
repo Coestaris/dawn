@@ -71,8 +71,6 @@ impl SSAOBlurKernelUBO {
         for (i, offset) in offsets.iter().enumerate() {
             self.payload.offset[i] = Std140Float::new(*offset);
         }
-        println!("weights: {:?}", weights);
-        println!("offsets: {:?}", offsets);
         info!(
             "SSAOBlurKernelUBO: set {} weights and {} offsets",
             weights.len(),
