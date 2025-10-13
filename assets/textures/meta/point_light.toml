@@ -1,0 +1,6 @@
+[header]
+asset_type = "Texture2D"
+
+[properties.Texture2D]
+source.File = "textures/point_light.png"
+pixel_format = "RGBA8"

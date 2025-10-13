@@ -1,0 +1,10 @@
+[header]
+asset_type = "Mesh"
+author = "Coestaris <vk_vm@ukr.net>"
+license = "MIT"
+
+[properties.Mesh.source]
+File = "meshes/cube.glb"
+
+[properties.Mesh]
+gen_material = true

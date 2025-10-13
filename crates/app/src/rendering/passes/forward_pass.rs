@@ -9,7 +9,7 @@ use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
-use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
+use dawn_graphics::gl::raii::texture::Texture2D;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -220,30 +220,14 @@ impl RenderPass<RenderingEvent> for ForwardPass {
                             )
                         };
 
-                    Texture::bind(
+                    Texture2D::bind(&self.gl, albedo, ALBEDO_INDEX as u32);
+                    Texture2D::bind(&self.gl, normal, NORMAL_INDEX as u32);
+                    Texture2D::bind(
                         &self.gl,
-                        TextureBind::Texture2D,
-                        albedo,
-                        ALBEDO_INDEX as u32,
-                    );
-                    Texture::bind(
-                        &self.gl,
-                        TextureBind::Texture2D,
-                        normal,
-                        NORMAL_INDEX as u32,
-                    );
-                    Texture::bind(
-                        &self.gl,
-                        TextureBind::Texture2D,
                         metallic_roughness,
                         METALLIC_ROUGHNESS_INDEX as u32,
                     );
-                    Texture::bind(
-                        &self.gl,
-                        TextureBind::Texture2D,
-                        occlusion,
-                        OCCLUSION_INDEX as u32,
-                    );
+                    Texture2D::bind(&self.gl, occlusion, OCCLUSION_INDEX as u32);
 
                     (false, RenderResult::default())
                 },
@@ -260,14 +244,10 @@ impl RenderPass<RenderingEvent> for ForwardPass {
         }
 
         Program::unbind(&self.gl);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, ALBEDO_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
-        Texture::unbind(
-            &self.gl,
-            TextureBind::Texture2D,
-            METALLIC_ROUGHNESS_INDEX as u32,
-        );
-        Texture::unbind(&self.gl, TextureBind::Texture2D, OCCLUSION_INDEX as u32);
+        Texture2D::unbind(&self.gl, ALBEDO_INDEX as u32);
+        Texture2D::unbind(&self.gl, NORMAL_INDEX as u32);
+        Texture2D::unbind(&self.gl, METALLIC_ROUGHNESS_INDEX as u32);
+        Texture2D::unbind(&self.gl, OCCLUSION_INDEX as u32);
         Framebuffer::unbind(&self.gl);
         RenderResult::default()
     }

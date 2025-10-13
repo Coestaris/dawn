@@ -142,7 +142,7 @@ pub fn run_dawn<PH>(
     let backend_config = RendererConfig {
         shader_defines: Arc::new(shader_defines),
         shader_factory_binding: Some(hub.get_factory_biding(AssetType::Shader)),
-        texture_factory_binding: Some(hub.get_factory_biding(AssetType::Texture)),
+        texture_factory_binding: Some(hub.get_factory_biding(AssetType::Texture2D)),
         mesh_factory_binding: Some(hub.get_factory_biding(AssetType::Mesh)),
         material_factory_binding: Some(hub.get_factory_biding(AssetType::Material)),
         font_factory_binding: Some(hub.get_factory_biding(AssetType::Font)),
