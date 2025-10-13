@@ -1,10 +1,10 @@
-use dawn_assets::ir::texture::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
-use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
+use dawn_assets::ir::texture2d::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
+use dawn_graphics::gl::raii::texture::Texture2D;
 use std::sync::Arc;
 
-pub fn white_noise_rgf32(gl: Arc<glow::Context>, width: usize, height: usize) -> Texture {
-    let texture = Texture::new2d(gl.clone()).unwrap();
-    Texture::bind(&gl, TextureBind::Texture2D, &texture, 0);
+pub fn white_noise_rgf32(gl: Arc<glow::Context>, width: usize, height: usize) -> Texture2D {
+    let texture = Texture2D::new2d(gl.clone()).unwrap();
+    Texture2D::bind(&gl, &texture, 0);
     texture.set_min_filter(IRTextureFilter::Nearest).unwrap();
     texture.set_mag_filter(IRTextureFilter::Nearest).unwrap();
     texture.set_wrap_s(IRTextureWrap::Repeat).unwrap();
@@ -30,14 +30,14 @@ pub fn white_noise_rgf32(gl: Arc<glow::Context>, width: usize, height: usize) ->
         )
         .unwrap();
 
-    Texture::unbind(&gl, TextureBind::Texture2D, 0);
+    Texture2D::unbind(&gl, 0);
     texture
 }
 
 /// Generate a white noise texture with f32 values in the range [0.0, 1.0]
-pub fn white_noise_f32(gl: Arc<glow::Context>, width: usize, height: usize) -> Texture {
-    let texture = Texture::new2d(gl.clone()).unwrap();
-    Texture::bind(&gl, TextureBind::Texture2D, &texture, 0);
+pub fn white_noise_f32(gl: Arc<glow::Context>, width: usize, height: usize) -> Texture2D {
+    let texture = Texture2D::new2d(gl.clone()).unwrap();
+    Texture2D::bind(&gl, &texture, 0);
     texture.set_min_filter(IRTextureFilter::Linear).unwrap();
     texture.set_mag_filter(IRTextureFilter::Linear).unwrap();
     texture.set_wrap_s(IRTextureWrap::MirroredRepeat).unwrap();
@@ -58,6 +58,6 @@ pub fn white_noise_f32(gl: Arc<glow::Context>, width: usize, height: usize) -> T
         )
         .unwrap();
 
-    Texture::unbind(&gl, TextureBind::Texture2D, 0);
+    Texture2D::unbind(&gl, 0);
     texture
 }

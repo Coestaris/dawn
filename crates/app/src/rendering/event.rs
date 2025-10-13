@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use dawn_assets::{AssetID, TypedAsset};
 use dawn_graphics::gl::raii::shader_program::Program;
-use dawn_graphics::gl::raii::texture::Texture;
+use dawn_graphics::gl::raii::texture::Texture2D;
 use glam::{Mat4, UVec2};
 
 #[derive(Debug, Clone)]
@@ -21,7 +21,7 @@ pub enum RenderingEvent {
     ViewportResized(UVec2),
 
     // Specific events can be added here
-    SetLightTexture(LightTextureType, TypedAsset<Texture>),
+    SetLightTexture(LightTextureType, TypedAsset<Texture2D>),
 }
 
 bitflags! {

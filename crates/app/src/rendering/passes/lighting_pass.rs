@@ -8,7 +8,7 @@ use crate::rendering::shaders::lighting::LightingShader;
 use crate::rendering::ubo::packed_light::{LightsHeaderPayload, PackedLights};
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
-use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
+use dawn_graphics::gl::raii::texture::Texture2D;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -183,12 +183,12 @@ impl RenderPass<RenderingEvent> for LightingPass {
     fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Framebuffer::unbind(&self.gl);
         Program::unbind(&self.gl);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, DEPTH_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, ALBEDO_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, ORM_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, NORMAL_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, PACKED_LIGHTS_INDEX as u32);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, HALFRES_SSAO_INDEX as u32);
+        Texture2D::unbind(&self.gl, DEPTH_INDEX as u32);
+        Texture2D::unbind(&self.gl, ALBEDO_INDEX as u32);
+        Texture2D::unbind(&self.gl, ORM_INDEX as u32);
+        Texture2D::unbind(&self.gl, NORMAL_INDEX as u32);
+        Texture2D::unbind(&self.gl, PACKED_LIGHTS_INDEX as u32);
+        Texture2D::unbind(&self.gl, HALFRES_SSAO_INDEX as u32);
         RenderResult::default()
     }
 }
