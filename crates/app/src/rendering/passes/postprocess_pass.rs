@@ -5,7 +5,7 @@ use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::postprocess::PostprocessShader;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_graphics::gl::raii::shader_program::Program;
-use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
+use dawn_graphics::gl::raii::texture::Texture2D;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -112,7 +112,7 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
     #[inline(always)]
     fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         Program::unbind(&self.gl);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, 0);
+        Texture2D::unbind(&self.gl, 0);
         RenderResult::default()
     }
 }

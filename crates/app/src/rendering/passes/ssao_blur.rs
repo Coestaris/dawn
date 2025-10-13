@@ -8,7 +8,7 @@ use crate::rendering::ubo::ssao_blur::SSAOBlurKernelUBO;
 use crate::rendering::ubo::SSAO_BLUR_KERNEL_UBO_BINDING;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
-use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
+use dawn_graphics::gl::raii::texture::Texture2D;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -161,11 +161,7 @@ impl SSAOBlurPass {
 
         // Unbind
         Framebuffer::unbind(&self.gl);
-        Texture::unbind(
-            &self.gl,
-            TextureBind::Texture2D,
-            HALFRES_SSAO_RAW_INDEX as u32,
-        );
+        Texture2D::unbind(&self.gl, HALFRES_SSAO_RAW_INDEX as u32);
 
         result
     }
@@ -252,16 +248,8 @@ impl RenderPass<RenderingEvent> for SSAOBlurPass {
 
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
-        Texture::unbind(
-            &self.gl,
-            TextureBind::Texture2D,
-            HALFRES_SSAO_RAW_INDEX as u32,
-        );
-        Texture::unbind(
-            &self.gl,
-            TextureBind::Texture2D,
-            HALFRES_NORMAL_INDEX as u32,
-        );
+        Texture2D::unbind(&self.gl, HALFRES_SSAO_RAW_INDEX as u32);
+        Texture2D::unbind(&self.gl, HALFRES_NORMAL_INDEX as u32);
         RenderResult::default()
     }
 }

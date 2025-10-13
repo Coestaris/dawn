@@ -1,0 +1,12 @@
+[header]
+asset_type = "Shader"
+author = "Coestaris <vk_vm@ukr.net>"
+license = "MIT"
+
+[[properties.Shader.sources]]
+kind = "Vertex"
+origin.External.File = "shaders/quad.vsh"
+
+[[properties.Shader.sources]]
+kind = "Fragment"
+origin.External.File = "shaders/ssao_raw.fsh"

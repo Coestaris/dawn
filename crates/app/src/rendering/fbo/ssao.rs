@@ -1,5 +1,5 @@
 use crate::rendering::fbo::GTexture;
-use dawn_assets::ir::texture::IRPixelFormat;
+use dawn_assets::ir::texture2d::IRPixelFormat;
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
 use glam::UVec2;
 use std::sync::Arc;

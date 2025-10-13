@@ -1,0 +1,8 @@
+[header]
+asset_type = "Texture2D"
+author = "Screaming Brain Studios"
+license = "CC0-1.0"
+
+[properties.Texture2D]
+pixel_format = "RGBA8"
+source.File = "skyboxes/skybox1.png"

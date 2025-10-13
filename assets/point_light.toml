@@ -1,8 +1,0 @@
-[header]
-asset_type = "Texture"
-
-[[properties.Texture.sources]]
-File = "blobs/point_light.png"
-
-[properties.Texture]
-pixel_format = "RGBA8"

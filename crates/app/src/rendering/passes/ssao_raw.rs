@@ -8,7 +8,7 @@ use crate::rendering::ubo::ssao_raw::SSAORawKernelUBO;
 use crate::rendering::ubo::{CAMERA_UBO_BINDING, SSAO_RAW_KERNEL_UBO_BINDING};
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
-use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
+use dawn_graphics::gl::raii::texture::Texture2D;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -150,7 +150,10 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
             );
             program.set_uniform(&shader.devtools.radius, self.config.get_ssao_raw_radius());
             program.set_uniform(&shader.devtools.bias, self.config.get_ssao_raw_bias());
-            program.set_uniform(&shader.devtools.intensity, self.config.get_ssao_raw_intensity());
+            program.set_uniform(
+                &shader.devtools.intensity,
+                self.config.get_ssao_raw_intensity(),
+            );
             program.set_uniform(&shader.devtools.power, self.config.get_ssao_raw_power());
             program.set_uniform(
                 &shader.devtools.ssao_enabled,
@@ -158,7 +161,8 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
             );
             if self.prev_kernel_size != self.config.get_ssao_raw_kernel_size() as usize {
                 self.prev_kernel_size = self.config.get_ssao_raw_kernel_size() as usize;
-                self.kernel_ubo.set_samples(self.config.get_ssao_raw_kernel());
+                self.kernel_ubo
+                    .set_samples(self.config.get_ssao_raw_kernel());
                 self.kernel_ubo.upload();
             }
         }
@@ -179,12 +183,8 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
 
         Program::unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
-        Texture::unbind(&self.gl, TextureBind::Texture2D, HALFRES_DEPTH_INDEX as u32);
-        Texture::unbind(
-            &self.gl,
-            TextureBind::Texture2D,
-            HALFRES_NORMAL_INDEX as u32,
-        );
+        Texture2D::unbind(&self.gl, HALFRES_DEPTH_INDEX as u32);
+        Texture2D::unbind(&self.gl, HALFRES_NORMAL_INDEX as u32);
         RenderResult::default()
     }
 }

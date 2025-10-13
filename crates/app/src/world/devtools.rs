@@ -9,7 +9,7 @@ use dawn_graphics::ecs::{
     ObjectAreaLight, ObjectColor, ObjectIntensity, ObjectMesh, ObjectPointLight, ObjectSpotLight,
     ObjectSunLight,
 };
-use dawn_graphics::gl::raii::texture::Texture;
+use dawn_graphics::gl::raii::texture::Texture2D;
 use dawn_graphics::passes::events::RenderPassEvent;
 use dawn_graphics::renderer::RendererMonitorEvent;
 use evenio::entity::EntityId;
@@ -112,7 +112,7 @@ fn gizmos_assets_handler(
 ) {
     match r.event {
         AssetHubEvent::AssetLoaded(id) if id.as_str() == SUN_LIGHT_TEXTURE => {
-            let texture = hub.get_typed::<Texture>(SUN_LIGHT_TEXTURE.into()).unwrap();
+            let texture = hub.get_typed::<Texture2D>(SUN_LIGHT_TEXTURE.into()).unwrap();
             dispatcher.dispatch(
                 RenderingEvent::SetLightTexture(LightTextureType::SunLight, texture),
                 &mut sender,
@@ -120,7 +120,7 @@ fn gizmos_assets_handler(
         }
         AssetHubEvent::AssetLoaded(id) if id.as_str() == POINT_LIGHT_TEXTURE => {
             let texture = hub
-                .get_typed::<Texture>(POINT_LIGHT_TEXTURE.into())
+                .get_typed::<Texture2D>(POINT_LIGHT_TEXTURE.into())
                 .unwrap();
             dispatcher.dispatch(
                 RenderingEvent::SetLightTexture(LightTextureType::PointLight, texture),

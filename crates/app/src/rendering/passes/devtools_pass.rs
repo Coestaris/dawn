@@ -16,7 +16,7 @@ use dawn_graphics::gl::raii::framebuffer::{
     BlitFramebufferFilter, BlitFramebufferMask, Framebuffer,
 };
 use dawn_graphics::gl::raii::shader_program::Program;
-use dawn_graphics::gl::raii::texture::{Texture, TextureBind};
+use dawn_graphics::gl::raii::texture::Texture2D;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -38,8 +38,8 @@ pub(crate) struct DevtoolsPass {
     // Resources
     line_shader: Option<LineShader>,
     billboard_shader: Option<BillboardShader>,
-    sun_light_texture: Option<TypedAsset<Texture>>,
-    point_light_texture: Option<TypedAsset<Texture>>,
+    sun_light_texture: Option<TypedAsset<Texture2D>>,
+    point_light_texture: Option<TypedAsset<Texture2D>>,
 
     // Primitives
     cube: Cube3DLines,
@@ -156,7 +156,7 @@ impl DevtoolsPass {
         let program = shader.asset.cast();
 
         let tex = self.point_light_texture.as_ref().unwrap().cast();
-        Texture::bind(&self.gl, TextureBind::Texture2D, tex, 0);
+        Texture2D::bind(&self.gl, tex, 0);
         program.set_uniform(&shader.size_location, Vec2::new(0.3, 0.3));
 
         let mut result = RenderResult::default();
@@ -175,7 +175,7 @@ impl DevtoolsPass {
         let program = shader.asset.cast();
 
         let tex = self.sun_light_texture.as_ref().unwrap().cast();
-        Texture::bind(&self.gl, TextureBind::Texture2D, tex, 0);
+        Texture2D::bind(&self.gl, tex, 0);
 
         let mut result = RenderResult::default();
         program.set_uniform(&shader.size_location, Vec2::new(2.0, 2.0));

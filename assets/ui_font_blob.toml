@@ -1,9 +1,0 @@
-[header]
-asset_type = "Blob"
-author = "Roman Shamin <al4emist.artway@gmail.com>, Evil Martians <fonts@evilmartians.com>"
-license = "OFL-1.1 license"
-
-[properties.Blob.source]
-Url.url = "https://github.com/evilmartians/mono/raw/refs/heads/main/fonts/ttf/MartianMono-Regular.ttf"
-
-
