@@ -1,5 +1,5 @@
 use dawn_assets::ir::texture2d::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
-use dawn_graphics::gl::raii::texture::Texture2D;
+use dawn_graphics::gl::raii::texture::{GLTexture, Texture2D};
 use dawn_graphics::renderable::{RenderablePointLight, RenderableSunLight};
 use glam::UVec4;
 use std::sync::Arc;
@@ -77,7 +77,7 @@ pub struct PackedLights {
 
 impl PackedLights {
     pub fn new(gl: Arc<glow::Context>) -> Option<Self> {
-        let texture = Texture2D::new2d(gl.clone()).ok()?;
+        let texture = Texture2D::new(gl.clone()).ok()?;
 
         Texture2D::bind(&gl, &texture, 0);
         texture.set_mag_filter(IRTextureFilter::Nearest).ok()?;
@@ -169,7 +169,7 @@ impl PackedLights {
         if needed_texels > self.capacity_texels {
             self.capacity_texels = (needed_texels * 2).max(16);
             self.texture
-                .feed_2d::<()>(
+                .feed::<()>(
                     0,
                     self.capacity_texels as usize,
                     1,
@@ -181,7 +181,7 @@ impl PackedLights {
         }
 
         self.texture
-            .feed_2d(
+            .feed(
                 0,
                 needed_texels as usize,
                 1,

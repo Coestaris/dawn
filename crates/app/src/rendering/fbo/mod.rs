@@ -1,7 +1,7 @@
 use dawn_assets::ir::texture2d::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
 use dawn_graphics::gl::raii::renderbuffer::{RenderBufferStorage, Renderbuffer};
-use dawn_graphics::gl::raii::texture::Texture2D;
+use dawn_graphics::gl::raii::texture::{GLTexture, Texture2D};
 use glam::UVec2;
 use std::sync::Arc;
 
@@ -63,7 +63,7 @@ impl GTexture {
         format: IRPixelFormat,
         attachment: FramebufferAttachment,
     ) -> anyhow::Result<Self> {
-        let texture = Texture2D::new2d(gl.clone())?;
+        let texture = Texture2D::new(gl.clone())?;
         Texture2D::bind(&gl, &texture, 0);
         texture.set_wrap_s(IRTextureWrap::ClampToEdge)?;
         texture.set_wrap_t(IRTextureWrap::ClampToEdge)?;
@@ -84,7 +84,7 @@ impl GTexture {
     fn resize(&self, new_size: UVec2) {
         Texture2D::bind(&self.gl, &self.texture, 0);
         self.texture
-            .feed_2d::<()>(
+            .feed::<()>(
                 0,
                 new_size.x as usize,
                 new_size.y as usize,

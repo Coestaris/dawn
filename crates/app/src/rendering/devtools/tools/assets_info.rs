@@ -31,6 +31,7 @@ fn color_type(asset: &AssetInfo) -> Color32 {
         AssetType::Unknown => Color32::from_rgb(200, 200, 200),
         AssetType::Shader => Color32::from_rgb(200, 100, 100),
         AssetType::Texture2D => Color32::from_rgb(100, 200, 100),
+        AssetType::TextureCube => Color32::from_rgb(100, 100, 200),           
         AssetType::Audio => Color32::from_rgb(100, 100, 200),
         AssetType::Notes => Color32::from_rgb(200, 200, 100),
         AssetType::Material => Color32::from_rgb(200, 100, 200),

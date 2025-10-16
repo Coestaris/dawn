@@ -1,8 +1,8 @@
 [header]
-asset_type = "Texture2D"
+asset_type = "TextureCube"
 author = "Screaming Brain Studios"
 license = "CC0-1.0"
 
-[properties.Texture2D]
+[properties.TextureCube]
 pixel_format = "RGBA8"
-source.File = "skyboxes/skybox1.png"
+source.Cross.File = "skyboxes/skybox1.png"
