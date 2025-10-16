@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use dawn_assets::{AssetID, TypedAsset};
 use dawn_graphics::gl::raii::shader_program::Program;
-use dawn_graphics::gl::raii::texture::Texture2D;
+use dawn_graphics::gl::raii::texture::{Texture2D, TextureCube};
 use glam::{Mat4, UVec2};
 
 #[derive(Debug, Clone)]
@@ -22,6 +22,7 @@ pub enum RenderingEvent {
 
     // Specific events can be added here
     SetLightTexture(LightTextureType, TypedAsset<Texture2D>),
+    SetSkybox(TypedAsset<TextureCube>)
 }
 
 bitflags! {
@@ -35,5 +36,6 @@ bitflags! {
         const VIEWPORT_RESIZED = 1 << 5;
 
         const SET_LIGHT_TEXTURE = 1 << 10;
+        const SET_SKYBOX = 1 << 11;
     }
 }

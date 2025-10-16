@@ -48,11 +48,11 @@ pub mod event;
 pub mod fbo;
 pub mod frustum;
 pub mod passes;
+pub mod preprocessor;
 pub mod primitive;
 pub mod shaders;
 pub mod textures;
 pub mod ubo;
-pub mod preprocessor;
 
 fn log_info(info: &OpenGLInfo) {
     info!("OpenGL information:");
@@ -92,6 +92,7 @@ fn pre_pipeline_construct(gl: &glow::Context) {
     // Setup OpenGL state
     unsafe {
         gl.enable(glow::DEPTH_TEST);
+        gl.enable(glow::TEXTURE_CUBE_MAP_SEAMLESS);
         gl.depth_func(glow::LEQUAL);
         gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
         // gl.enable(glow::CULL_FACE);
@@ -99,7 +100,6 @@ fn pre_pipeline_construct(gl: &glow::Context) {
         // gl.front_face(glow::CCW);
     }
 }
-
 
 pub struct Renderer {
     ids: PassIDs,
@@ -292,7 +292,8 @@ impl RendererBuilder {
             RenderingEventMask::DROP_ALL_ASSETS
                 | RenderingEventMask::UPDATE_SHADER
                 | RenderingEventMask::VIEWPORT_RESIZED
-                | RenderingEventMask::VIEW_UPDATED,
+                | RenderingEventMask::VIEW_UPDATED
+                | RenderingEventMask::SET_SKYBOX,
             &[LIGHTING_SHADER],
         );
         let postprocess_id = dispatcher.pass(

@@ -18,6 +18,7 @@ use log::info;
 use std::sync::Arc;
 
 pub const CURRENT_MAP: &str = "map1";
+pub const CURRENT_SKYBOX: &str = "skybox1";
 
 pub const APPLICATION_ICON_BLOB_ID: &str = "icon_blob";
 pub const SUN_LIGHT_TEXTURE: &str = "sun_light";

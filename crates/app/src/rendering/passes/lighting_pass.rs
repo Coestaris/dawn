@@ -6,9 +6,10 @@ use crate::rendering::fbo::ssao::SSAOHalfresTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::lighting::LightingShader;
 use crate::rendering::ubo::packed_light::{LightsHeaderPayload, PackedLights};
+use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
-use dawn_graphics::gl::raii::texture::Texture2D;
+use dawn_graphics::gl::raii::texture::{Texture2D, TextureCube};
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -24,6 +25,7 @@ const ORM_INDEX: i32 = 2;
 const NORMAL_INDEX: i32 = 3;
 const PACKED_LIGHTS_INDEX: i32 = 4;
 const HALFRES_SSAO_INDEX: i32 = 5;
+const SKYBOX_INDEX: i32 = 6;
 
 pub(crate) struct LightingPass {
     gl: Arc<glow::Context>,
@@ -31,6 +33,7 @@ pub(crate) struct LightingPass {
     config: RenderingConfig,
 
     shader: Option<LightingShader>,
+    skybox: Option<TypedAsset<TextureCube>>,
     quad: Quad2D,
     view: glam::Mat4,
     packed_lights: PackedLights,
@@ -53,6 +56,7 @@ impl LightingPass {
             id,
             config,
             shader: None,
+            skybox: None,
             quad: Quad2D::new(gl.clone()),
             view: glam::Mat4::IDENTITY,
             packed_lights: PackedLights::new(gl).unwrap(),
@@ -77,9 +81,13 @@ impl RenderPass<RenderingEvent> for LightingPass {
         match event {
             RenderingEvent::DropAllAssets => {
                 self.shader = None;
+                self.skybox = None;
             }
             RenderingEvent::ViewUpdated(view) => {
                 self.view = view;
+            }
+            RenderingEvent::SetSkybox(skybox) => {
+                self.skybox = Some(skybox);
             }
             RenderingEvent::UpdateShader(_, shader) => {
                 self.shader = Some(LightingShader::new(shader.clone()).unwrap());
@@ -93,6 +101,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 program.set_uniform(&shader.normal, NORMAL_INDEX);
                 program.set_uniform(&shader.packed_lights, PACKED_LIGHTS_INDEX);
                 program.set_uniform(&shader.halfres_ssao, HALFRES_SSAO_INDEX);
+                program.set_uniform(&shader.skybox, SKYBOX_INDEX);
                 Program::unbind(&self.gl);
             }
             RenderingEvent::ViewportResized(size) => {
@@ -176,6 +185,11 @@ impl RenderPass<RenderingEvent> for LightingPass {
         self.packed_lights.bind(PACKED_LIGHTS_INDEX);
         self.halfres_ssao.texture.bind2d(HALFRES_SSAO_INDEX);
 
+        if let Some(skybox) = &self.skybox {
+            let skybox = skybox.cast();
+            TextureCube::bind(&self.gl, skybox, SKYBOX_INDEX as u32);
+        }
+
         self.quad.draw()
     }
 
@@ -189,6 +203,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
         Texture2D::unbind(&self.gl, NORMAL_INDEX as u32);
         Texture2D::unbind(&self.gl, PACKED_LIGHTS_INDEX as u32);
         Texture2D::unbind(&self.gl, HALFRES_SSAO_INDEX as u32);
+        TextureCube::unbind(&self.gl, SKYBOX_INDEX as u32);
         RenderResult::default()
     }
 }

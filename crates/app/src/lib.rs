@@ -13,13 +13,7 @@ use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::preprocessor::shader_defines;
 use crate::rendering::{RendererBuilder, SetupRenderingParameters};
-use crate::world::app_icon::map_app_icon_handler;
-use crate::world::asset::setup_assets_system;
-use crate::world::exit::escape_handler;
-use crate::world::fcam::FreeCamera;
-use crate::world::fullscreen::setup_fullscreen_system;
-use crate::world::input::InputHolder;
-use crate::world::maps::setup_maps_system;
+use crate::world::{init_world, MainToEcs};
 use build_info::BuildInfo;
 use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
@@ -44,36 +38,6 @@ pub enum WorldSyncMode {
 }
 
 pub(crate) static WINDOW_SIZE: UVec2 = UVec2::new(1280, 720);
-
-struct MainToEcs {
-    reader_backend: Arc<dyn ReaderBackend>,
-    hub: AssetHub,
-    renderer_proxy: RendererProxy<RenderingEvent>,
-    dispatcher: RenderDispatcher,
-    #[cfg(feature = "devtools")]
-    devtools_connection: DevtoolsWorldConnection,
-}
-
-fn init_world(world: &mut World, to_ecs: MainToEcs) {
-    to_ecs.renderer_proxy.attach_to_ecs(world);
-    to_ecs.dispatcher.attach_to_ecs(world);
-
-    InputHolder::new().attach_to_ecs(world);
-    FreeCamera::new().attach_to_ecs(world);
-
-    setup_assets_system(world, to_ecs.reader_backend, to_ecs.hub);
-    setup_maps_system(world);
-    setup_fullscreen_system(world);
-
-    #[cfg(feature = "devtools")]
-    {
-        use crate::world::devtools::setup_devtools_system;
-        setup_devtools_system(world, to_ecs.devtools_connection);
-    }
-
-    world.add_handler(escape_handler);
-    world.add_handler(map_app_icon_handler);
-}
 
 // 'Make Zaebis' function
 pub fn run_dawn<PH>(
