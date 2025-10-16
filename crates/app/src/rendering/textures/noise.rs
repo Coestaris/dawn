@@ -1,9 +1,9 @@
 use dawn_assets::ir::texture2d::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
-use dawn_graphics::gl::raii::texture::Texture2D;
+use dawn_graphics::gl::raii::texture::{GLTexture, Texture2D};
 use std::sync::Arc;
 
 pub fn white_noise_rgf32(gl: Arc<glow::Context>, width: usize, height: usize) -> Texture2D {
-    let texture = Texture2D::new2d(gl.clone()).unwrap();
+    let texture = Texture2D::new(gl.clone()).unwrap();
     Texture2D::bind(&gl, &texture, 0);
     texture.set_min_filter(IRTextureFilter::Nearest).unwrap();
     texture.set_mag_filter(IRTextureFilter::Nearest).unwrap();
@@ -20,7 +20,7 @@ pub fn white_noise_rgf32(gl: Arc<glow::Context>, width: usize, height: usize) ->
     }
 
     texture
-        .feed_2d(
+        .feed(
             0,
             width,
             height,
@@ -36,7 +36,7 @@ pub fn white_noise_rgf32(gl: Arc<glow::Context>, width: usize, height: usize) ->
 
 /// Generate a white noise texture with f32 values in the range [0.0, 1.0]
 pub fn white_noise_f32(gl: Arc<glow::Context>, width: usize, height: usize) -> Texture2D {
-    let texture = Texture2D::new2d(gl.clone()).unwrap();
+    let texture = Texture2D::new(gl.clone()).unwrap();
     Texture2D::bind(&gl, &texture, 0);
     texture.set_min_filter(IRTextureFilter::Linear).unwrap();
     texture.set_mag_filter(IRTextureFilter::Linear).unwrap();
@@ -48,7 +48,7 @@ pub fn white_noise_f32(gl: Arc<glow::Context>, width: usize, height: usize) -> T
         data[i] = rand::random::<f32>();
     }
     texture
-        .feed_2d(
+        .feed(
             0,
             width,
             height,
