@@ -4,7 +4,7 @@
 #include "inc/normal.glsl"
 #include "inc/depth.glsl"
 
-layout(location = 0) out vec3 out_color;
+layout(location = 0) out vec4 out_color;
 
 // DEPTH24. OpenGL default depth format
 uniform sampler2D in_depth;
@@ -103,40 +103,43 @@ vec3 process(vec2 uv) {
 void main()
 {
     vec2 uv = (gl_FragCoord.xy + 0.5) / vec2(textureSize(in_depth, 0));
-    
+
+    vec3 color = vec3(0.0);
 #if ENABLE_DEVTOOLS
     if (in_debug_mode == DEBUG_MODE_OFF) {
-        out_color = process(uv);
+        color = process(uv);
     } else if (in_debug_mode == DEBUG_MODE_ALBEDO) {
-        out_color = vec3(get_albedo(uv));
+        color = vec3(get_albedo(uv));
     } else if (in_debug_mode == DEBUG_MODE_METALLIC) {
         float metallic = get_orm(uv).b;
-        out_color = vec3(metallic);
+        color = vec3(metallic);
     } else if (in_debug_mode == DEBUG_MODE_NORMAL) {
         vec3 normal = get_normal(uv);
-        out_color = vec3(normal * 0.5 + 0.5);
+        color = vec3(normal * 0.5 + 0.5);
     } else if (in_debug_mode == DEBUG_MODE_ROUGHNESS) {
         float roughness = get_orm(uv).g;
-        out_color = vec3(roughness);
+        color = vec3(roughness);
     } else if (in_debug_mode == DEBUG_MODE_AO) {
         float ao = get_orm(uv).r;
-        out_color = vec3(ao);
+        color = vec3(ao);
     } else if (in_debug_mode == DEBUG_MODE_DEPTH) {
         float d = get_depth(uv);
-        out_color = vec3(d);
+        color = vec3(d);
     } else if (in_debug_mode == DEBUG_MODE_POSITION) {
         vec3 p = get_pos(uv);
-        out_color = vec3(p);
+        color = vec3(p);
     } else if (in_debug_mode == DEBUG_MODE_SSAO) {
         float ao = get_ssao(uv);
-        out_color = vec3(ao);
+        color = vec3(ao);
     } else if (in_debug_mode == DEBUG_MODE_SKYBOX) {
         vec3 color = get_skybox(uv);
-        out_color = color;
+        color = color;
     } else {
-        out_color = vec3(1.0, 0.0, 1.0); // Magenta for unknown debug mode
+        color = vec3(1.0, 0.0, 1.0); // Magenta for unknown debug mode
     }
 #else
-    out_color = process(uv);
+    color = process(uv);
 #endif
+
+    out_color = vec4(color, 1.0);
 }

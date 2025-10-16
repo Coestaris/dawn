@@ -1,6 +1,6 @@
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
-use crate::rendering::fbo::obuffer::LightningTarget;
+use crate::rendering::fbo::lighting::LightingTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::postprocess::PostprocessShader;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
@@ -22,14 +22,14 @@ pub(crate) struct PostProcessPass {
 
     shader: Option<PostprocessShader>,
     quad: Quad2D,
-    lightning_target: Rc<LightningTarget>,
+    lightning_target: Rc<LightingTarget>,
 }
 
 impl PostProcessPass {
     pub fn new(
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
-        lightning_target: Rc<LightningTarget>,
+        lightning_target: Rc<LightingTarget>,
         config: RenderingConfig,
     ) -> Self {
         PostProcessPass {
