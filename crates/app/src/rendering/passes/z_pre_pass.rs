@@ -1,8 +1,7 @@
-use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
-use crate::rendering::fbo::gbuffer::GBuffer;
+use crate::rendering::fbo::dbuffer::DBuffer;
 use crate::rendering::frustum::FrustumCulling;
-use crate::rendering::shaders::forward::ForwardShader;
+use crate::rendering::shaders::z_pre_pass::ZPrepassShader;
 use crate::rendering::textures::fallback_tex::FallbackTextures;
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
@@ -10,69 +9,52 @@ use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::mesh::{SubMesh, TopologyBucket};
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
-use dawn_graphics::gl::raii::texture::Texture2D;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
-use glam::Mat4;
+use glam::{Mat4, UVec2};
 use glow::HasContext;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 use winit::window::Window;
 
-const ALBEDO_INDEX: i32 = 0;
-const NORMAL_INDEX: i32 = 1;
-const METALLIC_ROUGHNESS_INDEX: i32 = 2;
-const OCCLUSION_INDEX: i32 = 3;
-
-pub(crate) struct ForwardPass {
+pub(crate) struct ZPrePass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
-    config: RenderingConfig,
 
-    shader: Option<ForwardShader>,
+    shader: Option<ZPrepassShader>,
     fallback_textures: FallbackTextures,
+    viewport: UVec2,
 
     frustum: Rc<RefCell<FrustumCulling>>,
 
-    gbuffer: Rc<GBuffer>,
+    dbuffer: Rc<DBuffer>,
+    camera_ubo: CameraUBO,
 }
 
-impl ForwardPass {
+impl ZPrePass {
     pub fn new(
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
-        gbuffer: Rc<GBuffer>,
+        gbuffer: Rc<DBuffer>,
         frustum: Rc<RefCell<FrustumCulling>>,
-        config: RenderingConfig,
     ) -> Self {
-        ForwardPass {
+        ZPrePass {
             gl: gl.clone(),
             id,
-            config,
             shader: None,
-            fallback_textures: FallbackTextures::new(gl),
+            fallback_textures: FallbackTextures::new(gl.clone()),
+            viewport: Default::default(),
             frustum,
-            gbuffer,
+            dbuffer: gbuffer,
+            camera_ubo: CameraUBO::new(gl.clone(), CAMERA_UBO_BINDING),
         }
     }
 
     fn prepare_bucket(&self, bucket: &TopologyBucket) -> (bool, RenderResult) {
-        #[cfg(feature = "devtools")]
-        let tangents = if self.config.get_force_no_tangents() {
-            false
-        } else {
-            bucket.key.tangent_valid
-        };
-        #[cfg(not(feature = "devtools"))]
-        let tangents = bucket.key.tangent_valid;
-
-        let shader = self.shader.as_ref().unwrap();
-        let program = shader.asset.cast();
-        program.set_uniform(&shader.tangent_valid, tangents);
         (false, RenderResult::default())
     }
 
@@ -88,48 +70,24 @@ impl ForwardPass {
             return (true, RenderResult::default());
         }
 
-        let (albedo, normal, metallic_roughness, occlusion) =
-            if let Some(material) = &submesh.material {
-                let material = material.cast::<Material>();
+        if let Some(material) = &submesh.material {
+            let material = material.cast::<Material>();
 
-                // Transparent submeshes are not rendered
-                // They will be rendered in a separate pass
-                if material.transparent {
-                    return (true, RenderResult::default());
-                }
-
-                let albedo = material.albedo.cast();
-                let normal = material.normal.cast();
-                let metallic_roughness = material.metallic_roughness.cast();
-                let occlusion = material.occlusion.cast();
-
-                (albedo, normal, metallic_roughness, occlusion)
-            } else {
-                (
-                    &self.fallback_textures.albedo_texture,
-                    &self.fallback_textures.normal_texture,
-                    &self.fallback_textures.metallic_roughness_texture,
-                    &self.fallback_textures.occlusion_texture,
-                )
-            };
-
-        Texture2D::bind(&self.gl, albedo, ALBEDO_INDEX as u32);
-        Texture2D::bind(&self.gl, normal, NORMAL_INDEX as u32);
-        Texture2D::bind(
-            &self.gl,
-            metallic_roughness,
-            METALLIC_ROUGHNESS_INDEX as u32,
-        );
-        Texture2D::bind(&self.gl, occlusion, OCCLUSION_INDEX as u32);
+            // Transparent submeshes are not rendered
+            // They will be rendered in a separate pass
+            if material.transparent {
+                return (true, RenderResult::default());
+            }
+        }
 
         (false, RenderResult::default())
     }
 }
 
-impl RenderPass<RenderingEvent> for ForwardPass {
+impl RenderPass<RenderingEvent> for ZPrePass {
     fn get_target(&self) -> Vec<PassEventTarget<RenderingEvent>> {
         fn dispatch_pass(ptr: *mut u8, event: RenderingEvent) {
-            let pass = unsafe { &mut *(ptr as *mut ForwardPass) };
+            let pass = unsafe { &mut *(ptr as *mut ZPrePass) };
             pass.dispatch(event);
         }
 
@@ -142,7 +100,7 @@ impl RenderPass<RenderingEvent> for ForwardPass {
                 self.shader = None;
             }
             RenderingEvent::UpdateShader(_, shader) => {
-                self.shader = Some(ForwardShader::new(shader.clone()).unwrap());
+                self.shader = Some(ZPrepassShader::new(shader.clone()).unwrap());
 
                 // Setup shader static uniforms
                 let shader = self.shader.as_ref().unwrap();
@@ -152,11 +110,25 @@ impl RenderPass<RenderingEvent> for ForwardPass {
                     shader.ubo_camera_location,
                     CAMERA_UBO_BINDING as u32,
                 );
-                program.set_uniform(&shader.albedo, ALBEDO_INDEX);
-                program.set_uniform(&shader.normal, NORMAL_INDEX);
-                program.set_uniform(&shader.metallic_roughness, METALLIC_ROUGHNESS_INDEX);
-                program.set_uniform(&shader.occlusion, OCCLUSION_INDEX);
                 Program::unbind(&self.gl);
+            }
+
+            RenderingEvent::ViewportResized(size) => {
+                self.viewport = size;
+                self.camera_ubo.set_viewport(size.x as f32, size.y as f32);
+                self.dbuffer.resize(size);
+                self.camera_ubo.upload();
+            }
+
+            RenderingEvent::PerspectiveProjectionUpdated(proj, near, far) => {
+                self.frustum.borrow_mut().set_perspective(proj);
+                self.camera_ubo.set_perspective(proj, near, far);
+                self.camera_ubo.upload();
+            }
+            RenderingEvent::ViewUpdated(view) => {
+                self.frustum.borrow_mut().set_view(view);
+                self.camera_ubo.set_view(view);
+                self.camera_ubo.upload();
             }
 
             _ => {}
@@ -164,7 +136,7 @@ impl RenderPass<RenderingEvent> for ForwardPass {
     }
 
     fn name(&self) -> &str {
-        "ForwardPass"
+        "ZPrePass"
     }
 
     #[inline(always)]
@@ -174,20 +146,27 @@ impl RenderPass<RenderingEvent> for ForwardPass {
         _: &RendererBackend<RenderingEvent>,
         _frame: &DataStreamFrame,
     ) -> RenderResult {
-        Framebuffer::bind(&self.gl, &self.gbuffer.fbo);
+        unsafe {
+            // Setup viewport
+            self.gl
+                .viewport(0, 0, self.viewport.x as i32, self.viewport.y as i32);
+            self.gl
+                .scissor(0, 0, self.viewport.x as i32, self.viewport.y as i32);
+        }
+
+        Framebuffer::bind(&self.gl, &self.dbuffer.fbo);
 
         unsafe {
-            // Clear color
-            self.gl.clear(glow::COLOR_BUFFER_BIT);
+            // Setup clear color and depth
+            self.gl.clear(glow::DEPTH_BUFFER_BIT);
 
-            // Correct depth information already in the G-Buffer
-            self.gl.depth_func(glow::EQUAL);
-            // Do not modify the depth buffer
-            self.gl.depth_mask(false);
+            self.gl.enable(glow::DEPTH_TEST);
+            self.gl.depth_func(glow::LESS);
+            // Enable depth writing
+            self.gl.depth_mask(true);
 
-            if self.config.get_is_wireframe() {
-                self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::LINE);
-            }
+            // Rendering only the opaque objects
+            self.gl.disable(glow::BLEND);
         }
 
         if let Some(shader) = self.shader.as_mut() {
@@ -224,7 +203,6 @@ impl RenderPass<RenderingEvent> for ForwardPass {
 
         let shader = self.shader.as_mut().unwrap();
         let program = shader.asset.cast();
-
         program.set_uniform(&shader.model_location, renderable.model);
 
         mesh.draw(
@@ -235,16 +213,7 @@ impl RenderPass<RenderingEvent> for ForwardPass {
 
     #[inline(always)]
     fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
-        unsafe {
-            self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::FILL);
-            self.gl.depth_mask(true);
-        }
-
         Program::unbind(&self.gl);
-        Texture2D::unbind(&self.gl, ALBEDO_INDEX as u32);
-        Texture2D::unbind(&self.gl, NORMAL_INDEX as u32);
-        Texture2D::unbind(&self.gl, METALLIC_ROUGHNESS_INDEX as u32);
-        Texture2D::unbind(&self.gl, OCCLUSION_INDEX as u32);
         Framebuffer::unbind(&self.gl);
         RenderResult::default()
     }
