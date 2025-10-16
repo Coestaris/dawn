@@ -48,7 +48,7 @@ impl From<usize> for BoundingBoxMode {
 }
 
 impl OutputMode {
-    pub fn items() -> [&'static str; 9] {
+    pub fn items() -> [&'static str; 10] {
         [
             OutputMode::Default.as_str(),
             OutputMode::AlbedoOnly.as_str(),
@@ -59,6 +59,7 @@ impl OutputMode {
             OutputMode::DepthOnly.as_str(),
             OutputMode::Position.as_str(),
             OutputMode::SSAOOnly.as_str(),
+            OutputMode::SkyboxOnly.as_str(),
         ]
     }
 
@@ -73,6 +74,7 @@ impl OutputMode {
             OutputMode::DepthOnly => "Depth Only",
             OutputMode::Position => "Position",
             OutputMode::SSAOOnly => "SSAO Only",
+            OutputMode::SkyboxOnly => "Skybox Only",
         }
     }
 }
@@ -89,6 +91,7 @@ impl From<usize> for OutputMode {
             6 => OutputMode::DepthOnly,
             7 => OutputMode::Position,
             8 => OutputMode::SSAOOnly,
+            9 => OutputMode::SkyboxOnly,
 
             _ => {
                 panic!("Unknown output texture index {}", value);

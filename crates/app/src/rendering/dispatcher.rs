@@ -86,8 +86,8 @@ impl RenderDispatcher {
                 RenderingEventMask::ORTHO_PROJECTION_UPDATED
             }
             RenderingEvent::ViewportResized(_) => RenderingEventMask::VIEWPORT_RESIZED,
-
             RenderingEvent::SetLightTexture(_, _) => RenderingEventMask::SET_LIGHT_TEXTURE,
+            RenderingEvent::SetSkybox(_) => RenderingEventMask::SET_SKYBOX,
         };
 
         for descriptor in self.descriptors.iter() {

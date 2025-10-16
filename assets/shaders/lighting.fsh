@@ -21,6 +21,8 @@ uniform usampler2D in_packed_lights;
 // x=magic, y=ver, z=count, w=reserved
 uniform uvec4 in_packed_lights_header;
 
+uniform samplerCube in_skybox;
+
 #if ENABLE_DEVTOOLS
 
 uniform vec3  in_sky_color;
@@ -86,6 +88,12 @@ vec3 process(vec2 uv) {
 #endif
 
     // Fetch values from textures
+    float linear_depth = get_depth(uv);
+    if (linear_depth >= in_clip_planes.y) {
+        // Far plane, return skybox color
+        return get_skybox(uv);
+    }
+
     float ssao = get_ssao(uv);
     vec3 orm = get_orm(uv);
     vec3 albedo = get_albedo(uv);
@@ -124,10 +132,7 @@ vec3 process(vec2 uv) {
     vec3 ambient = vec3(0.03) * albedo * ao;
     vec3 color = ambient + Lo;
 
-
-
     return color;
-
 }
 
 void main()
@@ -160,6 +165,9 @@ void main()
     } else if (in_debug_mode == DEBUG_MODE_SSAO) {
         float ao = get_ssao(uv);
         out_color = vec3(ao);
+    } else if (in_debug_mode == DEBUG_MODE_SKYBOX) {
+        vec3 color = get_skybox(uv);
+        out_color = color;
     } else {
         out_color = vec3(1.0, 0.0, 1.0); // Magenta for unknown debug mode
     }
