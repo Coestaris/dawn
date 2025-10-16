@@ -145,24 +145,6 @@ pub fn tool_rendering_settings(
             ui.checkbox(&mut config.lighting.force_no_tangents, "Force No Tangents");
 
             ui.collapsing("Lighting Settings", |ui| {
-                egui::Slider::new(&mut config.lighting.sky_color.x, 0.0..=1.0)
-                    .text("Sky Color R")
-                    .ui(ui);
-                egui::Slider::new(&mut config.lighting.sky_color.y, 0.0..=1.0)
-                    .text("Sky Color G")
-                    .ui(ui);
-                egui::Slider::new(&mut config.lighting.sky_color.z, 0.0..=1.0)
-                    .text("Sky Color B")
-                    .ui(ui);
-                egui::Slider::new(&mut config.lighting.ground_color.x, 0.0..=1.0)
-                    .text("Ground Color R")
-                    .ui(ui);
-                egui::Slider::new(&mut config.lighting.ground_color.y, 0.0..=1.0)
-                    .text("Ground Color G")
-                    .ui(ui);
-                egui::Slider::new(&mut config.lighting.ground_color.z, 0.0..=1.0)
-                    .text("Ground Color B")
-                    .ui(ui);
                 egui::Slider::new(&mut config.lighting.diffuse_scale, 0.0..=10.0)
                     .text("Diffuse Scale")
                     .ui(ui);

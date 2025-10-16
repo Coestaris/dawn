@@ -56,8 +56,6 @@ fn insert_defines(defines: &mut HashMap<String, String>, config: &config::config
     #[cfg(not(feature = "devtools"))]
     insert_define!("ENABLE_DEVTOOLS", i32, 0);
 
-    insert_define!("DEF_SKY_COLOR", vec3, config.get_sky_color());
-    insert_define!("DEF_GROUND_COLOR", vec3, config.get_ground_color());
     insert_define!("DEF_DIFFUSE_SCALE", f32, config.get_diffuse_scale());
     insert_define!("DEF_SPECULAR_SCALE", f32, config.get_specular_scale());
     insert_define!("DEF_SSAO_ENABLED", i32, config.get_is_ssao_enabled() as i32);

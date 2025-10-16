@@ -6,3 +6,4 @@ license = "CC0-1.0"
 [properties.TextureCube]
 pixel_format = "RGB8"
 source.Cross.File = "skyboxes/skybox1.png"
+use_mipmaps = true

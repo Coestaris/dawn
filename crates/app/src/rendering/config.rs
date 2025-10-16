@@ -142,16 +142,6 @@ pub(crate) mod config_static {
         }
 
         #[inline(always)]
-        pub fn get_sky_color(&self) -> glam::Vec3 {
-            glam::Vec3::new(0.9, 0.95, 1.0)
-        }
-
-        #[inline(always)]
-        pub fn get_ground_color(&self) -> glam::Vec3 {
-            glam::Vec3::new(0.5, 0.45, 0.4)
-        }
-
-        #[inline(always)]
         pub fn get_diffuse_scale(&self) -> f32 {
             1.0
         }
@@ -276,8 +266,6 @@ mod config_impl {
     }
 
     pub struct LightingConfig {
-        pub sky_color: Vec3,
-        pub ground_color: Vec3,
         pub diffuse_scale: f32,
         pub specular_scale: f32,
         pub force_no_tangents: bool,
@@ -287,8 +275,6 @@ mod config_impl {
         pub fn new() -> Self {
             let stat = config_static::RenderingConfig::new();
             Self {
-                sky_color: stat.get_sky_color(),
-                ground_color: stat.get_ground_color(),
                 diffuse_scale: stat.get_diffuse_scale(),
                 specular_scale: stat.get_specular_scale(),
                 force_no_tangents: stat.get_force_no_tangents(),
@@ -387,14 +373,6 @@ mod config_impl {
 
         pub fn get_show_gizmos(&self) -> bool {
             self.0.borrow().general.show_gizmos
-        }
-
-        pub fn get_sky_color(&self) -> glam::Vec3 {
-            self.0.borrow().lighting.sky_color
-        }
-
-        pub fn get_ground_color(&self) -> glam::Vec3 {
-            self.0.borrow().lighting.ground_color
         }
 
         pub fn get_diffuse_scale(&self) -> f32 {
