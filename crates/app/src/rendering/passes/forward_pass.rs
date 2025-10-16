@@ -18,6 +18,7 @@ use dawn_graphics::renderable::Renderable;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glam::Mat4;
 use glow::HasContext;
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 use winit::window::Window;
@@ -35,10 +36,9 @@ pub(crate) struct ForwardPass {
     shader: Option<ForwardShader>,
     fallback_textures: FallbackTextures,
 
-    frustum: FrustumCulling,
+    frustum: Rc<RefCell<FrustumCulling>>,
 
     gbuffer: Rc<GBuffer>,
-    camera_ubo: CameraUBO,
 }
 
 impl ForwardPass {
@@ -46,7 +46,7 @@ impl ForwardPass {
         gl: Arc<glow::Context>,
         id: RenderPassTargetId,
         gbuffer: Rc<GBuffer>,
-        camera_ubo: CameraUBO,
+        frustum: Rc<RefCell<FrustumCulling>>,
         config: RenderingConfig,
     ) -> Self {
         ForwardPass {
@@ -55,9 +55,8 @@ impl ForwardPass {
             config,
             shader: None,
             fallback_textures: FallbackTextures::new(gl),
-            frustum: FrustumCulling::new(),
+            frustum,
             gbuffer,
-            camera_ubo,
         }
     }
 
@@ -81,13 +80,23 @@ impl ForwardPass {
         // Check if the submesh at the camera frustum
         // otherwise, skip rendering
         // TODO: Is it worth to do frustum culling per submesh?
-        if !self.frustum.is_visible(submesh.min, submesh.max, *model) {
+        if !self
+            .frustum
+            .borrow()
+            .is_visible(submesh.min, submesh.max, *model)
+        {
             return (true, RenderResult::default());
         }
 
         let (albedo, normal, metallic_roughness, occlusion) =
             if let Some(material) = &submesh.material {
                 let material = material.cast::<Material>();
+
+                // Transparent submeshes are not rendered
+                // They will be rendered in a separate pass
+                if material.transparent {
+                    return (true, RenderResult::default());
+                }
 
                 let albedo = material.albedo.cast();
                 let normal = material.normal.cast();
@@ -150,24 +159,6 @@ impl RenderPass<RenderingEvent> for ForwardPass {
                 Program::unbind(&self.gl);
             }
 
-            RenderingEvent::ViewportResized(size) => unsafe {
-                self.gl.viewport(0, 0, size.x as i32, size.y as i32);
-                self.gl.scissor(0, 0, size.x as i32, size.y as i32);
-                self.camera_ubo.set_viewport(size.x as f32, size.y as f32);
-                self.camera_ubo.upload();
-            },
-
-            RenderingEvent::PerspectiveProjectionUpdated(proj, near, far) => {
-                self.frustum.set_perspective(proj);
-                self.camera_ubo.set_perspective(proj, near, far);
-                self.camera_ubo.upload();
-            }
-            RenderingEvent::ViewUpdated(view) => {
-                self.frustum.set_view(view);
-                self.camera_ubo.set_view(view);
-                self.camera_ubo.upload();
-            }
-
             _ => {}
         }
     }
@@ -186,15 +177,13 @@ impl RenderPass<RenderingEvent> for ForwardPass {
         Framebuffer::bind(&self.gl, &self.gbuffer.fbo);
 
         unsafe {
-            self.gl.clear_color(0.1, 0.1, 0.1, 1.0);
-            self.gl.clear_depth(1.0);
-            self.gl
-                .clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
-            self.gl.enable(glow::DEPTH_TEST);
-            self.gl.enable(glow::CULL_FACE);
-            self.gl.cull_face(glow::BACK);
-            self.gl.depth_func(glow::LESS);
-            self.gl.disable(glow::BLEND);
+            // Clear color
+            self.gl.clear(glow::COLOR_BUFFER_BIT);
+
+            // Correct depth information already in the G-Buffer
+            self.gl.depth_func(glow::EQUAL);
+            // Do not modify the depth buffer
+            self.gl.depth_mask(false);
 
             if self.config.get_is_wireframe() {
                 self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::LINE);
@@ -227,6 +216,7 @@ impl RenderPass<RenderingEvent> for ForwardPass {
         // otherwise, skip rendering it at all
         if !self
             .frustum
+            .borrow()
             .is_visible(mesh.min, mesh.max, renderable.model)
         {
             return RenderResult::default();
@@ -247,6 +237,7 @@ impl RenderPass<RenderingEvent> for ForwardPass {
     fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         unsafe {
             self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::FILL);
+            self.gl.depth_mask(true);
         }
 
         Program::unbind(&self.gl);

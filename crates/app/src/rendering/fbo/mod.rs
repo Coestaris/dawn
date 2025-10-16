@@ -5,6 +5,7 @@ use dawn_graphics::gl::raii::texture::{GLTexture, Texture2D};
 use glam::UVec2;
 use std::sync::Arc;
 
+pub mod dbuffer;
 pub mod gbuffer;
 pub mod halfres;
 pub mod obuffer;
