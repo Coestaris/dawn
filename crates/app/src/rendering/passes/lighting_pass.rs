@@ -153,16 +153,8 @@ impl RenderPass<RenderingEvent> for LightingPass {
         #[cfg(feature = "devtools")]
         {
             program.set_uniform(
-                &shader.devtools.sky_color_location,
-                self.config.get_sky_color(),
-            );
-            program.set_uniform(
                 &shader.devtools.ssao_enabled,
                 self.config.get_is_ssao_enabled() as i32,
-            );
-            program.set_uniform(
-                &shader.devtools.ground_color_location,
-                self.config.get_ground_color(),
             );
             program.set_uniform(
                 &shader.devtools.diffuse_scale_location,
