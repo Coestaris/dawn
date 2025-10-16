@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use crate::rendering::fbo::GTexture;
 use dawn_assets::ir::texture2d::IRPixelFormat;
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
@@ -8,8 +9,9 @@ use std::sync::Arc;
 pub struct GBuffer {
     pub fbo: Framebuffer,
 
-    // Depth24.
-    pub depth: GTexture,
+    // Depth24. 
+    // Depth buffer is shared with D-buffer written in Z-prepass.
+    pub depth: Rc<GTexture>,
     // RGB8.
     pub albedo: GTexture,
     // RGB8. R - occlusion, G - roughness, B - metallic
@@ -24,17 +26,13 @@ impl GBuffer {
         self.albedo.resize(new_size);
         self.orm.resize(new_size);
         self.normal.resize(new_size);
-        self.depth.resize(new_size);
+        // Depth resize is handled by DBuffer
     }
 
-    pub fn new(gl: Arc<glow::Context>, initial: UVec2) -> anyhow::Result<Self> {
+    pub fn new(gl: Arc<glow::Context>, initial: UVec2, depth: Rc<GTexture>) -> anyhow::Result<Self> {
         let buffer = GBuffer {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
-            depth: GTexture::new(
-                gl.clone(),
-                IRPixelFormat::DEPTH24,
-                FramebufferAttachment::Depth,
-            )?,
+            depth: depth.clone(),
             albedo: GTexture::new(
                 gl.clone(),
                 IRPixelFormat::RGB8,

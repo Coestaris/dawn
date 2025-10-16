@@ -18,9 +18,10 @@ use crate::rendering::passes::postprocess_pass::PostProcessPass;
 use crate::rendering::passes::ssao_blur::SSAOBlurPass;
 use crate::rendering::passes::ssao_halfres::SSAOHalfresPass;
 use crate::rendering::passes::ssao_raw::SSAORawPass;
+use crate::rendering::passes::z_pre_pass::ZPrePass;
 use crate::rendering::shaders::{
     BILLBOARD_SHADER, FORWARD_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER,
-    SSAO_BLUR_SHADER, SSAO_HALFRES_SHADER, SSAO_RAW_SHADER,
+    SSAO_BLUR_SHADER, SSAO_HALFRES_SHADER, SSAO_RAW_SHADER, Z_PREPASS_SHADER,
 };
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
@@ -39,6 +40,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 use winit::event::WindowEvent;
 use winit::window::Window;
+use crate::rendering::fbo::dbuffer::DBuffer;
+use crate::rendering::frustum::FrustumCulling;
 
 mod config;
 #[cfg(feature = "devtools")]
@@ -89,15 +92,14 @@ fn log_info(info: &OpenGLInfo) {
 }
 
 fn pre_pipeline_construct(gl: &glow::Context) {
-    // Setup OpenGL state
+    // Some global settings
     unsafe {
-        gl.enable(glow::DEPTH_TEST);
+        gl.clear_color(0.1, 0.1, 0.1, 1.0);
+        gl.clear_depth(1.0);
         gl.enable(glow::TEXTURE_CUBE_MAP_SEAMLESS);
-        gl.depth_func(glow::LEQUAL);
-        gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
-        // gl.enable(glow::CULL_FACE);
-        // gl.cull_face(glow::BACK);
-        // gl.front_face(glow::CCW);
+
+        gl.enable(glow::CULL_FACE);
+        gl.cull_face(glow::BACK);
     }
 }
 
@@ -109,9 +111,9 @@ pub struct Renderer {
 }
 
 #[cfg(feature = "devtools")]
-type ChainType = construct_chain_type!(RenderingEvent; ForwardPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass, DevtoolsPass);
+type ChainType = construct_chain_type!(RenderingEvent; ZPrePass, ForwardPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass, DevtoolsPass);
 #[cfg(not(feature = "devtools"))]
-type ChainType = construct_chain_type!(RenderingEvent; ForwardPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass);
+type ChainType = construct_chain_type!(RenderingEvent; ZPrePass, ForwardPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass);
 
 impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
     fn spawn_chain(
@@ -125,19 +127,21 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         log_info(&r.info);
         pre_pipeline_construct(&r.gl);
 
-        let gbuffer = Rc::new(GBuffer::new(r.gl.clone(), WINDOW_SIZE).unwrap());
+        let depth = DBuffer::allocate_depth(r.gl.clone(), WINDOW_SIZE);
+        let dbuffer = Rc::new(DBuffer::new(r.gl.clone(), depth.clone()).unwrap());
+        let gbuffer = Rc::new(GBuffer::new(r.gl.clone(), WINDOW_SIZE, depth.clone()).unwrap());
         let halfres = Rc::new(HalfresBuffer::new(r.gl.clone(), WINDOW_SIZE).unwrap());
         let lighting_taget = Rc::new(LightningTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
         let ssao_raw_target = Rc::new(SSAOHalfresTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
         let ssao_blur_target = Rc::new(SSAOHalfresTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
 
-        let camera_ubo = CameraUBO::new(r.gl.clone(), CAMERA_UBO_BINDING);
-
+        let frustum = Rc::new(RefCell::new(FrustumCulling::new()));
+        let z_pre_pass = ZPrePass::new(r.gl.clone(), self.ids.z_prepass_id, dbuffer.clone(), frustum.clone());
         let forward_pass = ForwardPass::new(
             r.gl.clone(),
             self.ids.forward_id,
             gbuffer.clone(),
-            camera_ubo,
+            frustum.clone(),
             self.config.clone(),
         );
         let ssao_halfres = SSAOHalfresPass::new(
@@ -187,6 +191,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             );
 
             Ok(construct_chain!(
+                z_pre_pass,
                 forward_pass,
                 ssao_halfres,
                 ssao_raw,
@@ -200,6 +205,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         #[cfg(not(feature = "devtools"))]
         {
             Ok(construct_chain!(
+                z_pre_pass,
                 forward_pass,
                 ssao_halfres,
                 ssao_raw,
@@ -240,6 +246,7 @@ pub struct SetupRenderingParameters {
 }
 
 pub struct PassIDs {
+    pub z_prepass_id: RenderPassTargetId,
     pub forward_id: RenderPassTargetId,
     pub ssao_halfres: RenderPassTargetId,
     pub ssao_raw: RenderPassTargetId,
@@ -262,12 +269,16 @@ impl RendererBuilder {
         // This must be done before creating the renderer, because the passes
         // will need the IDs during their construction.
         let mut dispatcher = RenderDispatcher::new();
-        let forward_id = dispatcher.pass(
+        let z_prepass_id = dispatcher.pass(
             RenderingEventMask::DROP_ALL_ASSETS
                 | RenderingEventMask::UPDATE_SHADER
                 | RenderingEventMask::VIEW_UPDATED
                 | RenderingEventMask::VIEWPORT_RESIZED
                 | RenderingEventMask::PERSP_PROJECTION_UPDATED,
+            &[Z_PREPASS_SHADER],
+        );
+        let forward_id = dispatcher.pass(
+            RenderingEventMask::DROP_ALL_ASSETS | RenderingEventMask::UPDATE_SHADER,
             &[FORWARD_SHADER],
         );
         let ssao_halfres = dispatcher.pass(
@@ -315,6 +326,7 @@ impl RendererBuilder {
         let config = RenderingConfig::new();
         Self {
             ids: PassIDs {
+                z_prepass_id,
                 forward_id,
                 ssao_halfres,
                 ssao_raw,

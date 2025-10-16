@@ -6,8 +6,10 @@ pub mod postprocess;
 pub mod ssao_blur;
 pub mod ssao_halfres;
 pub mod ssao_raw;
+pub mod z_pre_pass;
 
 pub const LINE_SHADER: &str = "line_shader";
+pub const Z_PREPASS_SHADER: &str = "z_prepass_shader";
 pub const FORWARD_SHADER: &str = "forward_shader";
 pub const BILLBOARD_SHADER: &str = "billboard_shader";
 pub const LIGHTING_SHADER: &str = "lighting_shader";
