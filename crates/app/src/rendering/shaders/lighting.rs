@@ -41,6 +41,7 @@ pub struct LightingShader {
     pub orm: UniformLocation,
     pub normal: UniformLocation,
     pub halfres_ssao: UniformLocation,
+    pub skybox: UniformLocation,
 }
 
 impl LightingShader {
@@ -60,6 +61,7 @@ impl LightingShader {
             orm: program.get_uniform_location("in_orm")?,
             normal: program.get_uniform_location("in_normal")?,
             halfres_ssao: program.get_uniform_location("in_halfres_ssao")?,
+            skybox: program.get_uniform_location("in_skybox")?,
         })
     }
 }

@@ -10,6 +10,7 @@ pub enum OutputMode {
     DepthOnly,
     Position,
     SSAOOnly,
+    SkyboxOnly,
 }
 
 #[repr(usize)]
