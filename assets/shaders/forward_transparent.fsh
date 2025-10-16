@@ -13,6 +13,9 @@ in vec3 bitangent;
 uniform mat4 in_model;
 uniform bool in_tangent_valid;
 
+uniform float in_diffuse_scale;
+uniform float in_specular_scale;
+
 // RGB or RGBA
 uniform sampler2D in_albedo;
 // RGB
@@ -21,6 +24,8 @@ uniform sampler2D in_normal;
 uniform sampler2D in_metallic_roughness;
 // R - occlusion
 uniform sampler2D in_occlusion;
+
+uniform samplerCube in_skybox;
 
 #include "inc/lightning/light_getters.glsl"
 #include "inc/lightning/pbr.glsl"
@@ -63,7 +68,8 @@ vec3 get_normal()
 vec3 process(vec3 albedo, vec3 normal, float roughness, float metallic, float occlusion)
 {
     // For now, just output albedo modulated by occlusion as the color
-    return albedo;
+    vec3 sky = texture(in_skybox, normal).rgb;
+    return albedo + normal * 0.0001 + vec3(roughness) * 0.0001 + vec3(metallic) * 0.0001 + vec3(occlusion) * 0.0001 + sky * 0.0001;
 }
 
 void main()

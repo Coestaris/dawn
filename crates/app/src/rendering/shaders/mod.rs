@@ -1,5 +1,6 @@
 pub mod billboard;
 pub mod forward;
+pub mod forward_transparent;
 pub mod lighting;
 pub mod line;
 pub mod postprocess;
@@ -11,6 +12,7 @@ pub mod z_pre_pass;
 pub const LINE_SHADER: &str = "line_shader";
 pub const Z_PREPASS_SHADER: &str = "z_prepass_shader";
 pub const FORWARD_SHADER: &str = "forward_shader";
+pub const FORWARD_TRANSPARENT_SHADER: &str = "forward_transparent_shader";
 pub const BILLBOARD_SHADER: &str = "billboard_shader";
 pub const LIGHTING_SHADER: &str = "lighting_shader";
 pub const POSTPROCESS_SHADER: &str = "postprocess_shader";

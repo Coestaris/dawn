@@ -8,7 +8,7 @@ use std::sync::Arc;
 pub mod dbuffer;
 pub mod gbuffer;
 pub mod halfres;
-pub mod obuffer;
+pub mod lighting;
 pub mod ssao;
 
 #[allow(dead_code)]

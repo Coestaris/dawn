@@ -6,13 +6,16 @@ use crate::rendering::config::RenderingConfig;
 use crate::rendering::devtools::DevToolsGUI;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::{RenderingEvent, RenderingEventMask};
+use crate::rendering::fbo::dbuffer::DBuffer;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::halfres::HalfresBuffer;
-use crate::rendering::fbo::obuffer::LightningTarget;
+use crate::rendering::fbo::lighting::{LightingTarget, TransparentTarget};
 use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
+use crate::rendering::frustum::FrustumCulling;
 #[cfg(feature = "devtools")]
 use crate::rendering::passes::devtools_pass::DevtoolsPass;
 use crate::rendering::passes::forward_pass::ForwardPass;
+use crate::rendering::passes::forward_transparent_pass::ForwardTransparentPass;
 use crate::rendering::passes::lighting_pass::LightingPass;
 use crate::rendering::passes::postprocess_pass::PostProcessPass;
 use crate::rendering::passes::ssao_blur::SSAOBlurPass;
@@ -20,8 +23,8 @@ use crate::rendering::passes::ssao_halfres::SSAOHalfresPass;
 use crate::rendering::passes::ssao_raw::SSAORawPass;
 use crate::rendering::passes::z_pre_pass::ZPrePass;
 use crate::rendering::shaders::{
-    BILLBOARD_SHADER, FORWARD_SHADER, LIGHTING_SHADER, LINE_SHADER, POSTPROCESS_SHADER,
-    SSAO_BLUR_SHADER, SSAO_HALFRES_SHADER, SSAO_RAW_SHADER, Z_PREPASS_SHADER,
+    BILLBOARD_SHADER, FORWARD_SHADER, FORWARD_TRANSPARENT_SHADER, LIGHTING_SHADER, LINE_SHADER,
+    POSTPROCESS_SHADER, SSAO_BLUR_SHADER, SSAO_HALFRES_SHADER, SSAO_RAW_SHADER, Z_PREPASS_SHADER,
 };
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
@@ -40,8 +43,6 @@ use std::rc::Rc;
 use std::sync::Arc;
 use winit::event::WindowEvent;
 use winit::window::Window;
-use crate::rendering::fbo::dbuffer::DBuffer;
-use crate::rendering::frustum::FrustumCulling;
 
 mod config;
 #[cfg(feature = "devtools")]
@@ -111,9 +112,9 @@ pub struct Renderer {
 }
 
 #[cfg(feature = "devtools")]
-type ChainType = construct_chain_type!(RenderingEvent; ZPrePass, ForwardPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass, DevtoolsPass);
+type ChainType = construct_chain_type!(RenderingEvent; ZPrePass, ForwardPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, ForwardTransparentPass, PostProcessPass, DevtoolsPass);
 #[cfg(not(feature = "devtools"))]
-type ChainType = construct_chain_type!(RenderingEvent; ZPrePass, ForwardPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, PostProcessPass);
+type ChainType = construct_chain_type!(RenderingEvent; ZPrePass, ForwardPass, SSAOHalfresPass, SSAORawPass, SSAOBlurPass, LightingPass, ForwardTransparentPass, PostProcessPass);
 
 impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
     fn spawn_chain(
@@ -131,12 +132,23 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         let dbuffer = Rc::new(DBuffer::new(r.gl.clone(), depth.clone()).unwrap());
         let gbuffer = Rc::new(GBuffer::new(r.gl.clone(), WINDOW_SIZE, depth.clone()).unwrap());
         let halfres = Rc::new(HalfresBuffer::new(r.gl.clone(), WINDOW_SIZE).unwrap());
-        let lighting_taget = Rc::new(LightningTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
+
+        let hdr_target = LightingTarget::allocate_target(r.gl.clone(), WINDOW_SIZE);
+        let lighting_taget =
+            Rc::new(LightingTarget::new(r.gl.clone(), hdr_target.clone()).unwrap());
+        let transparent_target =
+            TransparentTarget::new(r.gl.clone(), hdr_target.clone(), depth.clone()).unwrap();
+
         let ssao_raw_target = Rc::new(SSAOHalfresTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
         let ssao_blur_target = Rc::new(SSAOHalfresTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
 
         let frustum = Rc::new(RefCell::new(FrustumCulling::new()));
-        let z_pre_pass = ZPrePass::new(r.gl.clone(), self.ids.z_prepass_id, dbuffer.clone(), frustum.clone());
+        let z_pre_pass = ZPrePass::new(
+            r.gl.clone(),
+            self.ids.z_prepass_id,
+            dbuffer.clone(),
+            frustum.clone(),
+        );
         let forward_pass = ForwardPass::new(
             r.gl.clone(),
             self.ids.forward_id,
@@ -173,6 +185,14 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             lighting_taget.clone(),
             self.config.clone(),
         );
+        let forward_transparent_pass = ForwardTransparentPass::new(
+            r.gl.clone(),
+            self.ids.forward_transparent_id,
+            transparent_target,
+            frustum.clone(),
+            self.config.clone(),
+        );
+
         let postprocess_pass = PostProcessPass::new(
             r.gl.clone(),
             self.ids.postprocess_id,
@@ -197,6 +217,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
                 ssao_raw,
                 ssao_blur,
                 lighting_pass,
+                forward_transparent_pass,
                 postprocess_pass,
                 devtools_pass
             ))
@@ -211,6 +232,7 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
                 ssao_raw,
                 ssao_blur,
                 lighting_pass,
+                forward_transparent_pass,
                 postprocess_pass
             ))
         }
@@ -252,6 +274,7 @@ pub struct PassIDs {
     pub ssao_raw: RenderPassTargetId,
     pub ssao_blur: RenderPassTargetId,
     pub lighting_id: RenderPassTargetId,
+    pub forward_transparent_id: RenderPassTargetId,
     pub postprocess_id: RenderPassTargetId,
     #[cfg(feature = "devtools")]
     pub devtools_id: RenderPassTargetId,
@@ -307,6 +330,13 @@ impl RendererBuilder {
                 | RenderingEventMask::SET_SKYBOX,
             &[LIGHTING_SHADER],
         );
+        let forward_transparent_id = dispatcher.pass(
+            RenderingEventMask::DROP_ALL_ASSETS
+                | RenderingEventMask::UPDATE_SHADER
+                | RenderingEventMask::VIEWPORT_RESIZED
+                | RenderingEventMask::SET_SKYBOX,
+            &[FORWARD_TRANSPARENT_SHADER],
+        );
         let postprocess_id = dispatcher.pass(
             RenderingEventMask::DROP_ALL_ASSETS | RenderingEventMask::UPDATE_SHADER,
             &[POSTPROCESS_SHADER],
@@ -332,6 +362,7 @@ impl RendererBuilder {
                 ssao_raw,
                 ssao_blur,
                 lighting_id,
+                forward_transparent_id,
                 postprocess_id,
                 #[cfg(feature = "devtools")]
                 devtools_id,
