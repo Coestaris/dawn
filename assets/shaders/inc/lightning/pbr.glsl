@@ -1,3 +1,6 @@
+const vec3 ENV_UP = vec3(0.0, 1.0, 0.0);
+const float SKY_HEMI_LOD = 5.0;
+
 float saturate(float x) {
     return clamp(x, 0.0, 1.0);
 }
@@ -40,6 +43,10 @@ float point_atten(float d, float radius, bool linear){
         float att_radius = 1.0 / (radius * radius);
         return att / (att + att_radius);
     }
+}
+
+vec3 sample_sky(vec3 dir_world, float lod) {
+    return textureLod(in_skybox, normalize(dir_world), lod).rgb;
 }
 
 vec3 shade_point(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, float metallic, float ao) {
@@ -112,9 +119,14 @@ vec3 shade_sun(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, 
 
     vec3 Lo_direct = (NoL > 0.0) ? (diff + spec) * Lc * NoL : vec3(0.0);
 
-    float ambSun = get_light_sun_ambient(L);
-    float NoUp = clamp(dot(N, normalize(ENV_UP)) * 0.5 + 0.5, 0.0, 1.0);
-    vec3 hemiIrradiance = mix(in_ground_color, in_sky_color, NoUp) * ambSun * in_diffuse_scale;
+    float ambient = get_light_sun_ambient(L);
+    vec3 upW = normalize((in_inv_view * vec4(ENV_UP, 0.0)).xyz);
+    vec3 sky_color    = sample_sky( upW,  SKY_HEMI_LOD);
+    vec3 ground_color = sample_sky(-upW,  SKY_HEMI_LOD);
+    vec3 nW = (in_inv_view * vec4(N, 0.0)).xyz;
+    float NoUp = clamp(dot(nW, upW) * 0.5 + 0.5, 0.0, 1.0);
+
+    vec3 hemiIrradiance = mix(ground_color, sky_color, NoUp) * ambient * in_diffuse_scale;
     vec3 ambientDiffuse = albedo * hemiIrradiance * (1.0 - metallic) * ao;
 
     float avgF0 = clamp((F0.x + F0.y + F0.z) * (1.0 / 3.0), 0.0, 1.0);
@@ -122,7 +134,7 @@ vec3 shade_sun(PackedLight L, vec3 P, vec3 N, vec3 V, vec3 albedo, float rough, 
 
     vec3 F_amb = F_Schlick(F0, NoV);
     float roughAtten = mix(1.0, 0.5, clamp(rough, 0.0, 1.0));
-    vec3 specAmb = F_amb * ambSun * in_specular_scale * roughAtten * ao;
+    vec3 specAmb = F_amb * ambient * in_specular_scale * roughAtten * ao;
 
     return Lo_direct + ambientDiffuse + specAmb;
 }

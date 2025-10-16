@@ -6,8 +6,6 @@ use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 /// Enabled only if the Devtools feature is toggled
 pub struct LightingShaderDevtools {
     pub debug_mode: UniformLocation,
-    pub sky_color_location: UniformLocation,
-    pub ground_color_location: UniformLocation,
     pub diffuse_scale_location: UniformLocation,
     pub specular_scale_location: UniformLocation,
     pub ssao_enabled: UniformLocation,
@@ -18,8 +16,6 @@ impl LightingShaderDevtools {
         let program = shader.cast();
         Ok(Self {
             debug_mode: program.get_uniform_location("in_debug_mode")?,
-            sky_color_location: program.get_uniform_location("in_sky_color")?,
-            ground_color_location: program.get_uniform_location("in_ground_color")?,
             diffuse_scale_location: program.get_uniform_location("in_diffuse_scale")?,
             specular_scale_location: program.get_uniform_location("in_specular_scale")?,
             ssao_enabled: program.get_uniform_location("in_ssao_enabled")?,

@@ -16,17 +16,13 @@ uniform sampler2D in_orm;
 uniform sampler2D in_normal;
 // R8
 uniform sampler2D in_halfres_ssao;
-// RGBA32, height 1
-uniform usampler2D in_packed_lights;
-// x=magic, y=ver, z=count, w=reserved
-uniform uvec4 in_packed_lights_header;
+
+// NOTE: Some of samplers defined in light_getters.glsl
 
 uniform samplerCube in_skybox;
 
 #if ENABLE_DEVTOOLS
 
-uniform vec3  in_sky_color;
-uniform vec3  in_ground_color;
 uniform float in_diffuse_scale;
 uniform float in_specular_scale;
 uniform int  in_ssao_enabled;
@@ -36,8 +32,6 @@ uniform int  in_debug_mode;
 
 #else
 
-const vec3 in_sky_color       = DEF_SKY_COLOR;
-const vec3 in_ground_color    = DEF_GROUND_COLOR;
 const float in_diffuse_scale  = DEF_DIFFUSE_SCALE;
 const float in_specular_scale = DEF_SPECULAR_SCALE;
 const int in_ssao_enabled     = DEF_SSAO_ENABLED;
@@ -45,36 +39,7 @@ const int in_debug_mode       = DEBUG_MODE_OFF;
 
 #endif
 
-const vec3 ENV_UP = vec3(0.0, 1.0, 0.0);
-
-const uint LIGHT_KIND_SUN       = 1u;
-const uint LIGHT_KIND_SPOT      = 2u;
-const uint LIGHT_KIND_POINT     = 3u;
-const uint LIGHT_KIND_AREA_RECT = 4u;
-
-struct PackedLight {
-    // x=kind, y=flags, z=reserved, w=float bits of intensity
-    uvec4 kind_flags_intensity;
-
-    // sun: rgb
-    // spot: rgb, a=outer angle (cosine)
-    // point: rgb, a=unused
-    vec4 color_rgba;
-
-    // sun: dir.xyz, w=ambient
-    // spot: pos.xyz, w=range
-    // point: pos.xyz, w=radius
-    vec4 v0;
-
-    // sun: unused
-    // spot: dir.xyz, w=inner angle (cosine)
-    // point: unused
-    vec4 v1;
-
-    // rough, metallic, falloff(0 phys / 1 lin), shadow
-    vec4 brdf;
-};
-
+#include "inc/lightning/light_getters.glsl"
 #include "inc/lightning/getters.glsl"
 #include "inc/lightning/ssao_upscale.glsl"
 #include "inc/lightning/pbr.glsl"
