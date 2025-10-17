@@ -334,6 +334,7 @@ impl RendererBuilder {
             RenderingEventMask::DROP_ALL_ASSETS
                 | RenderingEventMask::UPDATE_SHADER
                 | RenderingEventMask::VIEWPORT_RESIZED
+                | RenderingEventMask::VIEW_UPDATED
                 | RenderingEventMask::SET_SKYBOX,
             &[FORWARD_TRANSPARENT_SHADER],
         );
