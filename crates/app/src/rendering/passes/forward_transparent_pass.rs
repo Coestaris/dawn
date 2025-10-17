@@ -143,6 +143,7 @@ impl RenderPass<RenderingEvent> for ForwardTransparentPass {
         match event {
             RenderingEvent::DropAllAssets => {
                 self.shader = None;
+                self.skybox = None;
             }
             RenderingEvent::SetSkybox(skybox) => {
                 self.skybox = Some(skybox);
