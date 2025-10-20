@@ -9,6 +9,7 @@ in vec2 tex_coord;
 in vec3 normal;
 in vec3 tangent;
 in vec3 bitangent;
+in vec3 view_pos;
 
 uniform mat4 in_model;
 uniform bool in_tangent_valid;
@@ -67,9 +68,41 @@ vec3 get_normal()
 
 vec3 process(vec3 albedo, vec3 normal, float roughness, float metallic, float occlusion)
 {
-    // For now, just output albedo modulated by occlusion as the color
-    vec3 sky = texture(in_skybox, normal).rgb;
-    return albedo + normal * 0.0001 + vec3(roughness) * 0.0001 + vec3(metallic) * 0.0001 + vec3(occlusion) * 0.0001 + sky * 0.0001;
+    // Check magic and version
+#if ENABLE_DEVTOOLS
+    if (in_packed_lights_header.x != 0x4C495445u) {
+        return vec3(0.0, 1.0, 1.0); // Cyan for invalid lights buffer
+    }
+#endif
+
+    vec3 P = view_pos;
+    vec3 N = normalize(normal);
+    vec3 V = normalize(-P); // View vector in view space
+    float ao = occlusion;
+
+    vec3 Lo = vec3(0.0);
+    for (uint i = 0u; i < get_lights_count(); ++i) {
+        PackedLight L = get_light(i);
+
+        uint kind = get_light_kind(L);
+        if (kind == LIGHT_KIND_SUN) {
+            Lo += shade_sun(L, P, N, V, albedo, roughness, metallic, ao);
+        } else if (kind == LIGHT_KIND_SPOT) {
+            Lo += shade_spot(L, P, N, V, albedo, roughness, metallic, ao);
+        } else if (kind == LIGHT_KIND_POINT) {
+            Lo += shade_point(L, P, N, V, albedo, roughness, metallic, ao);
+        } else if (kind == LIGHT_KIND_AREA_RECT) {
+            Lo += shade_area_rect(L, P, N, V, albedo, roughness, metallic, ao);
+        } else {
+            // Unknown light kind. Output magenta to indicate error
+            Lo += vec3(1.0, 0.0, 1.0);
+        }
+    }
+
+    // Add IBL
+    vec3 ambient = vec3(0.03) * albedo * ao;
+    vec3 color = ambient + Lo;
+    return color;
 }
 
 void main()

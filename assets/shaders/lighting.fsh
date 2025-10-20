@@ -80,7 +80,7 @@ vec3 process(vec2 uv) {
 
         uint kind = get_light_kind(L);
         if (kind == LIGHT_KIND_SUN) {
-            Lo += shade_sun(L, P, N, V, albedo, roughness, metallic, ao);
+            Lo += shade_sun(L, P, N,    V, albedo, roughness, metallic, ao);
         } else if (kind == LIGHT_KIND_SPOT) {
             Lo += shade_spot(L, P, N, V, albedo, roughness, metallic, ao);
         } else if (kind == LIGHT_KIND_POINT) {
