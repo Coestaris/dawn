@@ -108,7 +108,7 @@ vec3 process(vec3 albedo, vec3 normal, float roughness, float metallic, float oc
 void main()
 {
     vec4 albedo = get_albedo();
-    if (albedo.a < 0.1)
+    if (albedo.a < 0.01)
     {
         // Barely visible, skip
         discard;
