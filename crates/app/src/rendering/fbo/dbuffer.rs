@@ -31,10 +31,7 @@ impl DBuffer {
         depth
     }
 
-    pub fn new(
-        gl: Arc<glow::Context>, 
-        depth: Rc<GTexture>,
-    ) -> Result<Self, String> {
+    pub fn new(gl: Arc<glow::Context>, depth: Rc<GTexture>) -> Result<Self, String> {
         let buffer = DBuffer {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
             depth: depth.clone(),

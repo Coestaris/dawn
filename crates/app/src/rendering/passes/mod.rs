@@ -1,10 +1,10 @@
 #[cfg(feature = "devtools")]
 pub mod devtools_pass;
 pub mod forward_pass;
-pub mod z_pre_pass;
+pub mod forward_transparent_pass;
 pub mod lighting_pass;
 pub mod postprocess_pass;
-pub mod forward_transparent_pass;
 pub mod ssao_blur;
 pub mod ssao_halfres;
 pub mod ssao_raw;
+pub mod z_pre_pass;

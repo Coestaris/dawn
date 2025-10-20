@@ -22,7 +22,7 @@ pub enum RenderingEvent {
 
     // Specific events can be added here
     SetLightTexture(LightTextureType, TypedAsset<Texture2D>),
-    SetSkybox(TypedAsset<TextureCube>)
+    SetSkybox(TypedAsset<TextureCube>),
 }
 
 bitflags! {

@@ -112,7 +112,9 @@ fn gizmos_assets_handler(
 ) {
     match r.event {
         AssetHubEvent::AssetLoaded(id) if id.as_str() == SUN_LIGHT_TEXTURE => {
-            let texture = hub.get_typed::<Texture2D>(SUN_LIGHT_TEXTURE.into()).unwrap();
+            let texture = hub
+                .get_typed::<Texture2D>(SUN_LIGHT_TEXTURE.into())
+                .unwrap();
             dispatcher.dispatch(
                 RenderingEvent::SetLightTexture(LightTextureType::SunLight, texture),
                 &mut sender,
