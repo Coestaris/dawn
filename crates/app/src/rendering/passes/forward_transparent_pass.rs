@@ -28,43 +28,49 @@ const METALLIC_ROUGHNESS_INDEX: i32 = 2;
 const OCCLUSION_INDEX: i32 = 3;
 const SKYBOX_INDEX: i32 = 4;
 
-struct SortableSubmesh<'a, 'b> {
+#[derive(Clone)]
+struct Transparent {
     model: Mat4,
-    bucket: &'a TopologyBucket,
-    submesh: &'b SubMesh,
-    key: f32,
+    renderable_idx: usize,
+    bucket_idx: usize,
+    submesh_idx: usize,
 }
 
-impl<'a, 'b> SortableSubmesh<'a, 'b> {
-    fn new(model: Mat4, bucket: &'a TopologyBucket, submesh: &'b SubMesh) -> Self {
-        Self {
+type SortKey = f32;
+
+impl Transparent {
+    fn new(model: Mat4, renderable_idx: usize, bucket_idx: usize, submesh_idx: usize) -> Self {
+        Transparent {
             model,
-            bucket,
-            submesh,
-            key: 0.0,
+            renderable_idx,
+            bucket_idx,
+            submesh_idx,
         }
     }
 
-    fn sort_by_distance(view: Mat4, vector: &mut Vec<Self>) {
-        // Calculate Keys
-        for m in vector.iter_mut() {
-            let min = view * m.model * m.submesh.min.extend(1.0);
-            let max = view * m.model * m.submesh.max.extend(1.0);
-            let center = (min + max) * 0.5;
-            m.key = center.z;
-        }
+    pub fn get_key(&self, view: Mat4, mesh: &Mesh) -> SortKey {
+        let bucket = &mesh.buckets[self.bucket_idx];
+        let submesh = &bucket.submesh[self.submesh_idx];
 
-        // Sort by distance
-        vector.sort_by(|a, b| a.key.partial_cmp(&b.key).unwrap());
+        let c_obj = (submesh.min + submesh.max) * 0.5;
+        let ext = (submesh.max - submesh.min) * 0.5;
+        let radius = ext.length();
+
+        let c_vs = (view * self.model * c_obj.extend(1.0)).z;
+
+        c_vs - radius
     }
 
     // Assume shader already bound
-    fn draw(&self, gl: &glow::Context, pass: &ForwardTransparentPass) -> RenderResult {
+    fn draw(&self, gl: &glow::Context, pass: &ForwardTransparentPass, mesh: &Mesh) -> RenderResult {
+        let bucket = &mesh.buckets[self.bucket_idx];
+        let submesh = &bucket.submesh[self.submesh_idx];
+
         #[cfg(feature = "devtools")]
         let tangents = if pass.config.get_force_no_tangents() {
             false
         } else {
-            self.bucket.key.tangent_valid
+            bucket.key.tangent_valid
         };
         #[cfg(not(feature = "devtools"))]
         let tangents = bucket.key.tangent_valid;
@@ -75,7 +81,7 @@ impl<'a, 'b> SortableSubmesh<'a, 'b> {
         program.set_uniform(&shader.model_location, self.model);
 
         let (albedo, normal, metallic_roughness, occlusion) =
-            if let Some(material) = &self.submesh.material {
+            if let Some(material) = &submesh.material {
                 let material = material.cast::<Material>();
                 let albedo = material.albedo.cast();
                 let normal = material.normal.cast();
@@ -97,11 +103,11 @@ impl<'a, 'b> SortableSubmesh<'a, 'b> {
         Texture2D::bind(gl, metallic_roughness, METALLIC_ROUGHNESS_INDEX as u32);
         Texture2D::bind(gl, occlusion, OCCLUSION_INDEX as u32);
 
-        let binding = self.bucket.vao.bind();
+        let binding = bucket.vao.bind();
         binding.draw_elements_base_vertex(
-            self.submesh.index_count,
-            self.submesh.index_offset,
-            self.submesh.vertex_offset,
+            submesh.index_count,
+            submesh.index_offset,
+            submesh.vertex_offset,
         )
     }
 }
@@ -118,6 +124,10 @@ pub(crate) struct ForwardTransparentPass {
 
     frustum: Rc<RefCell<FrustumCulling>>,
     target: TransparentTarget,
+
+    keys_buffer: Vec<SortKey>,
+    shuffle_buffer: Vec<usize>,
+    transparent_buffer: Vec<Transparent>,
 }
 
 impl ForwardTransparentPass {
@@ -138,7 +148,62 @@ impl ForwardTransparentPass {
             view: None,
             frustum,
             target,
+
+            keys_buffer: Vec::with_capacity(1024),
+            shuffle_buffer: Vec::with_capacity(1024),
+            transparent_buffer: Vec::with_capacity(1024),
         }
+    }
+
+    fn prepare_transparent(&mut self, frame: &DataStreamFrame) {
+        // Clear buffers
+        self.keys_buffer.clear();
+        self.shuffle_buffer.clear();
+        self.transparent_buffer.clear();
+
+        // Collect all transparent submeshes
+        let mut idx = 0;
+        for (renderable_idx, renderable) in frame.renderables.iter().enumerate() {
+            let mesh = renderable.mesh.cast();
+
+            // Check if the mesh is within the camera frustum
+            // otherwise, skip rendering it at all
+            if !self
+                .frustum
+                .borrow()
+                .is_visible(mesh.min, mesh.max, renderable.model)
+            {
+                continue;
+            }
+
+            for (bucket_idx, bucket) in mesh.buckets.iter().enumerate() {
+                for (submesh_idx, submesh) in bucket.submesh.iter().enumerate() {
+                    if submesh.material.is_none() {
+                        continue;
+                    }
+
+                    let material = submesh.material.as_ref().unwrap().cast::<Material>();
+                    if !material.transparent {
+                        continue;
+                    }
+
+                    let transparent =
+                        Transparent::new(renderable.model, renderable_idx, bucket_idx, submesh_idx);
+                    self.keys_buffer
+                        .push(transparent.get_key(self.view.unwrap_or(Mat4::IDENTITY), mesh));
+                    self.transparent_buffer.push(transparent);
+                    self.shuffle_buffer.push(idx);
+                    idx += 1;
+                }
+            }
+        }
+
+        // Sort indices by keys from keys buffer
+        self.shuffle_buffer.sort_unstable_by(|a, b| {
+            self.keys_buffer[*a]
+                .partial_cmp(&self.keys_buffer[*b])
+                .unwrap()
+        });
     }
 }
 
@@ -207,7 +272,7 @@ impl RenderPass<RenderingEvent> for ForwardTransparentPass {
         unsafe {
             // Correct depth information already in the G-Buffer
             self.gl.enable(glow::DEPTH_TEST);
-            self.gl.depth_func(glow::LESS);
+            self.gl.depth_func(glow::LEQUAL);
             // Do not modify the depth buffer
             self.gl.depth_mask(false);
 
@@ -230,42 +295,14 @@ impl RenderPass<RenderingEvent> for ForwardTransparentPass {
             TextureCube::bind(&self.gl, skybox, SKYBOX_INDEX as u32);
         }
 
-        // TODO: Do not reallocate this every frame
-        let mut sortables = vec![];
-        for renderable in &frame.renderables {
-            let mesh = renderable.mesh.cast();
-
-            // Check if the mesh is within the camera frustum
-            // otherwise, skip rendering it at all
-            if !self
-                .frustum
-                .borrow()
-                .is_visible(mesh.min, mesh.max, renderable.model)
-            {
-                continue;
-            }
-
-            for bucket in &mesh.buckets {
-                for submesh in &bucket.submesh {
-                    if submesh.material.is_none() {
-                        continue;
-                    }
-
-                    let material = submesh.material.as_ref().unwrap().cast::<Material>();
-                    if !material.transparent {
-                        continue;
-                    }
-
-                    sortables.push(SortableSubmesh::new(renderable.model, bucket, submesh))
-                }
-            }
-        }
-
-        SortableSubmesh::sort_by_distance(self.view.unwrap_or(Mat4::IDENTITY), &mut sortables);
+        self.prepare_transparent(frame);
 
         let mut result = RenderResult::default();
-        for submesh in sortables {
-            result += submesh.draw(&self.gl, self);
+        for idx in &self.shuffle_buffer {
+            let transparent = &self.transparent_buffer[*idx];
+            let renderable = &frame.renderables[transparent.renderable_idx];
+            let mesh = renderable.mesh.cast();
+            result += transparent.draw(&self.gl, self, mesh);
         }
 
         result
@@ -284,6 +321,7 @@ impl RenderPass<RenderingEvent> for ForwardTransparentPass {
         Texture2D::unbind(&self.gl, NORMAL_INDEX as u32);
         Texture2D::unbind(&self.gl, METALLIC_ROUGHNESS_INDEX as u32);
         Texture2D::unbind(&self.gl, OCCLUSION_INDEX as u32);
+        TextureCube::unbind(&self.gl, SKYBOX_INDEX as u32);
         Framebuffer::unbind(&self.gl);
         RenderResult::default()
     }
