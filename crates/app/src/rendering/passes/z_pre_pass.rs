@@ -2,11 +2,10 @@ use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::dbuffer::DBuffer;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::shaders::z_pre_pass::ZPrepassShader;
-use crate::rendering::textures::fallback_tex::FallbackTextures;
 use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_graphics::gl::material::Material;
-use dawn_graphics::gl::mesh::{SubMesh, TopologyBucket};
+use dawn_graphics::gl::mesh::SubMesh;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::gl::raii::vertex_array::VertexArray;
@@ -27,7 +26,6 @@ pub(crate) struct ZPrePass {
     id: RenderPassTargetId,
 
     shader: Option<ZPrepassShader>,
-    fallback_textures: FallbackTextures,
     viewport: UVec2,
 
     frustum: Rc<RefCell<FrustumCulling>>,
@@ -47,7 +45,6 @@ impl ZPrePass {
             gl: gl.clone(),
             id,
             shader: None,
-            fallback_textures: FallbackTextures::new(gl.clone()),
             viewport: Default::default(),
             frustum,
             dbuffer: gbuffer,
