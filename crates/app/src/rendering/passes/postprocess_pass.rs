@@ -106,7 +106,7 @@ impl RenderPass<RenderingEvent> for PostProcessPass {
         );
         self.lightning_target.texture.bind2d(0);
 
-        self.quad.draw()
+        self.quad.draw(&self.gl)
     }
 
     #[inline(always)]

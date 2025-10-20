@@ -1,3 +1,4 @@
+use crate::rendering::bind_tracker::{TextureBindTracker, VAOBindTracker};
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::lighting::TransparentTarget;
@@ -11,6 +12,7 @@ use dawn_graphics::gl::mesh::{Mesh, SubMesh, TopologyBucket};
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::gl::raii::texture::{Texture2D, TextureCube};
+use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -58,16 +60,32 @@ impl Transparent {
 
         let c_vs = (view * self.model * c_obj.extend(1.0)).z;
 
-        c_vs - radius
+        let key = c_vs - radius;
+
+        // If the key is not finite,
+        // then the object is behind the camera
+        if !key.is_finite() {
+            f32::INFINITY
+        } else {
+            key
+        }
     }
 
     // Assume shader already bound
-    fn draw(&self, gl: &glow::Context, pass: &ForwardTransparentPass, mesh: &Mesh) -> RenderResult {
+    fn draw(
+        &self,
+        gl: &glow::Context,
+        config: &RenderingConfig,
+        shader: &ForwardTransparentShader,
+        mesh: &Mesh,
+        tbt: &mut TextureBindTracker<5>,
+        vbt: &mut VAOBindTracker,
+    ) -> RenderResult {
         let bucket = &mesh.buckets[self.bucket_idx];
         let submesh = &bucket.submesh[self.submesh_idx];
 
         #[cfg(feature = "devtools")]
-        let tangents = if pass.config.get_force_no_tangents() {
+        let tangents = if config.get_force_no_tangents() {
             false
         } else {
             bucket.key.tangent_valid
@@ -75,40 +93,30 @@ impl Transparent {
         #[cfg(not(feature = "devtools"))]
         let tangents = bucket.key.tangent_valid;
 
-        let shader = pass.shader.as_ref().unwrap();
         let program = shader.asset.cast();
         program.set_uniform(&shader.tangent_valid, tangents);
         program.set_uniform(&shader.model_location, self.model);
 
-        let (albedo, normal, metallic_roughness, occlusion) =
-            if let Some(material) = &submesh.material {
-                let material = material.cast::<Material>();
-                let albedo = material.albedo.cast();
-                let normal = material.normal.cast();
-                let metallic_roughness = material.metallic_roughness.cast();
-                let occlusion = material.occlusion.cast();
+        if let Some(material) = &submesh.material {
+            let material = material.cast::<Material>();
+            let albedo = material.albedo.cast();
+            let normal = material.normal.cast();
+            let metallic_roughness = material.metallic_roughness.cast();
+            let occlusion = material.occlusion.cast();
 
-                (albedo, normal, metallic_roughness, occlusion)
-            } else {
-                (
-                    &pass.fallback_textures.albedo_texture,
-                    &pass.fallback_textures.normal_texture,
-                    &pass.fallback_textures.metallic_roughness_texture,
-                    &pass.fallback_textures.occlusion_texture,
-                )
-            };
+            tbt.bind2d(gl, ALBEDO_INDEX, albedo);
+            tbt.bind2d(gl, NORMAL_INDEX, normal);
+            tbt.bind2d(gl, METALLIC_ROUGHNESS_INDEX, metallic_roughness);
+            tbt.bind2d(gl, OCCLUSION_INDEX, occlusion);
+        }
 
-        Texture2D::bind(gl, albedo, ALBEDO_INDEX as u32);
-        Texture2D::bind(gl, normal, NORMAL_INDEX as u32);
-        Texture2D::bind(gl, metallic_roughness, METALLIC_ROUGHNESS_INDEX as u32);
-        Texture2D::bind(gl, occlusion, OCCLUSION_INDEX as u32);
-
-        let binding = bucket.vao.bind();
-        binding.draw_elements_base_vertex(
+        vbt.bind(gl, &bucket.vao);
+        let result = bucket.vao.draw_elements_base_vertex(
             submesh.index_count,
             submesh.index_offset,
             submesh.vertex_offset,
-        )
+        );
+        result
     }
 }
 
@@ -118,7 +126,6 @@ pub(crate) struct ForwardTransparentPass {
     config: RenderingConfig,
 
     shader: Option<ForwardTransparentShader>,
-    fallback_textures: FallbackTextures,
     skybox: Option<TypedAsset<TextureCube>>,
     view: Option<Mat4>,
 
@@ -128,6 +135,9 @@ pub(crate) struct ForwardTransparentPass {
     keys_buffer: Vec<SortKey>,
     shuffle_buffer: Vec<usize>,
     transparent_buffer: Vec<Transparent>,
+
+    tbt: TextureBindTracker<5>,
+    vbt: VAOBindTracker,
 }
 
 impl ForwardTransparentPass {
@@ -143,7 +153,6 @@ impl ForwardTransparentPass {
             id,
             config,
             shader: None,
-            fallback_textures: FallbackTextures::new(gl),
             skybox: None,
             view: None,
             frustum,
@@ -152,6 +161,8 @@ impl ForwardTransparentPass {
             keys_buffer: Vec::with_capacity(1024),
             shuffle_buffer: Vec::with_capacity(1024),
             transparent_buffer: Vec::with_capacity(1024),
+            tbt: TextureBindTracker::new(),
+            vbt: VAOBindTracker::new(),
         }
     }
 
@@ -200,9 +211,28 @@ impl ForwardTransparentPass {
 
         // Sort indices by keys from keys buffer
         self.shuffle_buffer.sort_unstable_by(|a, b| {
-            self.keys_buffer[*a]
-                .partial_cmp(&self.keys_buffer[*b])
-                .unwrap()
+            let i = *a;
+            let j = *b;
+
+            let ord = self.keys_buffer[i].total_cmp(&self.keys_buffer[j]);
+            if ord.is_eq() {
+                // Try to sort by renderable, bucket and submesh indices
+                self.transparent_buffer[i]
+                    .renderable_idx
+                    .cmp(&self.transparent_buffer[j].renderable_idx)
+                    .then(
+                        self.transparent_buffer[i]
+                            .bucket_idx
+                            .cmp(&self.transparent_buffer[j].bucket_idx),
+                    )
+                    .then(
+                        self.transparent_buffer[i]
+                            .submesh_idx
+                            .cmp(&self.transparent_buffer[j].submesh_idx),
+                    )
+            } else {
+                ord
+            }
         });
     }
 }
@@ -285,24 +315,35 @@ impl RenderPass<RenderingEvent> for ForwardTransparentPass {
             }
         }
 
-        let shader = self.shader.as_ref().unwrap();
-        let program = shader.asset.cast();
-        Program::bind(&self.gl, &program);
+        // Make rust happy about the borrowing of self.shader
+        {
+            let shader = self.shader.as_ref().unwrap();
+            let program = shader.asset.cast();
+            Program::bind(&self.gl, &program);
 
-        // Bind skybox if present
-        if let Some(skybox) = &self.skybox {
-            let skybox = skybox.cast();
-            TextureCube::bind(&self.gl, skybox, SKYBOX_INDEX as u32);
+            // Bind skybox if present
+            if let Some(skybox) = &self.skybox {
+                let skybox = skybox.cast();
+                self.tbt.bind_cube(&self.gl, SKYBOX_INDEX, skybox);
+            }
         }
 
         self.prepare_transparent(frame);
 
+        let shader = self.shader.as_ref().unwrap();
         let mut result = RenderResult::default();
         for idx in &self.shuffle_buffer {
             let transparent = &self.transparent_buffer[*idx];
             let renderable = &frame.renderables[transparent.renderable_idx];
             let mesh = renderable.mesh.cast();
-            result += transparent.draw(&self.gl, self, mesh);
+            result += transparent.draw(
+                &self.gl,
+                &self.config,
+                shader,
+                mesh,
+                &mut self.tbt,
+                &mut self.vbt,
+            );
         }
 
         result
@@ -317,11 +358,8 @@ impl RenderPass<RenderingEvent> for ForwardTransparentPass {
         }
 
         Program::unbind(&self.gl);
-        Texture2D::unbind(&self.gl, ALBEDO_INDEX as u32);
-        Texture2D::unbind(&self.gl, NORMAL_INDEX as u32);
-        Texture2D::unbind(&self.gl, METALLIC_ROUGHNESS_INDEX as u32);
-        Texture2D::unbind(&self.gl, OCCLUSION_INDEX as u32);
-        TextureCube::unbind(&self.gl, SKYBOX_INDEX as u32);
+        self.tbt.unbind(&self.gl);
+        self.vbt.unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
         RenderResult::default()
     }

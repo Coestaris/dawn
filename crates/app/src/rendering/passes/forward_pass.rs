@@ -1,3 +1,4 @@
+use crate::rendering::bind_tracker::TextureBindTracker;
 use crate::rendering::config::RenderingConfig;
 use crate::rendering::event::RenderingEvent;
 use crate::rendering::fbo::gbuffer::GBuffer;
@@ -11,6 +12,7 @@ use dawn_graphics::gl::mesh::{SubMesh, TopologyBucket};
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
 use dawn_graphics::gl::raii::texture::Texture2D;
+use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -34,9 +36,9 @@ pub(crate) struct ForwardPass {
     config: RenderingConfig,
 
     shader: Option<ForwardShader>,
-    fallback_textures: FallbackTextures,
 
     frustum: Rc<RefCell<FrustumCulling>>,
+    tbt: TextureBindTracker<5>,
 
     gbuffer: Rc<GBuffer>,
 }
@@ -54,13 +56,13 @@ impl ForwardPass {
             id,
             config,
             shader: None,
-            fallback_textures: FallbackTextures::new(gl),
             frustum,
+            tbt: TextureBindTracker::new(),
             gbuffer,
         }
     }
 
-    fn prepare_bucket(&self, bucket: &TopologyBucket) -> (bool, RenderResult) {
+    fn prepare_bucket(&self, bucket: &TopologyBucket) {
         #[cfg(feature = "devtools")]
         let tangents = if self.config.get_force_no_tangents() {
             false
@@ -73,56 +75,42 @@ impl ForwardPass {
         let shader = self.shader.as_ref().unwrap();
         let program = shader.asset.cast();
         program.set_uniform(&shader.tangent_valid, tangents);
-        (false, RenderResult::default())
     }
 
-    fn prepare_submesh(&self, model: &Mat4, submesh: &SubMesh) -> (bool, RenderResult) {
-        // Check if the submesh at the camera frustum
-        // otherwise, skip rendering
-        // TODO: Is it worth to do frustum culling per submesh?
+    fn prepare_submesh(&mut self, model: &Mat4, submesh: &SubMesh) -> bool {
         if !self
             .frustum
             .borrow()
             .is_visible(submesh.min, submesh.max, *model)
         {
-            return (true, RenderResult::default());
+            return false;
         }
 
-        let (albedo, normal, metallic_roughness, occlusion) =
-            if let Some(material) = &submesh.material {
-                let material = material.cast::<Material>();
+        // Check if the submesh at the camera frustum
+        // otherwise, skip rendering
+        // TODO: Is it worth to do frustum culling per submesh?
+        if let Some(material) = &submesh.material {
+            let material = material.cast::<Material>();
 
-                // Transparent submeshes are not rendered
-                // They will be rendered in a separate pass
-                if material.transparent {
-                    return (true, RenderResult::default());
-                }
+            // Transparent submeshes are not rendered
+            // They will be rendered in a separate pass
+            if material.transparent {
+                return false;
+            }
 
-                let albedo = material.albedo.cast();
-                let normal = material.normal.cast();
-                let metallic_roughness = material.metallic_roughness.cast();
-                let occlusion = material.occlusion.cast();
+            let albedo = material.albedo.cast();
+            let normal = material.normal.cast();
+            let metallic_roughness = material.metallic_roughness.cast();
+            let occlusion = material.occlusion.cast();
 
-                (albedo, normal, metallic_roughness, occlusion)
-            } else {
-                (
-                    &self.fallback_textures.albedo_texture,
-                    &self.fallback_textures.normal_texture,
-                    &self.fallback_textures.metallic_roughness_texture,
-                    &self.fallback_textures.occlusion_texture,
-                )
-            };
+            self.tbt.bind2d(&self.gl, ALBEDO_INDEX, albedo);
+            self.tbt.bind2d(&self.gl, NORMAL_INDEX, normal);
+            self.tbt
+                .bind2d(&self.gl, METALLIC_ROUGHNESS_INDEX, metallic_roughness);
+            self.tbt.bind2d(&self.gl, OCCLUSION_INDEX, occlusion);
+        };
 
-        Texture2D::bind(&self.gl, albedo, ALBEDO_INDEX as u32);
-        Texture2D::bind(&self.gl, normal, NORMAL_INDEX as u32);
-        Texture2D::bind(
-            &self.gl,
-            metallic_roughness,
-            METALLIC_ROUGHNESS_INDEX as u32,
-        );
-        Texture2D::bind(&self.gl, occlusion, OCCLUSION_INDEX as u32);
-
-        (false, RenderResult::default())
+        return true;
     }
 }
 
@@ -227,10 +215,26 @@ impl RenderPass<RenderingEvent> for ForwardPass {
 
         program.set_uniform(&shader.model_location, renderable.model);
 
-        mesh.draw(
-            |bucket| self.prepare_bucket(bucket),
-            |submesh| self.prepare_submesh(&renderable.model, submesh),
-        )
+        let mut result = RenderResult::default();
+        for bucket in &mesh.buckets {
+            self.prepare_bucket(bucket);
+
+            VertexArray::bind(&self.gl, &bucket.vao);
+            for submesh in &bucket.submesh {
+                if !self.prepare_submesh(&renderable.model, submesh) {
+                    continue;
+                }
+
+                result += bucket.vao.draw_elements_base_vertex(
+                    submesh.index_count,
+                    submesh.index_offset,
+                    submesh.vertex_offset,
+                );
+            }
+            VertexArray::unbind(&self.gl);
+        }
+
+        result
     }
 
     #[inline(always)]
@@ -241,10 +245,7 @@ impl RenderPass<RenderingEvent> for ForwardPass {
         }
 
         Program::unbind(&self.gl);
-        Texture2D::unbind(&self.gl, ALBEDO_INDEX as u32);
-        Texture2D::unbind(&self.gl, NORMAL_INDEX as u32);
-        Texture2D::unbind(&self.gl, METALLIC_ROUGHNESS_INDEX as u32);
-        Texture2D::unbind(&self.gl, OCCLUSION_INDEX as u32);
+        self.tbt.unbind(&self.gl);
         Framebuffer::unbind(&self.gl);
         RenderResult::default()
     }
