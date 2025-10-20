@@ -27,6 +27,7 @@ use crate::rendering::shaders::{
     POSTPROCESS_SHADER, SSAO_BLUR_SHADER, SSAO_HALFRES_SHADER, SSAO_RAW_SHADER, Z_PREPASS_SHADER,
 };
 use crate::rendering::ubo::camera::CameraUBO;
+use crate::rendering::ubo::packed_light::LightInfo;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::WINDOW_SIZE;
 use build_info::BuildInfo;
@@ -44,6 +45,7 @@ use std::sync::Arc;
 use winit::event::WindowEvent;
 use winit::window::Window;
 
+pub mod bind_tracker;
 mod config;
 #[cfg(feature = "devtools")]
 pub mod devtools;
@@ -57,7 +59,6 @@ pub mod primitive;
 pub mod shaders;
 pub mod textures;
 pub mod ubo;
-pub mod bind_tracker;
 
 fn log_info(info: &OpenGLInfo) {
     info!("OpenGL information:");
@@ -143,7 +144,9 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
         let ssao_raw_target = Rc::new(SSAOHalfresTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
         let ssao_blur_target = Rc::new(SSAOHalfresTarget::new(r.gl.clone(), WINDOW_SIZE).unwrap());
 
+        let light_info = Rc::new(RefCell::new(LightInfo::new(r.gl.clone()).unwrap()));
         let frustum = Rc::new(RefCell::new(FrustumCulling::new()));
+
         let z_pre_pass = ZPrePass::new(
             r.gl.clone(),
             self.ids.z_prepass_id,
@@ -185,12 +188,14 @@ impl CustomRenderer<ChainType, RenderingEvent> for Renderer {
             ssao_raw_target.clone(),
             lighting_taget.clone(),
             self.config.clone(),
+            light_info.clone(),
         );
         let forward_transparent_pass = ForwardTransparentPass::new(
             r.gl.clone(),
             self.ids.forward_transparent_id,
             transparent_target,
             frustum.clone(),
+            light_info.clone(),
             self.config.clone(),
         );
 

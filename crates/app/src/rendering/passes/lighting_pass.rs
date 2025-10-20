@@ -5,7 +5,7 @@ use crate::rendering::fbo::lighting::LightingTarget;
 use crate::rendering::fbo::ssao::SSAOHalfresTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::lighting::LightingShader;
-use crate::rendering::ubo::packed_light::{LightsHeaderPayload, PackedLights};
+use crate::rendering::ubo::packed_light::{LightInfo, LightsHeaderPayload, PackedLights};
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
@@ -15,6 +15,7 @@ use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
 use dawn_graphics::renderer::{DataStreamFrame, RendererBackend};
 use glow::HasContext;
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 use winit::window::Window;
@@ -31,12 +32,12 @@ pub(crate) struct LightingPass {
     gl: Arc<glow::Context>,
     id: RenderPassTargetId,
     config: RenderingConfig,
+    light_info: Rc<RefCell<LightInfo>>,
 
     shader: Option<LightingShader>,
     skybox: Option<TypedAsset<TextureCube>>,
     quad: Quad2D,
     view: glam::Mat4,
-    packed_lights: PackedLights,
     halfres_ssao: Rc<SSAOHalfresTarget>,
     gbuffer: Rc<GBuffer>,
     target: Rc<LightingTarget>,
@@ -50,16 +51,17 @@ impl LightingPass {
         ssao_blurred: Rc<SSAOHalfresTarget>,
         target: Rc<LightingTarget>,
         config: RenderingConfig,
+        light_info: Rc<RefCell<LightInfo>>,
     ) -> Self {
         LightingPass {
             gl: gl.clone(),
             id,
             config,
+            light_info,
             shader: None,
             skybox: None,
             quad: Quad2D::new(gl.clone()),
             view: glam::Mat4::IDENTITY,
-            packed_lights: PackedLights::new(gl).unwrap(),
             halfres_ssao: ssao_blurred,
             gbuffer,
             target,
@@ -132,18 +134,8 @@ impl RenderPass<RenderingEvent> for LightingPass {
             self.gl.disable(glow::DEPTH_TEST);
         }
 
-        self.packed_lights.clear();
-        let mut lights_count = 0;
-        for light in frame.point_lights.iter() {
-            self.packed_lights.push_point_light(light, &self.view);
-            lights_count += 1;
-        }
-        for light in frame.sun_lights.iter() {
-            self.packed_lights.push_sun_light(light, &self.view);
-            lights_count += 1;
-        }
-        self.packed_lights.upload();
-        let header = LightsHeaderPayload::new(lights_count as u32);
+        // Update lights
+        self.light_info.borrow_mut().feed(&self.view, frame);
 
         Framebuffer::bind(&self.gl, &self.target.fbo);
 
@@ -169,12 +161,22 @@ impl RenderPass<RenderingEvent> for LightingPass {
                 self.config.get_output_mode() as i32,
             );
         }
-        program.set_uniform(&shader.packed_lights_header, header.as_uvec4());
+
+        // Upload lights
+        program.set_uniform(
+            &shader.packed_lights_header,
+            self.light_info.borrow().header(),
+        );
+        Texture2D::bind(
+            &self.gl,
+            &self.light_info.borrow().texture(),
+            PACKED_LIGHTS_INDEX as u32,
+        );
+
         self.gbuffer.depth.bind2d(DEPTH_INDEX);
         self.gbuffer.albedo.bind2d(ALBEDO_INDEX);
         self.gbuffer.orm.bind2d(ORM_INDEX);
         self.gbuffer.normal.bind2d(NORMAL_INDEX);
-        self.packed_lights.bind(PACKED_LIGHTS_INDEX);
         self.halfres_ssao.texture.bind2d(HALFRES_SSAO_INDEX);
 
         if let Some(skybox) = &self.skybox {

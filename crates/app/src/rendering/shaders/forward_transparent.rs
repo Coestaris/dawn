@@ -24,6 +24,8 @@ pub struct ForwardTransparentShader {
     // Vertex uniforms
     pub ubo_camera_location: u32,
     pub model_location: UniformLocation,
+    pub packed_lights: UniformLocation,
+    pub packed_lights_header: UniformLocation,
 
     // Fragment uniforms
     pub albedo: UniformLocation,
@@ -42,6 +44,8 @@ impl ForwardTransparentShader {
             asset: clone,
             ubo_camera_location: program.get_uniform_block_location("ubo_camera")?,
             model_location: program.get_uniform_location("in_model")?,
+            packed_lights: program.get_uniform_location("in_packed_lights")?,
+            packed_lights_header: program.get_uniform_location("in_packed_lights_header")?,
             albedo: program.get_uniform_location("in_albedo")?,
             normal: program.get_uniform_location("in_normal")?,
             metallic_roughness: program.get_uniform_location("in_metallic_roughness")?,
