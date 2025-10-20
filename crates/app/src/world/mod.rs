@@ -1,4 +1,5 @@
 use crate::assets::reader::ReaderBackend;
+#[cfg(feature = "devtools")]
 use crate::devtools::DevtoolsWorldConnection;
 use crate::rendering::dispatcher::RenderDispatcher;
 use crate::rendering::event::RenderingEvent;

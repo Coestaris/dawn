@@ -165,7 +165,6 @@ impl PackedLights {
 
     pub fn upload(&mut self) {
         Texture2D::bind(&self.gl, &self.texture, 0);
-        println!("Uploading {} packed lights", self.vec.len());
 
         let needed_texels = self.vec.len() as i32;
         if needed_texels > self.capacity_texels {

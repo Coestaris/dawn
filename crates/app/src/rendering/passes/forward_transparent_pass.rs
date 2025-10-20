@@ -319,6 +319,8 @@ impl RenderPass<RenderingEvent> for ForwardTransparentPass {
             if self.config.get_is_wireframe() {
                 self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::LINE);
             }
+
+            self.gl.disable(glow::CULL_FACE);
         }
 
         // Make rust happy about the borrowing of self.shader
@@ -369,6 +371,9 @@ impl RenderPass<RenderingEvent> for ForwardTransparentPass {
     #[inline(always)]
     fn end(&mut self, _: &Window, _: &mut RendererBackend<RenderingEvent>) -> RenderResult {
         unsafe {
+            self.gl.enable(glow::CULL_FACE);
+            self.gl.cull_face(glow::BACK);
+
             self.gl.polygon_mode(glow::FRONT_AND_BACK, glow::FILL);
             self.gl.depth_mask(true);
             self.gl.disable(glow::BLEND);
