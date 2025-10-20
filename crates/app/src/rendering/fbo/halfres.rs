@@ -43,10 +43,9 @@ impl HalfresBuffer {
         buffer.normal.attach(&buffer.fbo);
 
         Framebuffer::bind(&gl, &buffer.fbo);
-        buffer.fbo.draw_buffers(&[
-            buffer.depth.attachment,
-            buffer.normal.attachment,
-        ]);
+        buffer
+            .fbo
+            .draw_buffers(&[buffer.depth.attachment, buffer.normal.attachment]);
         assert_eq!(buffer.fbo.is_complete(), true);
         Framebuffer::unbind(&gl);
 
