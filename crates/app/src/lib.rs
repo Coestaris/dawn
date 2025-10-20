@@ -15,9 +15,7 @@ use crate::world::{init_world, MainToEcs};
 use build_info::BuildInfo;
 use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
-use dawn_graphics::renderer::{
-    Renderer, RendererConfig, RendererSynchronization, WindowConfig,
-};
+use dawn_graphics::renderer::{Renderer, RendererConfig, RendererSynchronization, WindowConfig};
 use dawn_util::rendezvous::Rendezvous;
 use glam::UVec2;
 use log::info;

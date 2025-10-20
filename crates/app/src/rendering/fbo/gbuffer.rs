@@ -1,15 +1,15 @@
-use std::rc::Rc;
 use crate::rendering::fbo::GTexture;
 use dawn_assets::ir::texture2d::IRPixelFormat;
 use dawn_graphics::gl::raii::framebuffer::{Framebuffer, FramebufferAttachment};
 use glam::UVec2;
 use log::info;
+use std::rc::Rc;
 use std::sync::Arc;
 
 pub struct GBuffer {
     pub fbo: Framebuffer,
 
-    // Depth24. 
+    // Depth24.
     // Depth buffer is shared with D-buffer written in Z-prepass.
     pub depth: Rc<GTexture>,
     // RGB8.
@@ -29,7 +29,11 @@ impl GBuffer {
         // Depth resize is handled by DBuffer
     }
 
-    pub fn new(gl: Arc<glow::Context>, initial: UVec2, depth: Rc<GTexture>) -> anyhow::Result<Self> {
+    pub fn new(
+        gl: Arc<glow::Context>,
+        initial: UVec2,
+        depth: Rc<GTexture>,
+    ) -> anyhow::Result<Self> {
         let buffer = GBuffer {
             fbo: Framebuffer::new(gl.clone()).unwrap(),
             depth: depth.clone(),
