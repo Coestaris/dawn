@@ -170,7 +170,7 @@ impl RenderPass<RenderingEvent> for SSAORawPass {
         self.halfres_buffer.depth.bind2d(HALFRES_DEPTH_INDEX);
         self.halfres_buffer.normal.bind2d(HALFRES_NORMAL_INDEX);
 
-        self.quad.draw()
+        self.quad.draw(&self.gl)
     }
 
     #[inline(always)]

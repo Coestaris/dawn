@@ -123,7 +123,7 @@ impl RenderPass<RenderingEvent> for SSAOHalfresPass {
         self.gbuffer.depth.bind2d(DEPTH_INDEX);
         self.gbuffer.normal.bind2d(NORMAL_INDEX);
 
-        self.quad.draw()
+        self.quad.draw(&self.gl)
     }
 
     #[inline(always)]

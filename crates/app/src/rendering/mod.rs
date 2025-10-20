@@ -57,6 +57,7 @@ pub mod primitive;
 pub mod shaders;
 pub mod textures;
 pub mod ubo;
+pub mod bind_tracker;
 
 fn log_info(info: &OpenGLInfo) {
     info!("OpenGL information:");

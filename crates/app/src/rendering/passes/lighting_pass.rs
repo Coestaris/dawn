@@ -182,7 +182,7 @@ impl RenderPass<RenderingEvent> for LightingPass {
             TextureCube::bind(&self.gl, skybox, SKYBOX_INDEX as u32);
         }
 
-        self.quad.draw()
+        self.quad.draw(&self.gl)
     }
 
     #[inline(always)]

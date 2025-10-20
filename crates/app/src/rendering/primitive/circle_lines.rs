@@ -44,16 +44,16 @@ impl Circle3DLines {
 
         let vao = VertexArray::new(gl.clone(), IRTopology::Lines, IRIndexType::U16).unwrap();
         let mut vbo = ArrayBuffer::new(gl.clone()).unwrap();
-        let mut ebo = ElementArrayBuffer::new(gl).unwrap();
+        let mut ebo = ElementArrayBuffer::new(gl.clone()).unwrap();
 
-        let vao_binding = vao.bind();
+        VertexArray::bind(&gl, &vao);
         let vbo_binding = vbo.bind();
         let ebo_binding = ebo.bind();
 
         vbo_binding.feed(&vertex, ArrayBufferUsage::StaticDraw);
         ebo_binding.feed(&indices_edges, ElementArrayBufferUsage::StaticDraw);
 
-        vao_binding.setup_attribute(
+        vao.setup_attribute(
             0,
             &IRMeshLayoutItem {
                 field: IRLayoutField::Position,
@@ -66,7 +66,7 @@ impl Circle3DLines {
 
         drop(vbo_binding);
         drop(ebo_binding);
-        drop(vao_binding);
+        VertexArray::unbind(&gl);
 
         Circle3DLines {
             vao,
@@ -76,8 +76,10 @@ impl Circle3DLines {
         }
     }
 
-    pub fn draw(&self) -> RenderResult {
-        let binding = self.vao.bind();
-        binding.draw_elements(self.index_count, 0)
+    pub fn draw(&self, gl: &glow::Context) -> RenderResult {
+        VertexArray::bind(gl, &self.vao);
+        let result = self.vao.draw_elements(self.index_count, 0);
+        VertexArray::unbind(gl);
+        result
     }
 }

@@ -9,6 +9,7 @@ use dawn_graphics::gl::material::Material;
 use dawn_graphics::gl::mesh::{SubMesh, TopologyBucket};
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
+use dawn_graphics::gl::raii::vertex_array::VertexArray;
 use dawn_graphics::passes::events::{PassEventTarget, RenderPassTargetId};
 use dawn_graphics::passes::result::RenderResult;
 use dawn_graphics::passes::RenderPass;
@@ -54,11 +55,7 @@ impl ZPrePass {
         }
     }
 
-    fn prepare_bucket(&self, bucket: &TopologyBucket) -> (bool, RenderResult) {
-        (false, RenderResult::default())
-    }
-
-    fn prepare_submesh(&self, model: &Mat4, submesh: &SubMesh) -> (bool, RenderResult) {
+    fn prepare_submesh(&self, model: &Mat4, submesh: &SubMesh) -> bool {
         // Check if the submesh at the camera frustum
         // otherwise, skip rendering
         // TODO: Is it worth to do frustum culling per submesh?
@@ -67,7 +64,7 @@ impl ZPrePass {
             .borrow()
             .is_visible(submesh.min, submesh.max, *model)
         {
-            return (true, RenderResult::default());
+            return false;
         }
 
         if let Some(material) = &submesh.material {
@@ -76,11 +73,11 @@ impl ZPrePass {
             // Transparent submeshes are not rendered
             // They will be rendered in a separate pass
             if material.transparent {
-                return (true, RenderResult::default());
+                return false;
             }
         }
 
-        (false, RenderResult::default())
+        true
     }
 }
 
@@ -205,10 +202,24 @@ impl RenderPass<RenderingEvent> for ZPrePass {
         let program = shader.asset.cast();
         program.set_uniform(&shader.model_location, renderable.model);
 
-        mesh.draw(
-            |bucket| self.prepare_bucket(bucket),
-            |submesh| self.prepare_submesh(&renderable.model, submesh),
-        )
+        let mut result = RenderResult::default();
+        for bucket in &mesh.buckets {
+            VertexArray::bind(&self.gl, &bucket.vao);
+            for submesh in &bucket.submesh {
+                if !self.prepare_submesh(&renderable.model, submesh) {
+                    continue;
+                }
+
+                result += bucket.vao.draw_elements_base_vertex(
+                    submesh.index_count,
+                    submesh.index_offset,
+                    submesh.vertex_offset,
+                );
+            }
+            VertexArray::unbind(&self.gl);
+        }
+
+        result
     }
 
     #[inline(always)]
