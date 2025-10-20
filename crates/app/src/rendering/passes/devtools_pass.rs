@@ -140,13 +140,13 @@ impl DevtoolsPass {
         let mut result = RenderResult::default();
         program.set_uniform(&shader.color_location, X_COLOR);
         program.set_uniform(&shader.model_location, x_model);
-        result += self.segment.draw();
+        result += self.segment.draw(&self.gl);
         program.set_uniform(&shader.color_location, Y_COLOR);
         program.set_uniform(&shader.model_location, y_model);
-        result += self.segment.draw();
+        result += self.segment.draw(&self.gl);
         program.set_uniform(&shader.color_location, Z_COLOR);
         program.set_uniform(&shader.model_location, z_model);
-        result += self.segment.draw();
+        result += self.segment.draw(&self.gl);
 
         result
     }
@@ -164,7 +164,7 @@ impl DevtoolsPass {
         for point_light in frame.point_lights.iter() {
             let position = point_light.position;
             program.set_uniform(&shader.position_location, position);
-            result += self.quad.draw();
+            result += self.quad.draw(&self.gl);
         }
 
         result
@@ -183,7 +183,7 @@ impl DevtoolsPass {
         for sun_light in frame.sun_lights.iter() {
             let position = -sun_light.direction.normalize() * self.sunlight_distance; // Position it far away in the light direction
             program.set_uniform(&shader.position_location, position);
-            result += self.quad.draw();
+            result += self.quad.draw(&self.gl);
         }
 
         result
@@ -223,11 +223,11 @@ impl DevtoolsPass {
             ) * scale;
 
             program.set_uniform(&shader.model_location, model1);
-            result += self.circle.draw();
+            result += self.circle.draw(&self.gl);
             program.set_uniform(&shader.model_location, model2);
-            result += self.circle.draw();
+            result += self.circle.draw(&self.gl);
             program.set_uniform(&shader.model_location, model3);
-            result += self.circle.draw();
+            result += self.circle.draw(&self.gl);
         }
 
         result
@@ -253,7 +253,7 @@ impl DevtoolsPass {
             ) * Mat4::from_scale(Vec3::splat(self.sunlight_distance * 2.0));
 
             program.set_uniform(&shader.model_location, model);
-            result += self.segment.draw();
+            result += self.segment.draw(&self.gl);
         }
 
         result
@@ -389,6 +389,7 @@ impl DevtoolsPass {
 
                 match mode {
                     BoundingBoxMode::OBB | BoundingBoxMode::OBBHonorDepth => pass.cube.draw(
+                        &pass.gl,
                         |model| {
                             let obb = renderable_model * model;
                             program.set_uniform(&shader.model_location, obb);
@@ -399,6 +400,7 @@ impl DevtoolsPass {
                     BoundingBoxMode::AABB | BoundingBoxMode::AABBHonorDepth => {
                         let (min, max) = FrustumCulling::obb_to_aabb(min, max, renderable_model);
                         pass.cube.draw(
+                            &pass.gl,
                             |model| {
                                 program.set_uniform(&shader.model_location, model);
                             },

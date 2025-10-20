@@ -157,7 +157,7 @@ impl SSAOBlurPass {
         program.set_uniform(&shader.stride, stride);
         raw.texture.bind2d(HALFRES_SSAO_RAW_INDEX);
 
-        let result = self.quad.draw();
+        let result = self.quad.draw(&self.gl);
 
         // Unbind
         Framebuffer::unbind(&self.gl);
