@@ -1,5 +1,4 @@
 use crate::rendering::bind_tracker::TextureBinding::Empty;
-use build_info::semver::Op;
 use dawn_graphics::gl::raii::texture::{GLTexture, Texture2D, TextureCube};
 use dawn_graphics::gl::raii::vertex_array::VertexArray;
 

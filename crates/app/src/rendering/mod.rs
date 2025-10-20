@@ -10,7 +10,7 @@ use crate::rendering::fbo::dbuffer::DBuffer;
 use crate::rendering::fbo::gbuffer::GBuffer;
 use crate::rendering::fbo::halfres::HalfresBuffer;
 use crate::rendering::fbo::lighting::{LightingTarget, TransparentTarget};
-use crate::rendering::fbo::ssao::{SSAOHalfresTarget, SSAOTarget};
+use crate::rendering::fbo::ssao::SSAOHalfresTarget;
 use crate::rendering::frustum::FrustumCulling;
 #[cfg(feature = "devtools")]
 use crate::rendering::passes::devtools_pass::DevtoolsPass;
@@ -26,7 +26,6 @@ use crate::rendering::shaders::{
     BILLBOARD_SHADER, FORWARD_SHADER, FORWARD_TRANSPARENT_SHADER, LIGHTING_SHADER, LINE_SHADER,
     POSTPROCESS_SHADER, SSAO_BLUR_SHADER, SSAO_HALFRES_SHADER, SSAO_RAW_SHADER, Z_PREPASS_SHADER,
 };
-use crate::rendering::ubo::camera::CameraUBO;
 use crate::rendering::ubo::packed_light::LightInfo;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use crate::WINDOW_SIZE;
@@ -35,11 +34,9 @@ use dawn_graphics::gl::probe::OpenGLInfo;
 use dawn_graphics::passes::events::RenderPassTargetId;
 use dawn_graphics::renderer::{CustomRenderer, RendererBackend};
 use dawn_graphics::{construct_chain, construct_chain_type};
-use glam::{Vec3, Vec4};
 use glow::HasContext;
 use log::{debug, info, warn};
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 use winit::event::WindowEvent;

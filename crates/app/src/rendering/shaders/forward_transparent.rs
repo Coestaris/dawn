@@ -9,7 +9,6 @@ pub struct ForwardTransparentShaderDevtools {
 
 impl ForwardTransparentShaderDevtools {
     pub fn new(shader: TypedAsset<Program>) -> Result<Self, ShaderError> {
-        let clone = shader.clone();
         let program = shader.cast();
         Ok(Self {
             diffuse_scale: program.get_uniform_location("in_diffuse_scale")?,

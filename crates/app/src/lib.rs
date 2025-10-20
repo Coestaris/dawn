@@ -7,10 +7,8 @@ pub mod world;
 
 use crate::assets::reader::ReaderBackend;
 #[cfg(feature = "devtools")]
-use crate::devtools::{devtools_bridge, DevtoolsWorldConnection};
+use crate::devtools::devtools_bridge;
 use crate::logging::{print_build_info, START_TIME};
-use crate::rendering::dispatcher::RenderDispatcher;
-use crate::rendering::event::RenderingEvent;
 use crate::rendering::preprocessor::shader_defines;
 use crate::rendering::{RendererBuilder, SetupRenderingParameters};
 use crate::world::{init_world, MainToEcs};
@@ -18,10 +16,9 @@ use build_info::BuildInfo;
 use dawn_assets::hub::AssetHub;
 use dawn_assets::AssetType;
 use dawn_graphics::renderer::{
-    Renderer, RendererConfig, RendererProxy, RendererSynchronization, WindowConfig,
+    Renderer, RendererConfig, RendererSynchronization, WindowConfig,
 };
 use dawn_util::rendezvous::Rendezvous;
-use evenio::prelude::World;
 use glam::UVec2;
 use log::info;
 use std::panic;

@@ -1,10 +1,6 @@
 use crate::rendering::config;
-use glam::{Vec3, Vec4};
+use glam::Vec4;
 use std::collections::HashMap;
-
-fn vec3(v: Vec3) -> String {
-    format!("vec3({}, {}, {})", v.x, v.y, v.z)
-}
 
 fn vec4(v: Vec4) -> String {
     format!("vec4({}, {}, {}, {})", v.x, v.y, v.z, v.w)
