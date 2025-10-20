@@ -1,6 +1,7 @@
 use dawn_assets::ir::texture2d::{IRPixelFormat, IRTextureFilter, IRTextureWrap};
 use dawn_graphics::gl::raii::texture::{GLTexture, Texture2D};
 use dawn_graphics::renderable::{RenderablePointLight, RenderableSunLight};
+use dawn_graphics::renderer::DataStreamFrame;
 use glam::UVec4;
 use std::sync::Arc;
 
@@ -164,6 +165,7 @@ impl PackedLights {
 
     pub fn upload(&mut self) {
         Texture2D::bind(&self.gl, &self.texture, 0);
+        println!("Uploading {} packed lights", self.vec.len());
 
         let needed_texels = self.vec.len() as i32;
         if needed_texels > self.capacity_texels {
@@ -195,5 +197,57 @@ impl PackedLights {
 
     pub fn bind(&self, index: i32) {
         Texture2D::bind(&self.gl, &self.texture, index as u32);
+    }
+}
+
+pub struct LightInfo {
+    packed_lights: PackedLights,
+    header: LightsHeaderPayload,
+    prev_view: glam::Mat4,
+    fresh: bool,
+}
+
+impl LightInfo {
+    pub fn new(gl: Arc<glow::Context>) -> Option<Self> {
+        let packed_lights = PackedLights::new(gl)?;
+
+        Some(Self {
+            packed_lights,
+            header: LightsHeaderPayload::default(),
+            prev_view: glam::Mat4::IDENTITY,
+            fresh: true,
+        })
+    }
+
+    pub fn feed(&mut self, view: &glam::Mat4, frame: &DataStreamFrame) {
+        let light_updates = frame.sun_lights.iter().any(|l| l.meta.updated)
+            || frame.point_lights.iter().any(|l| l.meta.updated);
+        let view_updated = view != &self.prev_view;
+
+        let mut lights_count = 0;
+        if self.fresh || light_updates || view_updated {
+            self.fresh = false;
+            self.prev_view = *view;
+
+            self.packed_lights.clear();
+            for light in frame.point_lights.iter() {
+                self.packed_lights.push_point_light(light, &view);
+                lights_count += 1;
+            }
+            for light in frame.sun_lights.iter() {
+                self.packed_lights.push_sun_light(light, &view);
+                lights_count += 1;
+            }
+            self.packed_lights.upload();
+            self.header = LightsHeaderPayload::new(lights_count as u32);
+        }
+    }
+
+    pub fn header(&self) -> UVec4 {
+        self.header.as_uvec4()
+    }
+
+    pub fn texture(&self) -> &Texture2D {
+        &self.packed_lights.texture
     }
 }

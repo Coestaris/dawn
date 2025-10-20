@@ -5,6 +5,7 @@ use crate::rendering::fbo::lighting::TransparentTarget;
 use crate::rendering::frustum::FrustumCulling;
 use crate::rendering::shaders::forward_transparent::ForwardTransparentShader;
 use crate::rendering::textures::fallback_tex::FallbackTextures;
+use crate::rendering::ubo::packed_light::LightInfo;
 use crate::rendering::ubo::CAMERA_UBO_BINDING;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::material::Material;
@@ -29,6 +30,7 @@ const NORMAL_INDEX: i32 = 1;
 const METALLIC_ROUGHNESS_INDEX: i32 = 2;
 const OCCLUSION_INDEX: i32 = 3;
 const SKYBOX_INDEX: i32 = 4;
+const PACKED_LIGHTS_INDEX: i32 = 5;
 
 #[derive(Clone)]
 struct Transparent {
@@ -78,7 +80,7 @@ impl Transparent {
         config: &RenderingConfig,
         shader: &ForwardTransparentShader,
         mesh: &Mesh,
-        tbt: &mut TextureBindTracker<5>,
+        tbt: &mut TextureBindTracker<6>,
         vbt: &mut VAOBindTracker,
     ) -> RenderResult {
         let bucket = &mesh.buckets[self.bucket_idx];
@@ -130,13 +132,14 @@ pub(crate) struct ForwardTransparentPass {
     view: Option<Mat4>,
 
     frustum: Rc<RefCell<FrustumCulling>>,
+    light_info: Rc<RefCell<LightInfo>>,
     target: TransparentTarget,
 
     keys_buffer: Vec<SortKey>,
     shuffle_buffer: Vec<usize>,
     transparent_buffer: Vec<Transparent>,
 
-    tbt: TextureBindTracker<5>,
+    tbt: TextureBindTracker<6>,
     vbt: VAOBindTracker,
 }
 
@@ -146,6 +149,7 @@ impl ForwardTransparentPass {
         id: RenderPassTargetId,
         target: TransparentTarget,
         frustum: Rc<RefCell<FrustumCulling>>,
+        light_info: Rc<RefCell<LightInfo>>,
         config: RenderingConfig,
     ) -> Self {
         ForwardTransparentPass {
@@ -156,6 +160,7 @@ impl ForwardTransparentPass {
             skybox: None,
             view: None,
             frustum,
+            light_info,
             target,
 
             keys_buffer: Vec::with_capacity(1024),
@@ -275,6 +280,7 @@ impl RenderPass<RenderingEvent> for ForwardTransparentPass {
                 program.set_uniform(&shader.metallic_roughness, METALLIC_ROUGHNESS_INDEX);
                 program.set_uniform(&shader.occlusion, OCCLUSION_INDEX);
                 program.set_uniform(&shader.skybox, SKYBOX_INDEX);
+                program.set_uniform(&shader.packed_lights, PACKED_LIGHTS_INDEX);
                 Program::unbind(&self.gl);
             }
 
@@ -326,6 +332,17 @@ impl RenderPass<RenderingEvent> for ForwardTransparentPass {
                 let skybox = skybox.cast();
                 self.tbt.bind_cube(&self.gl, SKYBOX_INDEX, skybox);
             }
+
+            // Upload lights
+            program.set_uniform(
+                &shader.packed_lights_header,
+                self.light_info.borrow().header(),
+            );
+            self.tbt.bind2d(
+                &self.gl,
+                PACKED_LIGHTS_INDEX,
+                &self.light_info.borrow().texture(),
+            );
         }
 
         self.prepare_transparent(frame);
