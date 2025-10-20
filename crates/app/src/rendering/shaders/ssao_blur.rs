@@ -1,6 +1,6 @@
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::shader::ShaderError;
-use dawn_graphics::gl::raii::shader_program::{Program, UniformBlockLocation, UniformLocation};
+use dawn_graphics::gl::raii::shader_program::{Program, UniformLocation};
 
 #[cfg(feature = "devtools")]
 pub struct SSAOBlurShaderDevtools {

@@ -61,12 +61,6 @@ impl LightingTarget {
     }
 }
 impl TransparentTarget {
-    pub(crate) fn resize(&self, new_size: UVec2) {
-        info!("Resizing RGBABuffer to {:?}", new_size);
-        self.texture.resize(new_size);
-        // Resize of depth is handled by the DBuffer
-    }
-
     pub fn new(
         gl: Arc<glow::Context>,
         target: Rc<GTexture>,

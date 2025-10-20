@@ -238,7 +238,7 @@ pub(crate) mod config_static {
 #[cfg(feature = "devtools")]
 mod config_impl {
     pub(crate) use crate::rendering::config::{config_static, BoundingBoxMode, OutputMode};
-    use glam::Vec3;
+    
     use std::cell::RefCell;
     use std::rc::Rc;
 

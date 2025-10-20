@@ -5,7 +5,7 @@ use crate::rendering::fbo::lighting::LightingTarget;
 use crate::rendering::fbo::ssao::SSAOHalfresTarget;
 use crate::rendering::primitive::quad::Quad2D;
 use crate::rendering::shaders::lighting::LightingShader;
-use crate::rendering::ubo::packed_light::{LightInfo, LightsHeaderPayload, PackedLights};
+use crate::rendering::ubo::packed_light::LightInfo;
 use dawn_assets::TypedAsset;
 use dawn_graphics::gl::raii::framebuffer::Framebuffer;
 use dawn_graphics::gl::raii::shader_program::Program;
