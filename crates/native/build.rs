@@ -10,7 +10,7 @@ fn main() {
         use winresource::VersionInfo;
 
         let mut res = winresource::WindowsResource::new();
-        res.set_icon("../../assets/icon.ico");
+        res.set_icon("../../assets/blobs/icon.ico");
 
         //  MAJOR << 48 | MINOR << 32 | PATCH << 16 | RELEASE)
         macro_rules! version {
@@ -30,7 +30,7 @@ fn main() {
         );
         res.set_version_info(VersionInfo::FILEVERSION, version_code);
         res.set_version_info(VersionInfo::PRODUCTVERSION, version_code);
-        res.set_manifest(include_str!("../../assets/app.manifest"));
+        res.set_manifest(include_str!("../../assets/blobs/app.manifest"));
         res.compile().unwrap();
     }
 
