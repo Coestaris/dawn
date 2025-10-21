@@ -5,7 +5,7 @@ license = "MIT"
 
 [[properties.Shader.sources]]
 kind = "Vertex"
-origin.External.File = "shaders/forward_transparent.vsh"
+origin.External.File = "shaders/forward.vsh"
 
 [[properties.Shader.sources]]
 kind = "Fragment"

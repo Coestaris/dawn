@@ -7,5 +7,6 @@ uniform mat4 in_model;
 
 void main()
 {
-    gl_Position = in_projection * in_view * in_model * vec4(in_position, 1.0);
+    vec4 vp = in_view * in_model * vec4(in_position, 1.0);
+    gl_Position = in_projection * vp;
 }

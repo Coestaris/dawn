@@ -13,6 +13,7 @@ out vec2 tex_coord;
 out vec3 normal;
 out vec3 tangent;
 out vec3 bitangent;
+out vec3 view_pos;
 
 void main()
 {
@@ -22,5 +23,10 @@ void main()
     tangent = in_tangent;
     bitangent = in_bitangent;
 
-    gl_Position = in_projection * in_view * in_model * vec4(in_position, 1.0);
+    // Attention: This code MUST be the same as in the z_prepass.
+    // otherwise depth will sligtly different causing
+    // aggressive black artifacts
+    vec4 vp = in_view * in_model * vec4(in_position, 1.0);
+    view_pos = vp.xyz / vp.w;
+    gl_Position = in_projection * vp;
 }
