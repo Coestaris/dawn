@@ -1,7 +1,7 @@
 # DAWN
 
 <b>
-The development of this project has been suspended due architectural decisions that
+The development of this project has been suspended due to architectural decisions that
 make further development impractical. 
 Using pure OpenGL and handwritten resources management is quite exhausting for me,
 and I would like to try something new.
@@ -78,9 +78,9 @@ Schematic of the current rendering pipeline:
     <em>Example of multithreaded V-synced rendering</em>
 </p>
 
-Application is capable of running in following modes:
+Application is capable of running in the following modes:
 - Single-threaded: all the tasks are executed on the main thread;
-- Multi-threaded: moves all non-graphics tasks to a separate thread called 'World' thread. Also enables [rayon](https://crates.io/crates/rayon) to parallelize the world tasks in some cases;
+- Multithreaded: moves all non-graphics tasks to a separate thread called 'World' thread. Also enables [rayon](https://crates.io/crates/rayon) to parallelize the world tasks in some cases;
 
 When using multithreading, there are two modes of synchronization with the main thread:
 - Two-point synchronization: World thread runs independently and synchronizes with the main thread
@@ -108,6 +108,23 @@ The main reason of developing a custom container was to have the following featu
 - Minimal overhead and code footprint;
 
 The IR assets are stored as a serialized structure in the DAC file using [bincode](https://crates.io/crates/bincode).
+
+## Project Structure
+- `assets` - Contains assets used in the project.
+- `lib` - Contains the [DAWNLib](https://github.com/Coestaris/dawnlib).
+- `crates/app` - Main application code.
+- `crates/package` - Small utility to package the assets in a project-specific way.
+- `crates/native` - Boostrap code for native platforms (Windows, Linux, macOS).
+  It changes the features of the app, defines I/O, panic behavior, and other platform-specific stuff.
+- `crates/wasm` - Boostrap code for WebAssembly platform.
+- `crates/wasm-server` - Simple [axum](https://github.com/tokio-rs/axum)-based served along with some JS code to run and host the generated WASM.
+
+## License
+
+All the code in this repo is licensed under the MIT license.
+See the [LICENSE](./LICENSE) file for details.
+All the assets in the `assets` are licensed under their respective licenses.
+Check the appropriate metadata files (`*.toml`) for details.
 
 ## Building the project
 
@@ -162,20 +179,3 @@ You can manually generate the assets container using:
 ```bash
 cargo run -p dawn-package -- -i ./assets -o ./assets.dac
 ```
-
-## Project Structure
-- `assets` - Contains assets used in the project.
-- `lib` - Contains the [DAWNLib](https://github.com/Coestaris/dawnlib).
-- `crates/app` - Main application code.
-- `crates/package` - Small utility to package the assets in a project-specific way.
-- `crates/native` - Boostrap code for native platforms (Windows, Linux, macOS).
-  It changes the features of the app, defines I/O, panic behavior, and other platform-specific stuff.
-- `crates/wasm` - Boostrap code for WebAssembly platform.
-- `crates/wasm-server` - Simple [axum](https://github.com/tokio-rs/axum)-based served along with some JS code to run and host the generated WASM.
-
-## License
-
-All the code in this repo is licensed under the MIT license.
-See the [LICENSE](./LICENSE) file for details.
-All the assets in the `assets` are licensed under their respective licenses.
-Check the appropriate metadata files (`*.toml`) for details.
