@@ -1,4 +1,4 @@
 [submodule "lib"]
 	path = lib
-	url = git@github.com:Coestaris/dawnlib.git
+	url = https://github.com/Coestaris/dawnlib.git
 	branch = master
