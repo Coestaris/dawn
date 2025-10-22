@@ -29,6 +29,8 @@ Otherwise, the project will not be able to find the assets and will crash.
   </p>
 </details>
 
+Check out the demo (of v0.6.0) video on [YouTube](https://youtu.be/87HbJSMobHM).
+
 ## Features
 
 Main features:
